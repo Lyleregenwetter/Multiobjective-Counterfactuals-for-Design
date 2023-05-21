@@ -169,7 +169,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
 
-    def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame, k=3) -> np.array:
+    def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame, k=3) -> np.array: #TODO batch this for memory savings
         GD = self.gower_distance(dataframe, reference_dataframe)
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
@@ -299,13 +299,11 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
                 self.generate_dataset_pop()
                 self.verbose_log(f"Initial population initialized from dataset of {len(self.dataset_pop)} samples!")
                 pop = Population.merge(self.dataset_pop, query_pop)
-
             else:
                 mvs = MixedVariableSampling()
                 pop = mvs(self.problem, self.pop_size - 1)
                 self.verbose_log("Initial population randomly initialized!")
                 pop = Population.merge(pop, query_pop)
-
             algorithm = NSGA2(pop_size=self.pop_size, sampling=pop,
                               mating=MixedVariableMating(eliminate_duplicates=MixedVariableDuplicateElimination(),
                                                          repair=Revert_to_Query_Repair()),
@@ -313,7 +311,6 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
                               callback=All_Offspring_Callback(),
                               save_history=False)
             self.algorithm = algorithm
-
     def verbose_log(self, log_message):
         if self.verbose:
             print(log_message)
@@ -434,11 +431,8 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
         if self.dataset_pop is None:  # Evaluate Pop if not done already
             x = self.problem.data_package.features_dataset
             x = x.loc[:, self.problem.data_package.features_to_vary].to_dict("records")
-            # print(x)
             pop = Population.new("X", x)
-            # print(pop.get("X"))
             Evaluator().eval(self.problem, pop, datasetflag=True)
-            # print(pop.get("X"))
             self.dataset_pop = pop
             self.verbose_log(f"{len(pop)} dataset entries found matching problem parameters")
 
