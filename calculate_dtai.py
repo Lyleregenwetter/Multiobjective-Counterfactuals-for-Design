@@ -56,11 +56,3 @@ def convert_to_float_arrays(alpha_values, beta_values, y_eval):
     return alpha_values, beta_values, y_eval
 
 
-if __name__ == "__main__":
-    design_index = calculateDTAI(
-        np.array([[10, 5]]),
-        "maximize",
-        np.array([10, 5]),
-        np.array([1, 1]),
-        np.array([4, 4]))
-    print(design_index)
