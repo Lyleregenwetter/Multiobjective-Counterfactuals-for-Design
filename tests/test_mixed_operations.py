@@ -10,12 +10,13 @@ from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator
 
 class McdPredictor(metaclass=ABCMeta):
     def __init__(self, data_package: DataPackage, bonus_objs: list, ranges,
-                 constraint_functions):
+                 constraint_functions, predictor):
         self.data_package = data_package
         self.bonus_objs = bonus_objs
         self.ranges = ranges
         self.constraint_functions = constraint_functions
         self.query_constraints, self.query_lb, self.query_ub = self.sort_query_y(data_package.query_y)
+        self.predictor = predictor
 
     def sort_query_y(self, query_y: dict):
         query_constraints = []
@@ -32,7 +33,7 @@ class McdPredictor(metaclass=ABCMeta):
         pass
 
     def predict(self, x):
-        pass
+        return self.predictor.predict(x)
 
     def build_full_df(self, x):
         if x.empty:
@@ -67,7 +68,7 @@ class McdPredictor(metaclass=ABCMeta):
         all_scores = np.zeros((len(x), len(self.bonus_objs) + 3))
         all_scores[:, :-3] = prediction.loc[:, self.bonus_objs]
         # n + 1 is gower distance
-        all_scores[:, -3] = self.mixed_gower(x, self.data_package.query_x, [], {}).T
+        all_scores[:, -3] = self.gower_distance(x, self.data_package.query_x).T
         # n + 2 is changed features
         all_scores[:, -2] = self.changed_features(x, self.data_package.query_x)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
@@ -127,14 +128,24 @@ class McdClassifier(McdPredictor):
         pass
 
 
+class DummyPredictor:
+    def predict(self, x):
+        return np.arange(x.shape[0] * 2).reshape(-1, 2)
+
+
 class McdPredictorTest(unittest.TestCase):
+    def test_k_edge_case(self):
+        """If the features dataset is small, the partition method fails (K=2) out of bounds"""
+        pass
+
     def test_abstract(self):
-        package = DataPackage(features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]), columns=["x", "y", "z"]),
-                              predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2]]), columns=["A", "B"]),
-                              query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
-                              query_y={"A": (4, 10)},
-                              features_to_vary=["x", "y"],
-                              datatypes=[])
+        package = DataPackage(
+            features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [12, 13, 15]]), columns=["x", "y", "z"]),
+            predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2], [2, 1]]), columns=["A", "B"]),
+            query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
+            query_y={"A": (4, 10)},
+            features_to_vary=["x", "y", "z"],
+            datatypes=[])
 
         regressor = McdRegressor(
             data_package=package,
@@ -142,10 +153,11 @@ class McdPredictorTest(unittest.TestCase):
             ranges=MultiObjectiveCounterfactualsGenerator.build_ranges(
                 package.features_dataset, package.features_to_vary
             ),
-            constraint_functions=[]
+            constraint_functions=[],
+            predictor=DummyPredictor()
         )
         out = {}
         regressor.evaluate(
-            np.array([[12, 13], [14, 15], [16, 17]]),
-            out
+            np.array([[12, 13, 15], [14, 15, 19], [16, 17, 25], [16, 17, 25]]),
+            out, datasetflag=False
         )
