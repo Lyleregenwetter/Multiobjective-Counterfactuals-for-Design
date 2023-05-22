@@ -18,11 +18,11 @@ class McdPredictor(metaclass=ABCMeta):
         self.query_ub = query_ub
         self.query_lb = query_lb
 
-    def predict(self, x):
-        pass
-
     @abstractmethod
     def evaluate(self, x, out, *args, **kwargs):
+        pass
+
+    def predict(self, x):
         pass
 
     def build_full_df(self, x):
