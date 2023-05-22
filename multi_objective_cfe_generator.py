@@ -112,7 +112,6 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             f_d = f_d[(f_d.iloc[:, index] <= self.datatypes[index].bounds[1])]
         categorical_idx = self.get_features_by_type([Choice])  # pass in the pymoo built in variable types
         for parameter in categorical_idx:  # Filter out any that don't fall into an acceptable category
-            # TODO: ask Lyle whether this is a correct alteration
             p_d = p_d[(f_d.iloc[:, parameter].isin(self.datatypes[parameter].options))]
             f_d = f_d[(f_d.iloc[:, parameter].isin(self.datatypes[parameter].options))]  # TODO: fix this bug...
 
