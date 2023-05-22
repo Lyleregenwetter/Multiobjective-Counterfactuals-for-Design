@@ -227,15 +227,17 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     @staticmethod
     def mixed_gower(x1: pd.DataFrame, original: pd.DataFrame, ranges, datatypes):
         number_of_features = x1.shape[1]
-        x1_real = x1.values[:, datatypes.get("r", ())]
-        original_real = original.values[:, datatypes.get("r", ())]
+        real_indices = datatypes.get("r", ())
+        x1_real = x1.values[:, real_indices]
+        original_real = original.values[:, real_indices]
         dists = np.expand_dims(x1_real, 1) - np.expand_dims(original_real, 0)
         scaled_dists = np.divide(dists, ranges)
         scaled_dists: np.ndarray
         scaled_dists = scaled_dists.reshape((x1_real.shape[1], -1))
 
-        x1_categorical = x1.values[:, datatypes.get("c", ())]
-        original_categorical = original.values[:, datatypes.get("c", ())]
+        categorical_indices = datatypes.get("c", ())
+        x1_categorical = x1.values[:, categorical_indices]
+        original_categorical = original.values[:, categorical_indices]
         categorical_dists = np.count_nonzero(x1_categorical - original_categorical, axis=1)
 
         all_dists = np.concatenate([scaled_dists, np.expand_dims(categorical_dists, 1)], axis=1)
