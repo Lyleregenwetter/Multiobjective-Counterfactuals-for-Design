@@ -14,6 +14,10 @@ class DataPackageTest(unittest.TestCase):
     def test_get_features_to_freeze(self):
         self.assertEqual(["z"], self.initialize().features_to_freeze)
 
+    @unittest.skip
+    def test_invalid_query_x(self):
+        pass
+
     def test_raises_when_index_out_of_bound(self):
         self.assert_raises_with_message(
             lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]]), features_to_vary=[5]),

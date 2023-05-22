@@ -5,18 +5,27 @@ import numpy as np
 import pandas as pd
 
 from data_package import DataPackage
+from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator
 
 
 class McdPredictor(metaclass=ABCMeta):
     def __init__(self, data_package: DataPackage, bonus_objs: list, ranges,
-                 constraint_functions, query_constraints, query_ub, query_lb):
+                 constraint_functions):
         self.data_package = data_package
         self.bonus_objs = bonus_objs
         self.ranges = ranges
         self.constraint_functions = constraint_functions
-        self.query_constraints = query_constraints
-        self.query_ub = query_ub
-        self.query_lb = query_lb
+        self.query_constraints, self.query_lb, self.query_ub = self.sort_query_y(data_package.query_y)
+
+    def sort_query_y(self, query_y: dict):
+        query_constraints = []
+        query_lb = []
+        query_ub = []
+        for key in query_y.keys():
+            query_constraints.append(key)
+            query_lb.append(query_y[key][0])
+            query_ub.append(query_y[key][1])
+        return query_constraints, np.array(query_lb), np.array(query_ub)
 
     @abstractmethod
     def evaluate(self, x, out, *args, **kwargs):
@@ -49,7 +58,7 @@ class McdPredictor(metaclass=ABCMeta):
         return GD
 
     def calculate_scores(self, x, datasetflag):
-        x = pd.DataFrame.from_records(x)
+        x = pd.DataFrame.from_records(x, columns=self.data_package.features_to_vary)
         x_full = self.build_full_df(x)
         if datasetflag:
             prediction = self.data_package.predictions_dataset.copy()
@@ -120,4 +129,23 @@ class McdClassifier(McdPredictor):
 
 class McdPredictorTest(unittest.TestCase):
     def test_abstract(self):
-        pass
+        package = DataPackage(features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]), columns=["x", "y", "z"]),
+                              predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2]]), columns=["A", "B"]),
+                              query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
+                              query_y={"A": (4, 10)},
+                              features_to_vary=["x", "y"],
+                              datatypes=[])
+
+        regressor = McdRegressor(
+            data_package=package,
+            bonus_objs=[],
+            ranges=MultiObjectiveCounterfactualsGenerator.build_ranges(
+                package.features_dataset, package.features_to_vary
+            ),
+            constraint_functions=[]
+        )
+        out = {}
+        regressor.evaluate(
+            np.array([[12, 13], [14, 15], [16, 17]]),
+            out
+        )
