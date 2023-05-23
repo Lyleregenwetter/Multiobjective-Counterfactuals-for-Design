@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import pandas as pd
 import numpy.testing as np_test
+import pandas_utility as pd_util
 
 from data_package import DataPackage
 
@@ -148,6 +149,25 @@ class McdPredictorTest(unittest.TestCase):
     def test_k_edge_case(self):
         """If the features dataset is small, the partition method fails with error (K=2) out of bounds"""
         pass
+
+    def test_mixed_gower(self):
+        x1 = pd_util.get_one_row_dataframe_from_dict({
+            "x": 5,
+            "y": 12,
+            "z": 3
+        })
+        original = pd_util.get_one_row_dataframe_from_dict({
+            "x": 12,
+            "y": 10,
+            "z": 3
+        })
+        x1 = pd.concat([x1, x1], axis=0)
+        mixed_gower = McdPredictor.mixed_gower(x1, original, np.array([5, 1]), {"r": (1, 2),
+                                                                                "c": (0,)})
+        self.assertAlmostEqual(0.467,
+                               mixed_gower[0][0],
+                               places=3
+                               )
 
     def test_mixed_gower_same_as_gower_when_all_real(self):
         package = self.build_package()

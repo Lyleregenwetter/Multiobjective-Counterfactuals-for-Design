@@ -135,25 +135,6 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         self.assertAlmostEqual(0.0667, avg_gower_distance[1], places=4)
         self.assertAlmostEqual(0.1433, avg_gower_distance[2], places=4)
 
-    def test_mixed_gower(self):
-        x1 = pd_util.get_one_row_dataframe_from_dict({
-            "x": 5,
-            "y": 12,
-            "z": 3
-        })
-        original = pd_util.get_one_row_dataframe_from_dict({
-            "x": 12,
-            "y": 10,
-            "z": 3
-        })
-        x1 = pd.concat([x1, x1], axis=0)
-        mixed_gower = self.static_generator.mixed_gower(x1, original, np.array([5, 1]), {"r": (1, 2),
-                                                                                         "c": (0,)})
-        self.assertAlmostEqual(0.467,
-                               mixed_gower[0][0],
-                               places=3
-                               )
-
     def test_categorical_gower(self):
         x1 = pd_util.get_one_row_dataframe_from_dict({
             "x": 5,
