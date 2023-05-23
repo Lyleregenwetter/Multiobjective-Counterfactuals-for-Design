@@ -45,7 +45,11 @@ class DataPackage:
             return self.to_dataframe(predictions_dataset)
         return predictions_dataset
 
-    def _validate_parameters(self, features_dataset, features_to_vary, query_x: pd.DataFrame, predictions_dataset,
+    def _validate_parameters(self,
+                             features_dataset,
+                             features_to_vary,
+                             query_x: pd.DataFrame,
+                             predictions_dataset,
                              query_y):
         self._validate_datasets(features_dataset, predictions_dataset)
         self._validate_features_to_vary(features_dataset, features_to_vary)
@@ -104,7 +108,7 @@ class DataPackage:
             raise AssertionError(invalid_error_message)
 
     def _validate_query_x(self, features_dataset: pd.DataFrame, query_x: pd.DataFrame):
-        assert query_x is not None, "Query x cannot be none!"
+        assert not query_x.empty, "Query x cannot be empty!"
         assert query_x.values.shape == (
             1, len(features_dataset.columns)), "Dimensional mismatch between query x and dataset!"
         assert set(query_x.columns) == set(features_dataset.columns), "Query x columns do not match dataset columns!"

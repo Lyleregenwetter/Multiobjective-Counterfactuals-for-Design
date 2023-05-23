@@ -14,9 +14,23 @@ class DataPackageTest(unittest.TestCase):
     def test_get_features_to_freeze(self):
         self.assertEqual(["z"], self.initialize().features_to_freeze)
 
-    @unittest.skip
+    # noinspection PyTypeChecker
     def test_invalid_query_x(self):
-        pass
+        self.assert_raises_with_message(
+            lambda: self.initialize(query_x=None),
+            "Query x is neither a dataframe nor an ndarray!")
+        self.assert_raises_with_message(
+            lambda: self.initialize(query_x={}),
+            "Query x is neither a dataframe nor an ndarray!")
+        self.assert_raises_with_message(
+            lambda: self.initialize(query_x=pd.DataFrame()),
+            "Query x cannot be empty!")
+        self.assert_raises_with_message(
+            lambda: self.initialize(query_x=pd.DataFrame(np.array([[1]]), columns=["x"])),
+            "Dimensional mismatch between query x and dataset!")
+        self.assert_raises_with_message(
+            lambda: self.initialize(query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "zz"])),
+            "Query x columns do not match dataset columns!")
 
     def test_raises_when_index_out_of_bound(self):
         self.assert_raises_with_message(
