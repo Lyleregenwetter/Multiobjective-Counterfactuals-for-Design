@@ -14,11 +14,12 @@ class DataPackageTest(unittest.TestCase):
     def test_get_features_to_freeze(self):
         self.assertEqual(["z"], self.initialize().features_to_freeze)
 
-    # noinspection PyTypeChecker
     def test_invalid_query_x(self):
+        # noinspection PyTypeChecker
         self.assert_raises_with_message(
             lambda: self.initialize(query_x=None),
             "Query x is neither a dataframe nor an ndarray!")
+        # noinspection PyTypeChecker
         self.assert_raises_with_message(
             lambda: self.initialize(query_x={}),
             "Query x is neither a dataframe nor an ndarray!")

@@ -150,7 +150,6 @@ class McdPredictorTest(unittest.TestCase):
         pass
 
     def test_mixed_gower_same_as_gower_when_all_real(self):
-        """TODO: fix concat bug in mixed gower """
         package = self.build_package()
         regressor = self.build_regressor(package)
         features = pd.concat([package.features_dataset, pd.DataFrame(np.array([[1, 2, 3]]), columns=['x', 'y', 'z'])],

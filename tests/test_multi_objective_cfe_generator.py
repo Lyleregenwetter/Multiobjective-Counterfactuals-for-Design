@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import numpy as np
@@ -40,7 +39,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         )
         self.generator = MultiObjectiveCounterfactualsGenerator(
             data_package=self.data_package,
-            predictor=predictor,
+            predictor=predictor.predict,
             bonus_objs=[],
             constraint_functions=[],
             datatypes=[Real, Real, Real]
@@ -65,6 +64,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
 
     def test_type_inference(self):
         data = pd.DataFrame([[1, 3, "false"], [45, 23.0, "true"]])
+        # noinspection PyTypeChecker
         inferred_types = self.static_generator.infer_if_necessary(None, data)
         self.assertIs(inferred_types[0], Integer)
         self.assertIs(inferred_types[1], Real)
