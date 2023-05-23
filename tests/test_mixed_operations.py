@@ -94,15 +94,17 @@ class McdPredictor(metaclass=ABCMeta):
         return g
 
     @staticmethod
-    def mixed_gower(x1: pd.DataFrame, original: pd.DataFrame, ranges, datatypes):
-        number_of_features = x1.shape[1]
+    def mixed_gower(x1: pd.DataFrame, original: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
+        total_number_of_features = x1.shape[1]
+        total_number_of_rows = x1.shape[0]
+
         real_indices = datatypes.get("r", ())
         x1_real = x1.values[:, real_indices]
         original_real = original.values[:, real_indices]
         dists = np.expand_dims(x1_real, 1) - np.expand_dims(original_real, 0)
         scaled_dists = np.divide(dists, ranges)
-        scaled_dists: np.ndarray
-        scaled_dists = scaled_dists.reshape((-1, x1_real.shape[1]))
+        real_number_of_features = x1_real.shape[1]
+        scaled_dists = scaled_dists.reshape((-1, real_number_of_features))
 
         categorical_indices = datatypes.get("c", ())
         x1_categorical = x1.values[:, categorical_indices]
@@ -110,9 +112,9 @@ class McdPredictor(metaclass=ABCMeta):
         categorical_dists = np.count_nonzero(x1_categorical - original_categorical, axis=1)
 
         all_dists = np.concatenate([scaled_dists, np.expand_dims(categorical_dists, 1)], axis=1)
-        GD = np.divide(np.abs(all_dists), number_of_features)
+        GD = np.divide(np.abs(all_dists), total_number_of_features)
         GD = np.sum(GD, axis=1)
-        return GD.reshape(x1.shape[0], -1)
+        return GD.reshape(total_number_of_rows, -1)
 
     def changed_features(self, designs_dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
         changes = designs_dataframe.apply(
@@ -152,7 +154,7 @@ class McdPredictorTest(unittest.TestCase):
         package = self.build_package()
         regressor = self.build_regressor(package)
         features = pd.concat([package.features_dataset, pd.DataFrame(np.array([[1, 2, 3]]), columns=['x', 'y', 'z'])],
-                           axis=0)
+                             axis=0)
         distance = regressor.gower_distance(features, package.features_dataset.iloc[0])
         mixed_distance = regressor.mixed_gower(features,
                                                package.features_dataset.iloc[0:1],

@@ -150,7 +150,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         mixed_gower = self.static_generator.mixed_gower(x1, original, np.array([5, 1]), {"r": (1, 2),
                                                                                          "c": (0,)})
         self.assertAlmostEqual(0.467,
-                               mixed_gower[0],
+                               mixed_gower[0][0],
                                places=3
                                )
 
