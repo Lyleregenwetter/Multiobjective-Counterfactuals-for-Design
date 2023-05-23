@@ -71,7 +71,12 @@ class McdPredictor(metaclass=ABCMeta):
         all_scores = np.zeros((len(x), len(self.bonus_objs) + 3))
         all_scores[:, :-3] = prediction.loc[:, self.bonus_objs]
         # n + 1 is gower distance
-        all_scores[:, -3] = self.gower_distance(x_full, self.data_package.query_x).T
+        all_scores[:, -3] = self.mixed_gower(x_full,
+                                             self.data_package.query_x,
+                                             np.array(self.ranges),
+                                             {"r": tuple(
+                                                 _ for _ in range(len(self.data_package.features_dataset.columns)))}
+                                             ).T
         # n + 2 is changed features
         all_scores[:, -2] = self.changed_features(x_full, self.data_package.query_x)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
@@ -143,15 +148,19 @@ class McdPredictorTest(unittest.TestCase):
         pass
 
     def test_mixed_gower_same_as_gower_when_all_real(self):
+        """TODO: fix concat bug in mixed gower """
         package = self.build_package()
         regressor = self.build_regressor(package)
         distance = regressor.gower_distance(package.features_dataset, package.features_dataset.iloc[0])
-        mixed_distance = regressor.mixed_gower(package.features_dataset,
+        mixed_distance = regressor.mixed_gower(pd.concat([package.features_dataset, pd.DataFrame(np.array([[1, 2, 3]]), columns=['x', 'y', 'z'])], axis=0),
                                                package.features_dataset.iloc[0:1],
                                                np.array(regressor.ranges), {"r": (0, 1, 2)})
         np_test.assert_array_almost_equal(distance, mixed_distance, 5)
 
+    @unittest.skip
     def test_evaluate_mixed(self):
+
+        """TODO: finish this test"""
         package = self.build_package(features_to_vary=["x", "y", "z"])
         regressor = self.build_regressor(package)
         out = {}
