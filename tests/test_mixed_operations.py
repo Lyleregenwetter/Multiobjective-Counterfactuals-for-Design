@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import pandas as pd
+import numpy.testing as np_test
 
 from data_package import DataPackage
 
@@ -106,7 +107,7 @@ class McdPredictor(metaclass=ABCMeta):
         all_dists = np.concatenate([scaled_dists, np.expand_dims(categorical_dists, 1)], axis=1)
         GD = np.divide(np.abs(all_dists), number_of_features)
         GD = np.sum(GD, axis=1)
-        return GD
+        return GD.reshape(number_of_features, -1)
 
     def changed_features(self, designs_dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
         changes = designs_dataframe.apply(
@@ -116,7 +117,7 @@ class McdPredictor(metaclass=ABCMeta):
 
 class McdRegressor(McdPredictor):
 
-    def evaluate(self, x, out, *args, **kwargs):
+    def evaluate(self, x: np.ndarray, out, *args, **kwargs):
         # This flag will avoid passing the dataset through the predictor, when the y values are already known
         datasetflag = kwargs.get("datasetflag", False)
         score, validity = self.calculate_scores(x, datasetflag)
@@ -141,27 +142,40 @@ class McdPredictorTest(unittest.TestCase):
         """If the features dataset is small, the partition method fails with error (K=2) out of bounds"""
         pass
 
-    def test_subset(self):
-        package = self.build_package(
-            features_to_vary=["x", "y"]
+    def test_mixed_gower_same_as_gower_when_all_real(self):
+        package = self.build_package()
+        regressor = self.build_regressor(package)
+        distance = regressor.gower_distance(package.features_dataset, package.features_dataset.iloc[0])
+        mixed_distance = regressor.mixed_gower(package.features_dataset,
+                                               package.features_dataset.iloc[0:1],
+                                               np.array(regressor.ranges), {"r": (0, 1, 2)})
+        np_test.assert_array_almost_equal(distance, mixed_distance, 5)
+
+    def test_evaluate_mixed(self):
+        package = self.build_package(features_to_vary=["x", "y", "z"])
+        regressor = self.build_regressor(package)
+        out = {}
+        x = []
+        regressor.evaluate(
+            x, out, datasetflag=False
         )
+
+    def test_evaluate_subset(self):
+        package = self.build_package(features_to_vary=["x", "y"])
         regressor = self.build_regressor(package)
         out = {}
         regressor.evaluate(
-            np.array([[12, 13], [14, 15], [16, 17], [16, 19]]),
-            out, datasetflag=False
-        )
+            np.array([[12, 13], [14, 15], [16, 17], [16, 19]]), out, datasetflag=False)
         self.assertTrue("F" in out)
         self.assertTrue("G" in out)
 
-    def test_evaluate(self):
-        package = self.build_package()
+    def test_evaluate_all_features(self):
+        package = self.build_package(features_to_vary=["x", "y", "z"])
 
         regressor = self.build_regressor(package)
         out = {}
         regressor.evaluate(
-            np.array([[12, 13, 15], [14, 15, 19], [16, 17, 25], [16, 17, 25]]),
-            out, datasetflag=False
+            np.array([[12, 13, 15], [14, 15, 19], [16, 17, 25], [16, 17, 25]]), out, datasetflag=False
         )
         self.assertTrue("F" in out)
         self.assertTrue("G" in out)
