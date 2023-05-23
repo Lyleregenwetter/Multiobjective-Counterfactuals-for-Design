@@ -47,6 +47,7 @@ class DataPackageTest(unittest.TestCase):
         features = np.array([[1, 2, 3], [4, 5, 6]])
         predictions = np.array([[1, 2], [3, 4]])
         data_package = self.initialize(features_dataset=features, features_to_vary=[0, 1],
+                                       query_x=np.array([[1, 2, 3]]),
                                        predictions_dataset=predictions,
                                        query_y={0: (5, 10), 1: (10, 15)})
         self.assertTrue((data_package.features_dataset.to_numpy() == features).all())
@@ -90,7 +91,7 @@ class DataPackageTest(unittest.TestCase):
     def initialize(self,
                    features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]), columns=["x", "y", "z"]),
                    predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2]]), columns=["A", "B"]),
-                   query_x=pd.DataFrame(),
+                   query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "z"]),
                    query_y=None,
                    features_to_vary=None,
                    datatypes=None):

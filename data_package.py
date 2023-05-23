@@ -14,11 +14,11 @@ class DataPackage:
         predictions_dataset = self._predictions_to_dataframe_if_not(predictions_dataset, query_y)
         self.features_dataset = features_dataset
         self.predictions_dataset = predictions_dataset
-        self.query_x = query_x
+        self.query_x = self._query_x_to_dataframe_if_not(query_x)
+        self._validate_parameters(features_dataset, features_to_vary, self.query_x, predictions_dataset, query_y)
         self.features_to_vary = features_to_vary
         self.query_y = query_y
         self.datatypes = datatypes
-        self._validate_parameters(features_dataset, features_to_vary, predictions_dataset, query_y)
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 
     def to_dataframe(self, numpy_array: np.ndarray):
@@ -36,9 +36,20 @@ class DataPackage:
             return self.to_dataframe(optional_nd_array)
         return optional_nd_array
 
-    def _validate_parameters(self, features_dataset, features_to_vary, predictions_dataset, query_y):
+    def _predictions_to_dataframe_if_not(self, predictions_dataset, query_y):
+        if isinstance(predictions_dataset, np.ndarray):
+            total_features = predictions_dataset.shape[1]
+            self._validate_indices_to_vary(query_y.keys(), total_features,
+                                           "Query y must contain indices when the predictions dataset is a numpy array",
+                                           "Invalid index provided in query y")
+            return self.to_dataframe(predictions_dataset)
+        return predictions_dataset
+
+    def _validate_parameters(self, features_dataset, features_to_vary, query_x: pd.DataFrame, predictions_dataset,
+                             query_y):
         self._validate_datasets(features_dataset, predictions_dataset)
         self._validate_features_to_vary(features_dataset, features_to_vary)
+        self._validate_query_x(features_dataset, query_x)
         self._validate_query_y(predictions_dataset, query_y)
         self._validate_bonus_objs(predictions_dataset, query_y)  # TODO: fix bug here.
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
@@ -51,13 +62,13 @@ class DataPackage:
             uniform_cols) == 0, f"Error: The following columns were found to contain completely uniform values: " \
                                 f"{uniform_cols}. This is not allowed, since it blows proximity values up to infinity!"
 
-    def _validate_features_to_vary(self, features_dataset: pd.DataFrame, features_to_vary: list):
-        self._validate_labels(features_dataset, features_to_vary, "User has not provided any features to vary")
-
     # def validate_bounds(self, features_to_vary: list, upper_bounds: np.array, lower_bounds: np.array):
     #     valid_length = len(features_to_vary)
     #     assert upper_bounds.shape == (valid_length,)
     #     assert lower_bounds.shape == (valid_length,)
+
+    def _validate_features_to_vary(self, features_dataset: pd.DataFrame, features_to_vary: list):
+        self._validate_labels(features_dataset, features_to_vary, "User has not provided any features to vary")
 
     def _validate_labels(self, dataset: pd.DataFrame, labels: list,
                          no_labels_message):
@@ -76,15 +87,6 @@ class DataPackage:
                               bonus_objs,
                               "User has not provided any performance targets")
 
-    def _predictions_to_dataframe_if_not(self, predictions_dataset, query_y):
-        if isinstance(predictions_dataset, np.ndarray):
-            total_features = predictions_dataset.shape[1]
-            self._validate_indices_to_vary(query_y.keys(), total_features,
-                                           "Query y must contain indices when the predictions dataset is a numpy array",
-                                           "Invalid index provided in query y")
-            return self.to_dataframe(predictions_dataset)
-        return predictions_dataset
-
     def _validate_indices_to_vary(self, features_to_vary: list, total_features: int, type_error_message: str,
                                   invalid_error_message: str):
         for feature in features_to_vary:
@@ -100,3 +102,15 @@ class DataPackage:
             raise AssertionError(type_error_message)
         if not (is_int and int(feature) < total_features):
             raise AssertionError(invalid_error_message)
+
+    def _validate_query_x(self, features_dataset: pd.DataFrame, query_x: pd.DataFrame):
+        assert query_x is not None, "Query x cannot be none!"
+        assert query_x.values.shape == (
+            1, len(features_dataset.columns)), "Dimensional mismatch between query x and dataset!"
+        assert set(query_x.columns) == set(features_dataset.columns), "Query x columns do not match dataset columns!"
+
+    def _query_x_to_dataframe_if_not(self, query_x):
+        if isinstance(query_x, np.ndarray):
+            return self.to_dataframe(query_x)
+        assert isinstance(query_x, pd.DataFrame), "Query x is neither a dataframe nor an ndarray!"
+        return query_x
