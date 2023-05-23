@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 
 from data_package import DataPackage
-from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator
 
 
 class McdPredictor(metaclass=ABCMeta):
