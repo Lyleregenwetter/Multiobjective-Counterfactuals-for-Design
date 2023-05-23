@@ -102,7 +102,7 @@ class McdPredictor(metaclass=ABCMeta):
         dists = np.expand_dims(x1_real, 1) - np.expand_dims(original_real, 0)
         scaled_dists = np.divide(dists, ranges)
         scaled_dists: np.ndarray
-        scaled_dists = scaled_dists.reshape((x1_real.shape[1], -1))
+        scaled_dists = scaled_dists.reshape((-1, x1_real.shape[1]))
 
         categorical_indices = datatypes.get("c", ())
         x1_categorical = x1.values[:, categorical_indices]
@@ -112,7 +112,7 @@ class McdPredictor(metaclass=ABCMeta):
         all_dists = np.concatenate([scaled_dists, np.expand_dims(categorical_dists, 1)], axis=1)
         GD = np.divide(np.abs(all_dists), number_of_features)
         GD = np.sum(GD, axis=1)
-        return GD.reshape(number_of_features, -1)
+        return GD.reshape(x1.shape[0], -1)
 
     def changed_features(self, designs_dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
         changes = designs_dataframe.apply(
@@ -151,8 +151,10 @@ class McdPredictorTest(unittest.TestCase):
         """TODO: fix concat bug in mixed gower """
         package = self.build_package()
         regressor = self.build_regressor(package)
-        distance = regressor.gower_distance(package.features_dataset, package.features_dataset.iloc[0])
-        mixed_distance = regressor.mixed_gower(pd.concat([package.features_dataset, pd.DataFrame(np.array([[1, 2, 3]]), columns=['x', 'y', 'z'])], axis=0),
+        features = pd.concat([package.features_dataset, pd.DataFrame(np.array([[1, 2, 3]]), columns=['x', 'y', 'z'])],
+                           axis=0)
+        distance = regressor.gower_distance(features, package.features_dataset.iloc[0])
+        mixed_distance = regressor.mixed_gower(features,
                                                package.features_dataset.iloc[0:1],
                                                np.array(regressor.ranges), {"r": (0, 1, 2)})
         np_test.assert_array_almost_equal(distance, mixed_distance, 5)
