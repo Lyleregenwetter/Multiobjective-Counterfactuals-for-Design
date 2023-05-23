@@ -9,14 +9,17 @@ from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator
 
 
 class McdPredictor(metaclass=ABCMeta):
-    def __init__(self, data_package: DataPackage, bonus_objs: list, ranges,
-                 constraint_functions, predictor):
+    def __init__(self, data_package: DataPackage, bonus_objs: list, constraint_functions, predictor):
         self.data_package = data_package
         self.bonus_objs = bonus_objs
-        self.ranges = ranges
+        self.ranges = self.build_ranges(data_package.features_dataset)
         self.constraint_functions = constraint_functions
         self.query_constraints, self.query_lb, self.query_ub = self.sort_query_y(data_package.query_y)
         self.predictor = predictor
+
+    @staticmethod
+    def build_ranges(features_dataset: pd.DataFrame):
+        return features_dataset.max() - features_dataset.min()
 
     def sort_query_y(self, query_y: dict):
         query_constraints = []
@@ -43,7 +46,7 @@ class McdPredictor(metaclass=ABCMeta):
         df.index = list(range(n))
         df = pd.concat([df.loc[:, self.data_package.features_to_freeze], x], axis=1)
         df = df[self.data_package.features_dataset.columns]
-        return df.values
+        return df
 
     def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
                            k=3) -> np.array:  # TODO batch this for memory savings
@@ -68,11 +71,11 @@ class McdPredictor(metaclass=ABCMeta):
         all_scores = np.zeros((len(x), len(self.bonus_objs) + 3))
         all_scores[:, :-3] = prediction.loc[:, self.bonus_objs]
         # n + 1 is gower distance
-        all_scores[:, -3] = self.gower_distance(x, self.data_package.query_x).T
+        all_scores[:, -3] = self.gower_distance(x_full, self.data_package.query_x).T
         # n + 2 is changed features
-        all_scores[:, -2] = self.changed_features(x, self.data_package.query_x)
+        all_scores[:, -2] = self.changed_features(x_full, self.data_package.query_x)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
-        all_scores[:, -1] = self.avg_gower_distance(x, self.data_package.features_dataset)
+        all_scores[:, -1] = self.avg_gower_distance(x_full, self.data_package.features_dataset)
         return all_scores, self.get_constraint_satisfaction(x_full, prediction)
 
     def get_constraint_satisfaction(self, x_full, y):
@@ -134,30 +137,56 @@ class DummyPredictor:
 
 
 class McdPredictorTest(unittest.TestCase):
+    @unittest.skip
     def test_k_edge_case(self):
-        """If the features dataset is small, the partition method fails (K=2) out of bounds"""
+        """If the features dataset is small, the partition method fails with error (K=2) out of bounds"""
         pass
 
-    def test_abstract(self):
-        package = DataPackage(
-            features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [12, 13, 15]]), columns=["x", "y", "z"]),
-            predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2], [2, 1]]), columns=["A", "B"]),
-            query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
-            query_y={"A": (4, 10)},
-            features_to_vary=["x", "y", "z"],
-            datatypes=[])
-
-        regressor = McdRegressor(
-            data_package=package,
-            bonus_objs=[],
-            ranges=MultiObjectiveCounterfactualsGenerator.build_ranges(
-                package.features_dataset, package.features_to_vary
-            ),
-            constraint_functions=[],
-            predictor=DummyPredictor()
+    def test_subset(self):
+        package = self.build_package(
+            features_to_vary=["x", "y"]
         )
+        regressor = self.build_regressor(package)
+        out = {}
+        regressor.evaluate(
+            np.array([[12, 13], [14, 15], [16, 17], [16, 19]]),
+            out, datasetflag=False
+        )
+        self.assertTrue("F" in out)
+        self.assertTrue("G" in out)
+
+    def test_evaluate(self):
+        package = self.build_package()
+
+        regressor = self.build_regressor(package)
         out = {}
         regressor.evaluate(
             np.array([[12, 13, 15], [14, 15, 19], [16, 17, 25], [16, 17, 25]]),
             out, datasetflag=False
         )
+        self.assertTrue("F" in out)
+        self.assertTrue("G" in out)
+
+    def build_regressor(self, package):
+        return McdRegressor(
+            data_package=package,
+            bonus_objs=[],
+            constraint_functions=[],
+            predictor=DummyPredictor()
+        )
+
+    def build_package(self,
+                      features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [12, 13, 15]]),
+                                                    columns=["x", "y", "z"]),
+                      predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2], [2, 1]]), columns=["A", "B"]),
+                      query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
+                      query_y=None,
+                      features_to_vary=None,
+                      datatypes=None):
+        if datatypes is None:
+            datatypes = []
+        if features_to_vary is None:
+            features_to_vary = ["x", "y", "z"]
+        if query_y is None:
+            query_y = {"A": (4, 10)}
+        return DataPackage(features_dataset, predictions_dataset, query_x, features_to_vary, query_y, datatypes)
