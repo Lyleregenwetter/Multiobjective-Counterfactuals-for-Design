@@ -178,7 +178,7 @@ class McdPredictorTest(unittest.TestCase):
         mixed_distance = regressor.mixed_gower(features,
                                                package.features_dataset.iloc[0:1],
                                                np.array(regressor.ranges), {"r": (0, 1, 2)})
-        np_test.assert_array_almost_equal(distance, mixed_distance, 5)
+        np_test.assert_equal(distance, mixed_distance)
 
     @unittest.skip
     def test_evaluate_mixed(self):
