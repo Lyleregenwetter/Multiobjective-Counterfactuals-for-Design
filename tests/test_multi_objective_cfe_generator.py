@@ -106,8 +106,10 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
     def test_gower_distance_with_different_dimensions(self):
         x1 = np.array([[5, 10, 3], [5, 10, 3]])
         x2 = np.array([[6, 10, 3]])
-        self.assertAlmostEqual(0.033, self.generator.np_gower_distance(x1, x2)[0][0], places=3)
-        self.assertAlmostEqual(0.033, self.generator.np_gower_distance(x1, x2)[1][0], places=3)
+        gower_distance = self.generator.np_gower_distance(x1, x2)
+        self.assertEqual((2, 1), gower_distance.shape)
+        self.assertAlmostEqual(0.033, gower_distance[0][0], places=3)
+        self.assertAlmostEqual(0.033, gower_distance[1][0], places=3)
 
     def test_to_df(self):
         array = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
@@ -116,6 +118,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         self.assertEqual((3, 3), dataframe.shape)
 
     def test_average_gower_distance(self):
+        """Do we really want to the shape to be (4,) instead of (4,1)?"""
         generated_dataset = np.array([
             [1.3, 1.4, 1.6],
             [1, 1, 1],
@@ -130,7 +133,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             [2, 2, 2],
         ])
         avg_gower_distance = self.generator.np_avg_gower_distance(generated_dataset, original_dataset, 3)
-        self.assertEqual(4, len(avg_gower_distance))
+        self.assertEqual((4,), avg_gower_distance.shape)
         self.assertAlmostEqual(0.0811, avg_gower_distance[0], places=4)
         self.assertAlmostEqual(0.0667, avg_gower_distance[1], places=4)
         self.assertAlmostEqual(0.1433, avg_gower_distance[2], places=4)

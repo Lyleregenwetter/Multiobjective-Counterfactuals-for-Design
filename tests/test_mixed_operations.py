@@ -51,12 +51,12 @@ class McdPredictor(metaclass=ABCMeta):
 
     def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
                            k=3) -> np.array:  # TODO batch this for memory savings
-        GD = self.gower_distance(dataframe, reference_dataframe)
+        GD = self.gower_distance(dataframe, reference_dataframe, self.ranges.values)
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
 
-    def gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
-        ranges = self.ranges.values
+    @staticmethod
+    def gower_distance(dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame, ranges):
         dists = np.expand_dims(dataframe.values, 1) - np.expand_dims(reference_dataframe.values, 0)
         scaled_dists = np.divide(dists, ranges)
         GD = np.mean(np.abs(scaled_dists), axis=2)
@@ -104,13 +104,12 @@ class McdPredictor(metaclass=ABCMeta):
         original_real = original.values[:, real_indices]
         dists = np.expand_dims(x1_real, 1) - np.expand_dims(original_real, 0)
         scaled_dists = np.divide(dists, ranges)
-        real_number_of_features = x1_real.shape[1]
-        scaled_dists = scaled_dists.reshape((-1, real_number_of_features))
+        scaled_dists = scaled_dists.reshape((-1, len(original)))
 
         categorical_indices = datatypes.get("c", ())
         x1_categorical = x1.values[:, categorical_indices]
         original_categorical = original.values[:, categorical_indices]
-        categorical_dists = np.count_nonzero(x1_categorical - original_categorical, axis=1)
+        categorical_dists = np.count_nonzero(x1_categorical - original_categorical, axis=1).reshape(-1, len(original))
 
         all_dists = np.concatenate([scaled_dists, np.expand_dims(categorical_dists, 1)], axis=1)
         GD = np.divide(np.abs(all_dists), total_number_of_features)
@@ -169,12 +168,15 @@ class McdPredictorTest(unittest.TestCase):
                                places=3
                                )
 
+        zero_gower = McdPredictor.mixed_gower(x1, x1, np.array([5, 1]), {"r": (1, 2), "c": (0,)})
+        self.assertEqual(0, zero_gower[0][0])
+
     def test_mixed_gower_same_as_gower_when_all_real(self):
         package = self.build_package()
         regressor = self.build_regressor(package)
         features = pd.concat([package.features_dataset, pd.DataFrame(np.array([[1, 2, 3]]), columns=['x', 'y', 'z'])],
                              axis=0)
-        distance = regressor.gower_distance(features, package.features_dataset.iloc[0])
+        distance = regressor.gower_distance(features, package.features_dataset.iloc[0], regressor.ranges.values)
         mixed_distance = regressor.mixed_gower(features,
                                                package.features_dataset.iloc[0:1],
                                                np.array(regressor.ranges), {"r": (0, 1, 2)})
