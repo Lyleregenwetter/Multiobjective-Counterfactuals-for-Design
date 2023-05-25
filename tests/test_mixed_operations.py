@@ -94,15 +94,33 @@ class McdPredictor(metaclass=ABCMeta):
         return g
 
     @staticmethod
-    def get_mixed_constraint_satisfaction(x_full, y, constraint_functions, query_constraints, query_lb, query_ub):
-        n_cf = len(constraint_functions)
-        g = np.zeros((len(x_full), n_cf + len(query_constraints)))
+    def get_mixed_constraint_satisfaction(x_full,
+                                          y,
+                                          x_constraint_functions,
+                                          y_regression_constraints: dict,
+                                          y_classification_constraints: dict):
+        _, query_lb, query_ub = McdPredictor.sort_regression_constraints(y_regression_constraints)
+
+        n_cf = len(x_constraint_functions)
+        g = np.zeros((len(x_full), n_cf + len(y_regression_constraints)))
         for i in range(n_cf):
-            g[:, i] = constraint_functions[i](x_full).flatten()
-        pred_consts = y.loc[:, query_constraints].values
+            g[:, i] = x_constraint_functions[i](x_full).flatten()
+        pred_consts = y.loc[:, y_regression_constraints.keys()].values
         indiv_satisfaction = np.logical_and(np.less(pred_consts, query_ub), np.greater(pred_consts, query_lb))
         g[:, n_cf:] = 1 - indiv_satisfaction
         return g
+
+    @staticmethod
+    def sort_regression_constraints(regression_constraints: dict):
+        query_constraints = []
+        query_lb = []
+        query_ub = []
+        for key in regression_constraints.keys():
+            query_constraints.append(key)
+            query_lb.append(regression_constraints[key][0])
+            query_ub.append(regression_constraints[key][1])
+        return query_constraints, np.array(query_lb), np.array(query_ub)
+
 
     @staticmethod
     def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
@@ -168,17 +186,17 @@ class McdPredictorTest(unittest.TestCase):
         self.assertIsNotNone(mixed_gower)
 
     def test_get_mixed_constraint_satisfaction(self):
-        """Feeding 3 designs into this..."""
+        """This does not test the use of constraint functions - hence the dummy x_full"""
         y = pd.DataFrame.from_records(np.array([[1, 9], [2, 10],
                                                 [3, 12], [3, 8],
                                                 [4, 20], [5, 21]]))
         satisfaction = McdPredictor.get_mixed_constraint_satisfaction(x_full=np.array([[] for _ in range(6)]),
                                                                       y=y,
-                                                                      constraint_functions=[],
-                                                                      query_constraints=[0, 1],
-                                                                      query_lb=np.array([2, 10]),
-                                                                      query_ub=np.array([4, 20]))
-        print(satisfaction)
+                                                                      x_constraint_functions=[],
+                                                                      y_regression_constraints={0: (2, 4),
+                                                                                                1: (10, 20)},
+                                                                      y_classification_constraints={})
+        np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def test_mixed_gower_full(self):
         x1 = np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]])
