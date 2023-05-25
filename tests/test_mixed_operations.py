@@ -103,18 +103,18 @@ class McdPredictor(metaclass=ABCMeta):
         x1_real = x1.values[:, real_indices]
         original_real = original.values[:, real_indices]
         dists = np.expand_dims(x1_real, 1) - np.expand_dims(original_real, 0)
-        scaled_dists = np.divide(dists, ranges)
-        scaled_dists = scaled_dists.reshape((-1, len(original)))
+        scaled_dists = np.divide(dists, ranges)  # TODO: check whether np.divide will
+        # broadcasts shapes as we want in all cases
 
         categorical_indices = datatypes.get("c", ())
         x1_categorical = x1.values[:, categorical_indices]
         original_categorical = original.values[:, categorical_indices]
-        categorical_dists = np.count_nonzero(x1_categorical - original_categorical, axis=1).reshape(-1, len(original))
+        categorical_dists = np.not_equal(np.expand_dims(x1_categorical, 1), np.expand_dims(original_categorical, 0))
 
-        all_dists = np.concatenate([scaled_dists, np.expand_dims(categorical_dists, 1)], axis=1)
+        all_dists = np.concatenate([scaled_dists, categorical_dists], axis=2)
         GD = np.divide(np.abs(all_dists), total_number_of_features)
-        GD = np.sum(GD, axis=1)
-        return GD.reshape(total_number_of_rows, -1)
+        GD = np.sum(GD, axis=2)
+        return GD
 
     def changed_features(self, designs_dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
         changes = designs_dataframe.apply(
@@ -150,23 +150,12 @@ class McdPredictorTest(unittest.TestCase):
         pass
 
     def test_mixed_gower(self):
-        x1 = pd_util.get_one_row_dataframe_from_dict({
-            "x": 5,
-            "y": 12,
-            "z": 3
-        })
-        original = pd_util.get_one_row_dataframe_from_dict({
-            "x": 12,
-            "y": 10,
-            "z": 3
-        })
-        x1 = pd.concat([x1, x1], axis=0)
-        mixed_gower = McdPredictor.mixed_gower(x1, original, np.array([5, 1]), {"r": (1, 2),
-                                                                                "c": (0,)})
-        self.assertAlmostEqual(0.467,
-                               mixed_gower[0][0],
-                               places=3
-                               )
+        x1 = np.array([[i + j for i in range(1, 7)] for j in range(1, 6)])
+        x2 = np.array([[i + j for i in range(1, 7)] for j in range(5, 8)])
+        x1 = pd.DataFrame.from_records(x1)
+        x2 = pd.DataFrame.from_records(x2)
+        data_types = {"r": (0, 1, 3, 5), "c": (2, 4)}
+        mixed_gower = McdPredictor.mixed_gower(x1, x2, np.array([5, 1, 10, 20]), data_types)
 
         zero_gower = McdPredictor.mixed_gower(x1, x1, np.array([5, 1]), {"r": (1, 2), "c": (0,)})
         self.assertEqual(0, zero_gower[0][0])
