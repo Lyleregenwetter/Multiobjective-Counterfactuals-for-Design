@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import numpy.testing as np_test
 
 from data_package import DataPackage
 
@@ -33,7 +34,7 @@ class DataPackageTest(unittest.TestCase):
             lambda: self.initialize(query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "zz"])),
             "Query x columns do not match dataset columns!")
 
-    def test_raises_when_index_out_of_bound(self):
+    def test_raises_when_index_out_of_bounds(self):
         self.assert_raises_with_message(
             lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]]), features_to_vary=[5]),
             "Invalid index provided in list of features to vary")
@@ -41,7 +42,7 @@ class DataPackageTest(unittest.TestCase):
             lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]]), query_y={5: (3, 10)}),
             "Invalid index provided in query y")
 
-    def test_raises_when_index_index_not_int(self):
+    def test_raises_when_index_not_int(self):
         self.assert_raises_with_message(
             lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]]), features_to_vary=[5.4]),
             "Invalid index provided in list of features to vary")
@@ -57,7 +58,6 @@ class DataPackageTest(unittest.TestCase):
             lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]])),
             "Query y must contain indices when the predictions dataset is a numpy array")
 
-    # noinspection PyUnresolvedReferences
     def test_initialize_with_numpy_arrays(self):
         features = np.array([[1, 2, 3], [4, 5, 6]])
         predictions = np.array([[1, 2], [3, 4]])
@@ -65,12 +65,12 @@ class DataPackageTest(unittest.TestCase):
                                        query_x=np.array([[1, 2, 3]]),
                                        predictions_dataset=predictions,
                                        query_y={0: (5, 10), 1: (10, 15)})
-        self.assertTrue((data_package.features_dataset.to_numpy() == features).all())
-        self.assertTrue((data_package.predictions_dataset.to_numpy() == predictions).all())
+        np_test.assert_equal(data_package.features_dataset.to_numpy(), features)
+        np_test.assert_equal(data_package.predictions_dataset.to_numpy(), predictions)
         self.assertIs(pd.DataFrame, type(data_package.features_dataset))
         self.assertIs(pd.DataFrame, type(data_package.predictions_dataset))
-        self.assertTrue((np.array([0, 1, 2]) == data_package.features_dataset.columns).all())
-        self.assertTrue((np.array([0, 1]) == data_package.predictions_dataset.columns).all())
+        self.assertEqual({0, 1, 2}, set(data_package.features_dataset.columns))
+        self.assertEqual({0, 1}, set(data_package.predictions_dataset.columns))
 
     @unittest.skip
     def test_validate_bonus_objs(self):
