@@ -99,14 +99,14 @@ class DataPackage:
         for feature in features_to_vary:
             self._validate_int(feature, number_of_features, type_error_message, invalid_error_message)
 
-    def _validate_int(self, feature, total_features: int,
+    def _validate_int(self, feature, number_of_features: int,
                       type_error_message,
                       invalid_error_message):
         try:
             is_int = (float(feature) == int(feature))
         except ValueError:
             raise AssertionError(type_error_message)
-        if not (is_int and int(feature) < total_features):
+        if not (is_int and int(feature) < number_of_features):
             raise AssertionError(invalid_error_message)
 
     def _validate_query_x(self, features_dataset: pd.DataFrame, query_x: pd.DataFrame):
