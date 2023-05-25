@@ -116,16 +116,19 @@ class McdPredictor(metaclass=ABCMeta):
         pred_consts = y.loc[:, y_regression_constraints.keys()].values
         indiv_satisfaction = np.logical_and(np.less(pred_consts, query_ub), np.greater(pred_consts, query_lb))
 
-        category_consts = y.loc[:, y_category_constraints.keys()].values
+        category_consts = y.loc[:, y_category_constraints.keys()]
         category_satisfaction = wrapper.evaluate_categorical(category_consts,
                                                              targets=np.array([[i for i in j] for j in
                                                                                y_category_constraints.values()]))
         for proba_key, proba_targets in y_proba_constraints.items():
             proba_consts = y.loc[:, proba_key]
             proba_satisfaction = wrapper.evaluate_proba(proba_consts, proba_targets)
-            g[:, proba_key] = 1 - proba_satisfaction
+            g[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
 
-        g[:, n_cf:] = 1 - indiv_satisfaction
+        g[:, list(y_regression_constraints.keys())] = 1 - indiv_satisfaction
+        g[:, list(y_category_constraints.keys())] = 1 - category_satisfaction
+
+        # g[:, n_cf:] = 1 - indiv_satisfaction
         return g
 
     @staticmethod
@@ -232,7 +235,7 @@ class McdPredictorTest(unittest.TestCase):
                                                                           1: (200, 300),
                                                                           3: (550,)},
                                                                       y_proba_constraints={(4, 5): (5,)})
-        np_test.assert_equal(satisfaction, np.array([
+        np_test.assert_array_almost_equal(satisfaction, np.array([
             [1, 0, 1, 1, 0, 0],
             [0, 1, 1, 0, 1, 1],
             [0, 0, 0, 1, 0, 0],
@@ -255,7 +258,7 @@ class McdPredictorTest(unittest.TestCase):
                                                                                                 1: (10, 20)},
                                                                       y_category_constraints={},
                                                                       y_proba_constraints={})
-        np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
+        np_test.assert_array_almost_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def test_mixed_gower_full(self):
         x1 = pd.DataFrame.from_records(np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]]))

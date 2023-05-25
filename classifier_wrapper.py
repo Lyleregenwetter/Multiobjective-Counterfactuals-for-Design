@@ -1,26 +1,30 @@
 import numpy as np
+import pandas as pd
 
 
 class ClassifierWrapper:
-    def evaluate_categorical(self, actual: np.ndarray, targets: np.ndarray):
+    def evaluate_categorical(self, actual: pd.DataFrame, targets: np.ndarray):
         """Takes an n × m actual_performances array and a targets array consisting of m arrays.
         Checks that for each row in n, the value of each column in m is in the corresponding targets array.
         Examples provided in ClassifierWrapperTest.
         """
         # TODO: make this more efficient.
-        assert actual.shape[1] == targets.shape[0], "Dimensional mismatch between actual performances and targets array"
-        num_columns = actual.shape[1]
+        actual_values = actual.values
+        assert actual_values.shape[1] == targets.shape[0], "Dimensional mismatch between actual performances and targets array"
+        num_columns = actual_values.shape[1]
         # noinspection PyUnresolvedReferences
-        result = np.isin(actual[:, 0], targets[0]).astype(int).reshape(actual.shape[0], 1)
+        result = np.isin(actual_values[:, 0], targets[0]).astype(int).reshape(actual_values.shape[0], 1)
         for i in range(1, num_columns):
             # noinspection PyUnresolvedReferences
-            result = np.concatenate([result, np.isin(actual[:, i], targets[i]).astype(int).reshape(actual.shape[0], 1)],
+            result = np.concatenate([result, np.isin(actual_values[:, i],
+                                                     targets[i])
+                                    .astype(int).reshape(actual_values.shape[0], 1)],
                                     axis=1)
         return result
 
-    def evaluate_proba(self, actual: np.ndarray, target_classes_indices: tuple):
+    def evaluate_proba(self, actual: pd.DataFrame, target_classes_indices: tuple):
         unwanted_classes = tuple(set([_ for _ in actual.columns]) - set(target_classes_indices))
-        max_desired = np.max(actual[:, target_classes_indices].reshape(actual.shape[0], -1), axis=1)
-        max_undesired = np.max(actual[:, unwanted_classes].reshape(actual.shape[0], -1), axis=1)
+        max_desired = np.max(actual.loc[:, target_classes_indices], axis=1)
+        max_undesired = np.max(actual.loc[:, unwanted_classes], axis=1)
         # TODO:
-        return (max_desired - max_undesired).reshape(actual.shape[0], 1)
+        return (max_desired - max_undesired).values.reshape(actual.shape[0], 1)
