@@ -51,7 +51,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self.x_dimension = len(self.data_package.features_dataset.columns)
         self.predictor = predictor
         self.bonus_objs = bonus_objs
-        self.query_constraints, self.query_lb, self.query_ub = self.sort_query_y(self.data_package.query_y)
+        self.query_constraints, self.query_lb, self.query_ub = self.data_package.sort_query_y()
         self.constraint_functions = constraint_functions
         self.datatypes = self.infer_if_necessary(datatypes, self.data_package.query_x)
         variables = {}
@@ -62,7 +62,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                          n_constr=len(constraint_functions) + len(self.query_constraints),
                          )
         self.ranges = self.build_ranges(self.data_package.features_dataset, self.data_package.features_to_vary)
-        self.set_valid_datasets_subset() #Remove any invalid designs from the features dataset and predicitons dataset
+        self.set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predicitons dataset
 
     def _evaluate(self, x, out, *args, **kwargs):
         # This flag will avoid passing the dataset through the predictor, when the y values are already known
@@ -138,16 +138,6 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         subset = features_dataset.drop(columns=features_dataset.columns.difference(features_to_vary))
         return subset.max() - subset.min()
 
-    def sort_query_y(self, query_y: dict):
-        query_constraints = []
-        query_lb = []
-        query_ub = []
-        for key in query_y.keys():
-            query_constraints.append(key)
-            query_lb.append(query_y[key][0])
-            query_ub.append(query_y[key][1])
-        return query_constraints, np.array(query_lb), np.array(query_ub)
-
     def build_full_df(self, x):
         if x.empty:
             return x.values
@@ -168,7 +158,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
 
-    def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame, k=3) -> np.array: #TODO batch this for memory savings
+    def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
+                           k=3) -> np.array:  # TODO batch this for memory savings
         GD = self.gower_distance(dataframe, reference_dataframe)
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
@@ -263,7 +254,7 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
                  initialize_from_dataset: bool = True,
                  verbose: bool = True):
         self.all_cf_y, self.all_cf_x, self.agg_scores, self.dtai_scores, \
-            self.seed, self.res, self.algorithm,  self.dataset_pop = (None for _ in range(8))
+            self.seed, self.res, self.algorithm, self.dataset_pop = (None for _ in range(8))
         self.problem = problem
         self.pop_size = pop_size
         self.initialize_from_dataset = initialize_from_dataset
@@ -291,6 +282,7 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
                               callback=All_Offspring_Callback(),
                               save_history=False)
             self.algorithm = algorithm
+
     def verbose_log(self, log_message):
         if self.verbose:
             print(log_message)

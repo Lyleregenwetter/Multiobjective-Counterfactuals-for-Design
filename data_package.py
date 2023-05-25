@@ -20,7 +20,17 @@ class DataPackage:
         self.datatypes = datatypes
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 
-    def to_dataframe(self, numpy_array: np.ndarray):
+    def sort_query_y(self):
+        query_constraints = []
+        query_lb = []
+        query_ub = []
+        for key in self.query_y.keys():
+            query_constraints.append(key)
+            query_lb.append(self.query_y[key][0])
+            query_ub.append(self.query_y[key][1])
+        return query_constraints, np.array(query_lb), np.array(query_ub)
+
+    def _to_dataframe(self, numpy_array: np.ndarray):
         index_based_columns = [_ for _ in range(numpy_array.shape[1])]
         return pd.DataFrame(numpy_array, columns=index_based_columns)
 
@@ -44,7 +54,7 @@ class DataPackage:
                                            number_of_features,
                                            type_error_message,
                                            invalid_error_message)
-            return self.to_dataframe(dataset)
+            return self._to_dataframe(dataset)
         return dataset
 
     def _validate_fields(self,
@@ -116,6 +126,6 @@ class DataPackage:
 
     def _query_x_to_dataframe_if_not(self, query_x):
         if isinstance(query_x, np.ndarray):
-            return self.to_dataframe(query_x)
+            return self._to_dataframe(query_x)
         assert isinstance(query_x, pd.DataFrame), "Query x is neither a dataframe nor an ndarray!"
         return query_x

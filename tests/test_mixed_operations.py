@@ -94,13 +94,24 @@ class McdPredictor(metaclass=ABCMeta):
         return g
 
     @staticmethod
+    def get_mixed_constraint_satisfaction(x_full, y, constraint_functions, query_constraints, query_lb, query_ub):
+        n_cf = len(constraint_functions)
+        g = np.zeros((len(x_full), n_cf + len(query_constraints)))
+        for i in range(n_cf):
+            g[:, i] = constraint_functions[i](x_full).flatten()
+        pred_consts = y.loc[:, query_constraints].values
+        indiv_satisfaction = np.logical_and(np.less(pred_consts, query_ub), np.greater(pred_consts, query_lb))
+        g[:, n_cf:] = 1 - indiv_satisfaction
+        return g
+
+    @staticmethod
     def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
 
         real_indices = datatypes.get("r", ())
         x1_real = x1.values[:, real_indices]
         x2_real = x2.values[:, real_indices]
         dists = np.expand_dims(x1_real, 1) - np.expand_dims(x2_real, 0)
-        # TODO: check whether np.divide will broadcasts shapes as we want in all cases
+        # TODO: check whether np.divide will broadcast shapes as desired in all cases
         scaled_dists = np.divide(dists, ranges)
 
         categorical_indices = datatypes.get("c", ())
@@ -155,6 +166,19 @@ class McdPredictorTest(unittest.TestCase):
         data_types = {"r": (0, 1, 3, 5), "c": (2, 4)}
         mixed_gower = McdPredictor.mixed_gower(x1, x2, np.array([5, 1, 10, 20]), data_types)
         self.assertIsNotNone(mixed_gower)
+
+    def test_get_mixed_constraint_satisfaction(self):
+        """Feeding 3 designs into this..."""
+        y = pd.DataFrame.from_records(np.array([[1, 9], [2, 10],
+                                                [3, 12], [3, 8],
+                                                [4, 20], [5, 21]]))
+        satisfaction = McdPredictor.get_mixed_constraint_satisfaction(x_full=np.array([[] for _ in range(6)]),
+                                                                      y=y,
+                                                                      constraint_functions=[],
+                                                                      query_constraints=[0, 1],
+                                                                      query_lb=np.array([2, 10]),
+                                                                      query_ub=np.array([4, 20]))
+        print(satisfaction)
 
     def test_mixed_gower_full(self):
         x1 = np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]])
