@@ -19,7 +19,7 @@ class ClassifierWrapper:
         return result
 
     def evaluate_proba(self, actual: np.ndarray, target_classes_indices: tuple):
-        unwanted_classes = tuple(set([_ for _ in range(actual.shape[1])]) - set(target_classes_indices))
+        unwanted_classes = tuple(set([_ for _ in actual.columns]) - set(target_classes_indices))
         max_desired = np.max(actual[:, target_classes_indices].reshape(actual.shape[0], -1), axis=1)
         max_undesired = np.max(actual[:, unwanted_classes].reshape(actual.shape[0], -1), axis=1)
         # TODO:

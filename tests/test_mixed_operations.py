@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+from classifier_wrapper import ClassifierWrapper
 
 from data_package import DataPackage
 
@@ -101,13 +102,29 @@ class McdPredictor(metaclass=ABCMeta):
                                           y_category_constraints: dict,
                                           y_proba_constraints: dict):
         _, query_lb, query_ub = McdPredictor.sort_regression_constraints(y_regression_constraints)
+        n_proba_constrains = len(McdPredictor.flatten_list_of_tuples(list(y_proba_constraints.keys())))
+
+        wrapper = ClassifierWrapper()
 
         n_cf = len(x_constraint_functions)
-        g = np.zeros((x_full.shape[0], n_cf + len(y_regression_constraints)))
+        n_total_constraints = n_cf + len(y_regression_constraints) + len(y_category_constraints) + n_proba_constrains
+        g = np.zeros((x_full.shape[0], n_total_constraints))
         for i in range(n_cf):
-            g[:, i] = x_constraint_functions[i](x_full).flatten()
+            # TODO: discuss this change with Lyle
+            g[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
+
         pred_consts = y.loc[:, y_regression_constraints.keys()].values
         indiv_satisfaction = np.logical_and(np.less(pred_consts, query_ub), np.greater(pred_consts, query_lb))
+
+        category_consts = y.loc[:, y_category_constraints.keys()].values
+        category_satisfaction = wrapper.evaluate_categorical(category_consts,
+                                                             targets=np.array([[i for i in j] for j in
+                                                                               y_category_constraints.values()]))
+        for proba_key, proba_targets in y_proba_constraints.items():
+            proba_consts = y.loc[:, proba_key]
+            proba_satisfaction = wrapper.evaluate_proba(proba_consts, proba_targets)
+            g[:, proba_key] = 1 - proba_satisfaction
+
         g[:, n_cf:] = 1 - indiv_satisfaction
         return g
 
@@ -121,6 +138,15 @@ class McdPredictor(metaclass=ABCMeta):
             query_lb.append(regression_constraints[key][0])
             query_ub.append(regression_constraints[key][1])
         return query_constraints, np.array(query_lb), np.array(query_ub)
+
+    @staticmethod
+    def flatten_list_of_tuples(list_tuples: list):
+        """flattens indices in proba constrains"""
+        all_elements = []
+        for t in list_tuples:
+            for e in t:
+                all_elements.append(e)
+        return all_elements
 
     @staticmethod
     def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
@@ -186,8 +212,31 @@ class McdPredictorTest(unittest.TestCase):
         self.assertIsNotNone(mixed_gower)
 
     def test_get_mixed_constraint_full(self):
-        x_full = None
-        y = pd.DataFrame.from_records(np.array([]))
+        """
+
+        """
+        x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(3)]))
+        y = pd.DataFrame.from_records(np.array([
+            [1, 200, 3, 500, 0.4, 0.6],
+            [3, 250, 10, 550, 0.7, 0.3],
+            [5, 300, 15, 500, 0.0, 1.0]
+        ]))
+        satisfaction = McdPredictor.get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                      y=y,
+                                                                      x_constraint_functions=[],
+                                                                      y_regression_constraints={
+                                                                          0: (2, 6),
+                                                                          2: (10, 16)
+                                                                      },
+                                                                      y_category_constraints={
+                                                                          1: (200, 300),
+                                                                          3: (550,)},
+                                                                      y_proba_constraints={(4, 5): (5,)})
+        np_test.assert_equal(satisfaction, np.array([
+            [1, 0, 1, 1, 0, 0],
+            [0, 1, 1, 0, 1, 1],
+            [0, 0, 0, 1, 0, 0],
+        ]))
 
     def test_strict_inequality_of_regression_constraints(self):
         """this is the current behavior, but is it desired?"""
