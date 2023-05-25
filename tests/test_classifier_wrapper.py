@@ -23,28 +23,23 @@ class ClassifierWrapperTest(unittest.TestCase):
         evaluation = self.classifier.evaluate_categorical(
             np.array([['A', 'O'], ['B', 'K'], ['A', 'I'], ['C', 'N'], ['A', 'L']]),
             targets=np.array([['A', 'D', 'F'], ['N', 'I']], dtype='object'))
-        self.assertTrue(
-            (np.array([
-                [1, 0],
-                [0, 0],
-                [1, 1],
-                [0, 1],
-                [1, 0],
-            ]) == evaluation).all()
-        )
+        np_test.assert_equal(evaluation, np.array([
+            [1, 0],
+            [0, 0],
+            [1, 1],
+            [0, 1],
+            [1, 0]]))
 
     def test_simple_score(self):
         evaluation = self.classifier.evaluate_categorical(np.array([['A'], ['B'], ['D'], ['C'], ['A']]),
                                                           targets=np.array([['A', 'D', 'F']], dtype='object'))
-        self.assertTrue(
-            (np.array([
-                [1],
-                [0],
-                [1],
-                [0],
-                [1],
-            ]) == evaluation).all()
-        )
+        np_test.assert_equal(evaluation, (np.array([
+            [1],
+            [0],
+            [1],
+            [0],
+            [1],
+        ])))
 
     def test_dimensional_mismatch(self):
         with self.assertRaises(AssertionError) as context:
