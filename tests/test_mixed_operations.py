@@ -149,7 +149,7 @@ class McdPredictorTest(unittest.TestCase):
         """If the features dataset is small, the partition method fails with error (K=2) out of bounds"""
         pass
 
-    def test_mixed_gower(self):
+    def test_high_dimensional_mixed_gower(self):
         x1 = np.array([[i + j for i in range(1, 7)] for j in range(1, 6)])
         x2 = np.array([[i + j for i in range(1, 7)] for j in range(5, 8)])
         x1 = pd.DataFrame.from_records(x1)
@@ -159,6 +159,22 @@ class McdPredictorTest(unittest.TestCase):
 
         zero_gower = McdPredictor.mixed_gower(x1, x1, np.array([5, 1]), {"r": (1, 2), "c": (0,)})
         self.assertEqual(0, zero_gower[0][0])
+
+    def test_accurate_mixed_gower(self):
+        x1 = np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]])
+        x2 = np.array([[15., 0, 20., 500], [16., 1, 25., 505]])
+        x1 = pd.DataFrame.from_records(x1)
+        x2 = pd.DataFrame.from_records(x2)
+        datatypes = {"r": (0, 2), "c": (1, 3)}
+        ranges = np.array([10, 5])
+        gower_distance = McdPredictor.mixed_gower(x1, x2, ranges, datatypes)
+        self.assertEqual((3, 2), gower_distance.shape)
+        self.assertEqual(0, gower_distance[0][0])
+        self.assertEqual(0.775, gower_distance[0][1])
+        self.assertEqual(0.5, gower_distance[1][0])
+        self.assertEqual(0.275, gower_distance[1][1])
+        self.assertEqual(4.125, gower_distance[2][0])
+        self.assertEqual(3.85, gower_distance[2][1])
 
     def test_mixed_gower_same_as_gower_when_all_real(self):
         package = self.build_package()
