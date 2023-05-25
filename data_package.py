@@ -10,8 +10,8 @@ class DataPackage:
                  features_to_vary: list,
                  query_y: dict,
                  datatypes=None):
-        self.features_dataset = self._features_to_dataframe_if_ndarray(features_dataset, features_to_vary)
-        self.predictions_dataset = self._predictions_to_dataframe_if_ndarray(predictions_dataset, query_y.keys())
+        self.features_dataset = self._attempt_features_to_dataframe(features_dataset, features_to_vary)
+        self.predictions_dataset = self._attempt_predictions_to_dataframe(predictions_dataset, query_y.keys())
         self.features_to_vary = features_to_vary
         self.query_x = self._query_x_to_dataframe_if_not(query_x)
         self.query_y = query_y
@@ -34,24 +34,23 @@ class DataPackage:
         index_based_columns = [_ for _ in range(numpy_array.shape[1])]
         return pd.DataFrame(numpy_array, columns=index_based_columns)
 
-    def _features_to_dataframe_if_ndarray(self, features_dataset, features_to_vary):
-        return self._to_dataframe_if_ndarray(
+    def _attempt_features_to_dataframe(self, features_dataset, features_to_vary):
+        return self._attempt_to_dataframe(
             features_dataset, features_to_vary,
             "The list of features to vary must be a list of indices when the features dataset is a numpy array",
             "Invalid index provided in list of features to vary")
 
-    def _predictions_to_dataframe_if_ndarray(self, predictions_dataset, query_y):
-        return self._to_dataframe_if_ndarray(
+    def _attempt_predictions_to_dataframe(self, predictions_dataset, query_y):
+        return self._attempt_to_dataframe(
             predictions_dataset, query_y,
             "Query y must contain indices when the predictions dataset is a numpy array",
             "Invalid index provided in query y"
         )
 
-    def _to_dataframe_if_ndarray(self, dataset, provided_features, type_error_message, invalid_error_message):
+    def _attempt_to_dataframe(self, dataset, provided_features, type_error_message, invalid_error_message):
         if isinstance(dataset, np.ndarray):
-            number_of_features = dataset.shape[1]
             self._validate_indices_to_vary(provided_features,
-                                           number_of_features,
+                                           dataset.shape[1],
                                            type_error_message,
                                            invalid_error_message)
             return self._to_dataframe(dataset)

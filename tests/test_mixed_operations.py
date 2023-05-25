@@ -94,15 +94,16 @@ class McdPredictor(metaclass=ABCMeta):
         return g
 
     @staticmethod
-    def get_mixed_constraint_satisfaction(x_full,
-                                          y,
-                                          x_constraint_functions,
+    def get_mixed_constraint_satisfaction(x_full: pd.DataFrame,
+                                          y: pd.DataFrame,
+                                          x_constraint_functions: list,
                                           y_regression_constraints: dict,
-                                          y_classification_constraints: dict):
+                                          y_category_constraints: dict,
+                                          y_proba_constraints: dict):
         _, query_lb, query_ub = McdPredictor.sort_regression_constraints(y_regression_constraints)
 
         n_cf = len(x_constraint_functions)
-        g = np.zeros((len(x_full), n_cf + len(y_regression_constraints)))
+        g = np.zeros((x_full.shape[0], n_cf + len(y_regression_constraints)))
         for i in range(n_cf):
             g[:, i] = x_constraint_functions[i](x_full).flatten()
         pred_consts = y.loc[:, y_regression_constraints.keys()].values
@@ -120,7 +121,6 @@ class McdPredictor(metaclass=ABCMeta):
             query_lb.append(regression_constraints[key][0])
             query_ub.append(regression_constraints[key][1])
         return query_constraints, np.array(query_lb), np.array(query_ub)
-
 
     @staticmethod
     def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
@@ -185,34 +185,36 @@ class McdPredictorTest(unittest.TestCase):
         mixed_gower = McdPredictor.mixed_gower(x1, x2, np.array([5, 1, 10, 20]), data_types)
         self.assertIsNotNone(mixed_gower)
 
+    def test_get_mixed_constraint_full(self):
+        x_full = None
+        y = pd.DataFrame.from_records(np.array([]))
+
+    def test_strict_inequality_of_regression_constraints(self):
+        """this is the current behavior, but is it desired?"""
+        self.test_get_mixed_constraint_satisfaction()
+
     def test_get_mixed_constraint_satisfaction(self):
         """This does not test the use of constraint functions - hence the dummy x_full"""
         y = pd.DataFrame.from_records(np.array([[1, 9], [2, 10],
                                                 [3, 12], [3, 8],
                                                 [4, 20], [5, 21]]))
-        satisfaction = McdPredictor.get_mixed_constraint_satisfaction(x_full=np.array([[] for _ in range(6)]),
+        x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
+        satisfaction = McdPredictor.get_mixed_constraint_satisfaction(x_full=x_full,
                                                                       y=y,
                                                                       x_constraint_functions=[],
                                                                       y_regression_constraints={0: (2, 4),
                                                                                                 1: (10, 20)},
-                                                                      y_classification_constraints={})
+                                                                      y_category_constraints={},
+                                                                      y_proba_constraints={})
         np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def test_mixed_gower_full(self):
-        x1 = np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]])
-        x2 = np.array([[15., 0, 20., 500], [16., 1, 25., 505]])
-        x1 = pd.DataFrame.from_records(x1)
-        x2 = pd.DataFrame.from_records(x2)
+        x1 = pd.DataFrame.from_records(np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]]))
+        x2 = pd.DataFrame.from_records(np.array([[15., 0, 20., 500], [16., 1, 25., 5000]]))
         datatypes = {"r": (0, 2), "c": (1, 3)}
         ranges = np.array([10, 5])
         gower_distance = McdPredictor.mixed_gower(x1, x2, ranges, datatypes)
-        self.assertEqual((3, 2), gower_distance.shape)
-        self.assertEqual(0, gower_distance[0][0])
-        self.assertEqual(0.775, gower_distance[0][1])
-        self.assertEqual(0.5, gower_distance[1][0])
-        self.assertEqual(0.275, gower_distance[1][1])
-        self.assertEqual(4.125, gower_distance[2][0])
-        self.assertEqual(3.85, gower_distance[2][1])
+        np_test.assert_equal(gower_distance, np.array([[0, 0.775], [0.5, 0.275], [4.125, 3.85]]))
 
     def test_mixed_gower_same_as_gower_when_all_real(self):
         package = self.build_package()
