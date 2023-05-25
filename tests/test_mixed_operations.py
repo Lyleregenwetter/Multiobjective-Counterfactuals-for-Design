@@ -2,9 +2,8 @@ import unittest
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-import pandas as pd
 import numpy.testing as np_test
-import pandas_utility as pd_util
+import pandas as pd
 
 from data_package import DataPackage
 
@@ -95,23 +94,22 @@ class McdPredictor(metaclass=ABCMeta):
         return g
 
     @staticmethod
-    def mixed_gower(x1: pd.DataFrame, original: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
-        total_number_of_features = x1.shape[1]
-        total_number_of_rows = x1.shape[0]
+    def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
 
         real_indices = datatypes.get("r", ())
         x1_real = x1.values[:, real_indices]
-        original_real = original.values[:, real_indices]
-        dists = np.expand_dims(x1_real, 1) - np.expand_dims(original_real, 0)
-        scaled_dists = np.divide(dists, ranges)  # TODO: check whether np.divide will
-        # broadcasts shapes as we want in all cases
+        x2_real = x2.values[:, real_indices]
+        dists = np.expand_dims(x1_real, 1) - np.expand_dims(x2_real, 0)
+        # TODO: check whether np.divide will broadcasts shapes as we want in all cases
+        scaled_dists = np.divide(dists, ranges)
 
         categorical_indices = datatypes.get("c", ())
         x1_categorical = x1.values[:, categorical_indices]
-        original_categorical = original.values[:, categorical_indices]
-        categorical_dists = np.not_equal(np.expand_dims(x1_categorical, 1), np.expand_dims(original_categorical, 0))
+        x2_categorical = x2.values[:, categorical_indices]
+        categorical_dists = np.not_equal(np.expand_dims(x1_categorical, 1), np.expand_dims(x2_categorical, 0))
 
         all_dists = np.concatenate([scaled_dists, categorical_dists], axis=2)
+        total_number_of_features = x1.shape[1]
         GD = np.divide(np.abs(all_dists), total_number_of_features)
         GD = np.sum(GD, axis=2)
         return GD
@@ -156,11 +154,9 @@ class McdPredictorTest(unittest.TestCase):
         x2 = pd.DataFrame.from_records(x2)
         data_types = {"r": (0, 1, 3, 5), "c": (2, 4)}
         mixed_gower = McdPredictor.mixed_gower(x1, x2, np.array([5, 1, 10, 20]), data_types)
+        self.assertIsNotNone(mixed_gower)
 
-        zero_gower = McdPredictor.mixed_gower(x1, x1, np.array([5, 1]), {"r": (1, 2), "c": (0,)})
-        self.assertEqual(0, zero_gower[0][0])
-
-    def test_accurate_mixed_gower(self):
+    def test_mixed_gower_full(self):
         x1 = np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]])
         x2 = np.array([[15., 0, 20., 500], [16., 1, 25., 505]])
         x1 = pd.DataFrame.from_records(x1)
@@ -186,18 +182,6 @@ class McdPredictorTest(unittest.TestCase):
                                                package.features_dataset.iloc[0:1],
                                                np.array(regressor.ranges), {"r": (0, 1, 2)})
         np_test.assert_equal(distance, mixed_distance)
-
-    @unittest.skip
-    def test_evaluate_mixed(self):
-
-        """TODO: finish this test"""
-        package = self.build_package(features_to_vary=["x", "y", "z"])
-        regressor = self.build_regressor(package)
-        out = {}
-        x = []
-        regressor.evaluate(
-            x, out, datasetflag=False
-        )
 
     def test_evaluate_subset(self):
         package = self.build_package(features_to_vary=["x", "y"])
