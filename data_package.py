@@ -10,14 +10,13 @@ class DataPackage:
                  features_to_vary: list,
                  query_y: dict,
                  datatypes=None):
-        features_dataset = self._features_to_dataframe_if_not(features_dataset, features_to_vary)
-        predictions_dataset = self._predictions_to_dataframe_if_not(predictions_dataset, query_y.keys())
-        self.features_dataset = features_dataset
-        self.predictions_dataset = predictions_dataset
-        self.query_x = self._query_x_to_dataframe_if_not(query_x)
-        self._validate_parameters(features_dataset, features_to_vary, self.query_x, predictions_dataset, query_y)
+        self.features_dataset = self._features_to_dataframe_if_ndarray(features_dataset, features_to_vary)
+        self.predictions_dataset = self._predictions_to_dataframe_if_ndarray(predictions_dataset, query_y.keys())
         self.features_to_vary = features_to_vary
+        self.query_x = self._query_x_to_dataframe_if_not(query_x)
         self.query_y = query_y
+        self._validate_fields(self.features_dataset, self.features_to_vary,
+                              self.query_x, self.predictions_dataset, query_y)
         self.datatypes = datatypes
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 
@@ -25,20 +24,20 @@ class DataPackage:
         index_based_columns = [_ for _ in range(numpy_array.shape[1])]
         return pd.DataFrame(numpy_array, columns=index_based_columns)
 
-    def _features_to_dataframe_if_not(self, optional_nd_array, features_to_vary):
-        return self._to_dataframe_if_not(
-            optional_nd_array, features_to_vary,
+    def _features_to_dataframe_if_ndarray(self, features_dataset, features_to_vary):
+        return self._to_dataframe_if_ndarray(
+            features_dataset, features_to_vary,
             "The list of features to vary must be a list of indices when the features dataset is a numpy array",
             "Invalid index provided in list of features to vary")
 
-    def _predictions_to_dataframe_if_not(self, predictions_dataset, query_y):
-        return self._to_dataframe_if_not(
+    def _predictions_to_dataframe_if_ndarray(self, predictions_dataset, query_y):
+        return self._to_dataframe_if_ndarray(
             predictions_dataset, query_y,
             "Query y must contain indices when the predictions dataset is a numpy array",
             "Invalid index provided in query y"
         )
 
-    def _to_dataframe_if_not(self, dataset, provided_features, type_error_message, invalid_error_message):
+    def _to_dataframe_if_ndarray(self, dataset, provided_features, type_error_message, invalid_error_message):
         if isinstance(dataset, np.ndarray):
             number_of_features = dataset.shape[1]
             self._validate_indices_to_vary(provided_features,
@@ -48,12 +47,12 @@ class DataPackage:
             return self.to_dataframe(dataset)
         return dataset
 
-    def _validate_parameters(self,
-                             features_dataset,
-                             features_to_vary,
-                             query_x: pd.DataFrame,
-                             predictions_dataset,
-                             query_y):
+    def _validate_fields(self,
+                         features_dataset,
+                         features_to_vary,
+                         query_x: pd.DataFrame,
+                         predictions_dataset,
+                         query_y):
         self._validate_datasets(features_dataset, predictions_dataset)
         self._validate_features_to_vary(features_dataset, features_to_vary)
         self._validate_query_x(features_dataset, query_x)
