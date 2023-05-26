@@ -53,7 +53,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self.bonus_objs = bonus_objs
         self.query_constraints, self.query_lb, self.query_ub = self.data_package.sort_query_y()
         self.constraint_functions = constraint_functions
-        self.datatypes = self.infer_if_necessary(datatypes, self.data_package.query_x)
+        self.datatypes = datatypes
         variables = {}
         for i in range(len(self.data_package.features_to_vary)):
             variables[self.data_package.features_to_vary[i]] = datatypes[i]

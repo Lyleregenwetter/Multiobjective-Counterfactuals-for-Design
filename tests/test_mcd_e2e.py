@@ -7,6 +7,7 @@ import pandas as pd
 from pymoo.core.variable import Real
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
+import numpy.testing as np_test
 
 import multi_objective_cfe_generator as MOCG
 from alt_multi_label_predictor import MultilabelPredictor
@@ -37,6 +38,8 @@ class McdEndToEndTest(unittest.TestCase):
         self.assertGreater(r2_score(y, predictions), 0.72)
 
     def test_framed_example(self):
+        # TODO: toy dataset and dummy model
+        """Test should use some toy dataset and a dummy model - both for speed and easy reproducibility"""
         x, y = self.x, self.y
         lbs = np.quantile(x.values, 0.01, axis=0)
         ubs = np.quantile(x.values, 0.99, axis=0)
@@ -49,7 +52,10 @@ class McdEndToEndTest(unittest.TestCase):
         cf_set.optimize(5)
         num_samples = 10
         cfs = cf_set.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
-        print(cfs)
+        results = self.call_predictor(cfs).values
+        all_conditions_satisfaction = np.logical_and(np.greater(results, np.array([2])),
+                                                     np.less(results, np.array([4])))
+        np_test.assert_equal(all_conditions_satisfaction, 1)
 
     def call_predictor(self, x):
 
