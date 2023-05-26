@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
-from classifier_wrapper import ClassifierWrapper
+from classification_evaluator import ClassificationEvaluator
 
 from data_package import DataPackage
 
@@ -104,7 +104,7 @@ class McdPredictor(metaclass=ABCMeta):
         _, query_lb, query_ub = McdPredictor.sort_regression_constraints(y_regression_constraints)
         n_proba_constrains = len(McdPredictor.flatten_list_of_tuples(list(y_proba_constraints.keys())))
 
-        wrapper = ClassifierWrapper()
+        wrapper = ClassificationEvaluator()
 
         n_cf = len(x_constraint_functions)
         n_total_constraints = n_cf + len(y_regression_constraints) + len(y_category_constraints) + n_proba_constrains

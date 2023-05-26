@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-class ClassifierWrapper:
+class ClassificationEvaluator:
     def evaluate_categorical(self, actual: pd.DataFrame, targets: np.ndarray):
         """Takes an n × m actual_performances array and a targets array consisting of m arrays.
         Checks that for each row in n, the value of each column in m is in the corresponding targets array.
@@ -26,5 +26,4 @@ class ClassifierWrapper:
         unwanted_classes = tuple(set([_ for _ in actual.columns]) - set(target_classes_indices))
         max_desired = np.max(actual.loc[:, target_classes_indices], axis=1)
         max_undesired = np.max(actual.loc[:, unwanted_classes], axis=1)
-        # TODO:
         return (max_desired - max_undesired).values.reshape(actual.shape[0], 1)

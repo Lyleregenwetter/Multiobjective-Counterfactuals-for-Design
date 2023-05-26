@@ -4,12 +4,12 @@ import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 
-from classifier_wrapper import ClassifierWrapper
+from classification_evaluator import ClassificationEvaluator
 
 
 class ClassifierWrapperTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.classifier = ClassifierWrapper()
+        self.classifier = ClassificationEvaluator()
 
     def test_evaluate_simple_percentages(self):
         array = np.array([[0.4, 0.3, 0.3], [0.25, 0.25, 0.5], [0.2, 0.8, 0]])
