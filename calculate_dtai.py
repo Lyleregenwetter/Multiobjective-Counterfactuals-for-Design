@@ -31,7 +31,7 @@ def calculate_scores(alpha_values, beta_values, ratios):
     greater_than_one = np.greater(ratios, 1)
     greater_than_one = greater_than_one.astype("float32")
     scores = np.multiply(case_greater_or_equal_to_one, greater_than_one) \
-        + np.multiply(case_less_or_equal_to_one, (1 - greater_than_one))
+             + np.multiply(case_less_or_equal_to_one, (1 - greater_than_one))
     return scores
 
 
@@ -41,12 +41,10 @@ def ensure_greater_than_smallest(actual_performance, tolerance):
 
 def calculate_ratios(direction, targets, y):
     if direction == "maximize":
-        x = np.divide(y, targets)
-    elif direction == "minimize":
-        x = np.divide(targets, y)
-    else:
-        raise Exception("Unknown optimization direction, expected maximize or minimize")
-    return x
+        return np.divide(y, targets)
+    if direction == "minimize":
+        return np.divide(targets, y)
+    raise Exception("Unknown optimization direction, expected maximize or minimize")
 
 
 def convert_to_float_arrays(alpha_values, beta_values, y_eval):
@@ -54,5 +52,3 @@ def convert_to_float_arrays(alpha_values, beta_values, y_eval):
     beta_values = beta_values.astype("float32")
     y_eval = y_eval.astype("float32")
     return alpha_values, beta_values, y_eval
-
-
