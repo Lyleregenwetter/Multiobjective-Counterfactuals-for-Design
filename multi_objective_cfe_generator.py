@@ -84,11 +84,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         all_scores = np.zeros((len(x), self.number_of_objectives))
         all_scores[:, :-3] = prediction.loc[:, self.bonus_objs]
         # n + 1 is gower distance
-        data_types_dict = {
-            "r": tuple(self.get_features_by_type([Real, Integer])),
-            "c": tuple(self.get_features_by_type([Choice, Binary]))
-        }
-        all_scores[:, -3] = self.mixed_gower(x, self.data_package.query_x, self.ranges.values, data_types_dict).T
+        all_scores[:, -3] = self.mixed_gower(x, self.data_package.query_x, self.ranges.values,
+                                             self._build_gower_types()).T
         # n + 2 is changed features
         all_scores[:, -2] = self.changed_features(x, self.data_package.query_x)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
@@ -100,6 +97,12 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                                                                    self.data_package.query_y.items()},
                                                                   {},
                                                                   {})
+
+    def _build_gower_types(self):
+        return {
+            "r": tuple(self.get_features_by_type([Real, Integer])),
+            "c": tuple(self.get_features_by_type([Choice, Binary]))
+        }
 
     def get_constraint_satisfaction(self, x_full, y):
         n_cf = len(self.constraint_functions)
@@ -175,6 +178,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     @staticmethod
     def _append_category_satisfaction(result, y, y_category_constraints):
+        # TODO: refactor
         category_satisfaction = MultiObjectiveCounterfactualsGenerator.\
             _evaluate_categorical_satisfaction(y, y_category_constraints)
         indices = [list(y.columns).index(key) for key in y_category_constraints]
@@ -182,18 +186,20 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     @staticmethod
     def _append_regression_satisfaction(result, y, y_regression_constraints):
+        # TODO: refactor
         regression_satisfaction = MultiObjectiveCounterfactualsGenerator \
             ._evaluate_regression_satisfaction(y, y_regression_constraints)
         indices = [list(y.columns).index(key) for key in y_regression_constraints.keys()]
         result[:, indices] = 1 - regression_satisfaction
 
     @staticmethod
-    def _append_proba_satisfaction(g, y, y_proba_constraints):
+    def _append_proba_satisfaction(result, y, y_proba_constraints):
         c_evaluator = ClassificationEvaluator()
         for proba_key, proba_targets in y_proba_constraints.items():
             proba_consts = y.loc[:, proba_key]
             proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
-            g[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
+            # TODO: proba_key to indices
+            result[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
 
     @staticmethod
     def _append_x_constraint_satisfaction(g, x_full, x_constraint_functions, n_total_constraints):
@@ -248,7 +254,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
                            k=3) -> np.array:  # TODO batch this for memory savings
-        GD = self.gower_distance(dataframe, reference_dataframe)
+        GD = self.mixed_gower(dataframe, reference_dataframe, self.ranges.values, self._build_gower_types())
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
 
