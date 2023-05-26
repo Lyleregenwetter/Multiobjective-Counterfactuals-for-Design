@@ -165,15 +165,6 @@ class McdPredictor(metaclass=ABCMeta):
         return query_constraints, np.array(query_lb), np.array(query_ub)
 
     @staticmethod
-    def flatten_list_of_tuples(list_tuples: list):
-        """flattens indices in proba constrains"""
-        all_elements = []
-        for t in list_tuples:
-            for e in t:
-                all_elements.append(e)
-        return all_elements
-
-    @staticmethod
     def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
 
         real_indices = datatypes.get("r", ())
