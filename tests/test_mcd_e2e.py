@@ -4,14 +4,14 @@ import unittest
 
 import numpy as np
 import pandas as pd
-
-from data_package import DataPackage
-from pymoo.core.variable import Real, Integer, Binary, Choice
-import multi_objective_cfe_generator as MOCG
-from sklearn.model_selection import train_test_split
-from alt_multi_label_predictor import MultilabelPredictor
-from load_data import load_scaled_framed_dataset
+from pymoo.core.variable import Real
 from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split
+
+import multi_objective_cfe_generator as MOCG
+from alt_multi_label_predictor import MultilabelPredictor
+from data_package import DataPackage
+from load_data import load_scaled_framed_dataset
 
 DEFAULT_MODEL_PATH = "/home/yazan/Repositories/Personal/BikeCAD-integration/service_resources/generated/models" \
                      "/Trained Models/AutogluonModels/ag-20230311_154304"
@@ -26,7 +26,8 @@ class McdEndToEndTest(unittest.TestCase):
             self.predictor = MultilabelPredictor.load(self.MODEL_PATH)
         except Exception as e:
             print(e)
-            raise EnvironmentError("Could not resolve model path. Override the MODEL_FULL_PATH environment variable.")
+            raise EnvironmentError("""Could not load model. 
+            You might need to override the MODEL_FULL_PATH environment variable""")
         self.x, self.y = self._load_data()
 
     def _test_model_loaded(self):
