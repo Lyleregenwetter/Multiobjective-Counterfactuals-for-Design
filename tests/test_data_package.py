@@ -99,7 +99,7 @@ class DataPackageTest(unittest.TestCase):
             "Dimensional mismatch between provided datasets")
 
     def assert_raises_with_message(self, faulty_call: callable, expected_message: str):
-        with self.assertRaises(AssertionError) as context:
+        with self.assertRaises(ValueError) as context:
             faulty_call()
         self.assertEqual(expected_message, context.exception.args[0])
 
