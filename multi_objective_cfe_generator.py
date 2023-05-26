@@ -81,7 +81,12 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         all_scores = np.zeros((len(x), self.number_of_objectives))
         all_scores[:, :-3] = prediction.loc[:, self.bonus_objs]
         # n + 1 is gower distance
-        all_scores[:, -3] = self.gower_distance(x, self.data_package.query_x).T
+        data_types_dict = {
+            "r": tuple(self.get_features_by_type([Real, Integer])),
+            "c": tuple(self.get_features_by_type([Choice, Binary]))
+        }
+        all_scores[:, -3] = self.mixed_gower(x, self.data_package.query_x,
+                                             self.ranges.values, data_types_dict).T
         # n + 2 is changed features
         all_scores[:, -2] = self.changed_features(x, self.data_package.query_x)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
@@ -163,6 +168,27 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         GD = self.gower_distance(dataframe, reference_dataframe)
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
+
+    @staticmethod
+    def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
+
+        real_indices = datatypes.get("r", ())
+        x1_real = x1.values[:, real_indices]
+        x2_real = x2.values[:, real_indices]
+        dists = np.expand_dims(x1_real, 1) - np.expand_dims(x2_real, 0)
+        # TODO: check whether np.divide will broadcast shapes as desired in all cases
+        scaled_dists = np.divide(dists, ranges)
+
+        categorical_indices = datatypes.get("c", ())
+        x1_categorical = x1.values[:, categorical_indices]
+        x2_categorical = x2.values[:, categorical_indices]
+        categorical_dists = np.not_equal(np.expand_dims(x1_categorical, 1), np.expand_dims(x2_categorical, 0))
+
+        all_dists = np.concatenate([scaled_dists, categorical_dists], axis=2)
+        total_number_of_features = x1.shape[1]
+        GD = np.divide(np.abs(all_dists), total_number_of_features)
+        GD = np.sum(GD, axis=2)
+        return GD
 
     def gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
         ranges = self.ranges.values

@@ -5,6 +5,7 @@ import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 from classification_evaluator import ClassificationEvaluator
+from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
 
 from data_package import DataPackage
 import itertools
@@ -73,12 +74,12 @@ class McdPredictor(metaclass=ABCMeta):
         all_scores = np.zeros((len(x), len(self.bonus_objs) + 3))
         all_scores[:, :-3] = prediction.loc[:, self.bonus_objs]
         # n + 1 is gower distance
-        all_scores[:, -3] = self.mixed_gower(x_full,
-                                             self.data_package.query_x,
-                                             np.array(self.ranges),
-                                             {"r": tuple(
-                                                 _ for _ in range(len(self.data_package.features_dataset.columns)))}
-                                             ).T
+        all_scores[:, -3] = MOCFG.mixed_gower(x_full,
+                                              self.data_package.query_x,
+                                              np.array(self.ranges),
+                                              {"r": tuple(
+                                                  _ for _ in range(len(self.data_package.features_dataset.columns)))}
+                                              ).T
         # n + 2 is changed features
         all_scores[:, -2] = self.changed_features(x_full, self.data_package.query_x)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
@@ -164,27 +165,6 @@ class McdPredictor(metaclass=ABCMeta):
             query_ub.append(regression_constraints[key][1])
         return query_constraints, np.array(query_lb), np.array(query_ub)
 
-    @staticmethod
-    def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
-
-        real_indices = datatypes.get("r", ())
-        x1_real = x1.values[:, real_indices]
-        x2_real = x2.values[:, real_indices]
-        dists = np.expand_dims(x1_real, 1) - np.expand_dims(x2_real, 0)
-        # TODO: check whether np.divide will broadcast shapes as desired in all cases
-        scaled_dists = np.divide(dists, ranges)
-
-        categorical_indices = datatypes.get("c", ())
-        x1_categorical = x1.values[:, categorical_indices]
-        x2_categorical = x2.values[:, categorical_indices]
-        categorical_dists = np.not_equal(np.expand_dims(x1_categorical, 1), np.expand_dims(x2_categorical, 0))
-
-        all_dists = np.concatenate([scaled_dists, categorical_dists], axis=2)
-        total_number_of_features = x1.shape[1]
-        GD = np.divide(np.abs(all_dists), total_number_of_features)
-        GD = np.sum(GD, axis=2)
-        return GD
-
     def changed_features(self, designs_dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
         changes = designs_dataframe.apply(
             lambda row: np.count_nonzero(row.values - reference_dataframe.iloc[0].values), axis=1)
@@ -224,7 +204,7 @@ class McdPredictorTest(unittest.TestCase):
         x1 = pd.DataFrame.from_records(x1)
         x2 = pd.DataFrame.from_records(x2)
         data_types = {"r": (0, 1, 3, 5), "c": (2, 4)}
-        mixed_gower = McdPredictor.mixed_gower(x1, x2, np.array([5, 1, 10, 20]), data_types)
+        mixed_gower = MOCFG.mixed_gower(x1, x2, np.array([5, 1, 10, 20]), data_types)
         self.assertIsNotNone(mixed_gower)
 
     def test_get_mixed_constraint_full(self):
@@ -271,14 +251,14 @@ class McdPredictorTest(unittest.TestCase):
                                                                                                 1: (10, 20)},
                                                                       y_category_constraints={},
                                                                       y_proba_constraints={})
-        np_test.assert_array_almost_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
+        np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def test_mixed_gower_full(self):
         x1 = pd.DataFrame.from_records(np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]]))
         x2 = pd.DataFrame.from_records(np.array([[15., 0, 20., 500], [16., 1, 25., 5000]]))
         datatypes = {"r": (0, 2), "c": (1, 3)}
         ranges = np.array([10, 5])
-        gower_distance = McdPredictor.mixed_gower(x1, x2, ranges, datatypes)
+        gower_distance = MOCFG.mixed_gower(x1, x2, ranges, datatypes)
         np_test.assert_equal(gower_distance, np.array([[0, 0.775], [0.5, 0.275], [4.125, 3.85]]))
 
     def test_mixed_gower_same_as_gower_when_all_real(self):
@@ -287,9 +267,9 @@ class McdPredictorTest(unittest.TestCase):
         features = pd.concat([package.features_dataset, pd.DataFrame(np.array([[1, 2, 3]]), columns=['x', 'y', 'z'])],
                              axis=0)
         distance = regressor.gower_distance(features, package.features_dataset.iloc[0], regressor.ranges.values)
-        mixed_distance = regressor.mixed_gower(features,
-                                               package.features_dataset.iloc[0:1],
-                                               np.array(regressor.ranges), {"r": (0, 1, 2)})
+        mixed_distance = MOCFG.mixed_gower(features,
+                                           package.features_dataset.iloc[0:1],
+                                           np.array(regressor.ranges), {"r": (0, 1, 2)})
         np_test.assert_equal(distance, mixed_distance)
 
     def test_evaluate_subset(self):
