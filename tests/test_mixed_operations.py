@@ -4,11 +4,9 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
-from classification_evaluator import ClassificationEvaluator
-from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
 
 from data_package import DataPackage
-import itertools
+from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
 
 
 class McdPredictor(metaclass=ABCMeta):
@@ -96,75 +94,6 @@ class McdPredictor(metaclass=ABCMeta):
         g[:, n_cf:] = 1 - indiv_satisfaction
         return g
 
-    @staticmethod
-    def get_mixed_constraint_satisfaction(x_full: pd.DataFrame,
-                                          y: pd.DataFrame,
-                                          x_constraint_functions: list,
-                                          y_regression_constraints: dict,
-                                          y_category_constraints: dict,
-                                          y_proba_constraints: dict):
-        n_proba_constrains = len(list(itertools.chain.from_iterable(y_proba_constraints.keys())))
-
-        n_cf = len(x_constraint_functions)
-        n_total_constraints = n_cf + len(y_regression_constraints) + len(y_category_constraints) + n_proba_constrains
-
-        result = np.zeros((x_full.shape[0], n_total_constraints))
-
-        McdPredictor._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, n_total_constraints)
-        McdPredictor._append_proba_satisfaction(result, y, y_proba_constraints)
-        McdPredictor._append_regression_satisfaction(result, y, y_regression_constraints)
-        McdPredictor._append_category_satisfaction(result, y, y_category_constraints)
-
-        return result
-
-    @staticmethod
-    def _append_category_satisfaction(result, y, y_category_constraints):
-        category_satisfaction = McdPredictor._evaluate_categorical_satisfaction(y, y_category_constraints)
-        result[:, list(y_category_constraints.keys())] = 1 - category_satisfaction
-
-    @staticmethod
-    def _append_regression_satisfaction(result, y, y_regression_constraints):
-        regression_satisfaction = McdPredictor._evaluate_regression_satisfaction(y, y_regression_constraints)
-        result[:, list(y_regression_constraints.keys())] = 1 - regression_satisfaction
-
-    @staticmethod
-    def _append_proba_satisfaction(g, y, y_proba_constraints):
-        c_evaluator = ClassificationEvaluator()
-        for proba_key, proba_targets in y_proba_constraints.items():
-            proba_consts = y.loc[:, proba_key]
-            proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
-            g[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
-
-    @staticmethod
-    def _append_x_constraint_satisfaction(g, x_full, x_constraint_functions, n_total_constraints):
-        for i in range(len(x_constraint_functions)):
-            # TODO: discuss this change with Lyle
-            g[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
-
-    @staticmethod
-    def _evaluate_categorical_satisfaction(y: pd.DataFrame, y_category_constraints: dict):
-        actual = y.loc[:, y_category_constraints.keys()]
-        targets = np.array([[i for i in j] for j in y_category_constraints.values()])
-        return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
-
-    @staticmethod
-    def _evaluate_regression_satisfaction(y: pd.DataFrame, y_regression_constraints: dict):
-        _, query_lb, query_ub = McdPredictor.sort_regression_constraints(y_regression_constraints)
-        actual = y.loc[:, y_regression_constraints.keys()].values
-        satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))
-        return satisfaction
-
-    @staticmethod
-    def sort_regression_constraints(regression_constraints: dict):
-        query_constraints = []
-        query_lb = []
-        query_ub = []
-        for key in regression_constraints.keys():
-            query_constraints.append(key)
-            query_lb.append(regression_constraints[key][0])
-            query_ub.append(regression_constraints[key][1])
-        return query_constraints, np.array(query_lb), np.array(query_ub)
-
     def changed_features(self, designs_dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
         changes = designs_dataframe.apply(
             lambda row: np.count_nonzero(row.values - reference_dataframe.iloc[0].values), axis=1)
@@ -217,17 +146,17 @@ class McdPredictorTest(unittest.TestCase):
             [3, 250, 10, 550, 0.7, 0.3],
             [5, 300, 15, 500, 0.0, 1.0]
         ]))
-        satisfaction = McdPredictor.get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                      y=y,
-                                                                      x_constraint_functions=[],
-                                                                      y_regression_constraints={
-                                                                          0: (2, 6),
-                                                                          2: (10, 16)
-                                                                      },
-                                                                      y_category_constraints={
-                                                                          1: (200, 300),
-                                                                          3: (550,)},
-                                                                      y_proba_constraints={(4, 5): (5,)})
+        satisfaction = MOCFG.get_mixed_constraint_satisfaction(x_full=x_full,
+                                                               y=y,
+                                                               x_constraint_functions=[],
+                                                               y_regression_constraints={
+                                                                   0: (2, 6),
+                                                                   2: (10, 16)
+                                                               },
+                                                               y_category_constraints={
+                                                                   1: (200, 300),
+                                                                   3: (550,)},
+                                                               y_proba_constraints={(4, 5): (5,)})
         np_test.assert_array_almost_equal(satisfaction, np.array([
             [1, 0, 1, 1, 0, 0],
             [0, 1, 1, 0, 1, 1],
@@ -244,13 +173,13 @@ class McdPredictorTest(unittest.TestCase):
                                                 [3, 12], [3, 8],
                                                 [4, 20], [5, 21]]))
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
-        satisfaction = McdPredictor.get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                      y=y,
-                                                                      x_constraint_functions=[],
-                                                                      y_regression_constraints={0: (2, 4),
-                                                                                                1: (10, 20)},
-                                                                      y_category_constraints={},
-                                                                      y_proba_constraints={})
+        satisfaction = MOCFG.get_mixed_constraint_satisfaction(x_full=x_full,
+                                                               y=y,
+                                                               x_constraint_functions=[],
+                                                               y_regression_constraints={0: (2, 4),
+                                                                                         1: (10, 20)},
+                                                               y_category_constraints={},
+                                                               y_proba_constraints={})
         np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def test_mixed_gower_full(self):

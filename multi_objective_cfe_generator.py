@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import pandas as pd
 import os
@@ -15,6 +17,7 @@ from pymoo.core.population import Population
 from pymoo.core.evaluator import Evaluator
 import calculate_dtai as calculate_dtai
 import DPPsampling as DPPsampling
+from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
 
 # from main.evaluation.Predictor import Predictor
@@ -85,13 +88,18 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             "r": tuple(self.get_features_by_type([Real, Integer])),
             "c": tuple(self.get_features_by_type([Choice, Binary]))
         }
-        all_scores[:, -3] = self.mixed_gower(x, self.data_package.query_x,
-                                             self.ranges.values, data_types_dict).T
+        all_scores[:, -3] = self.mixed_gower(x, self.data_package.query_x, self.ranges.values, data_types_dict).T
         # n + 2 is changed features
         all_scores[:, -2] = self.changed_features(x, self.data_package.query_x)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
         all_scores[:, -1] = self.avg_gower_distance(x, self.data_package.features_dataset)
-        return all_scores, self.get_constraint_satisfaction(x_full, prediction)
+        return all_scores, self.get_mixed_constraint_satisfaction(x_full,
+                                                                  prediction,
+                                                                  self.constraint_functions,
+                                                                  {key: value for key, value in
+                                                                   self.data_package.query_y.items()},
+                                                                  {},
+                                                                  {})
 
     def get_constraint_satisfaction(self, x_full, y):
         n_cf = len(self.constraint_functions)
@@ -142,6 +150,81 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def build_ranges(features_dataset: pd.DataFrame, features_to_vary: list):
         subset = features_dataset.drop(columns=features_dataset.columns.difference(features_to_vary))
         return subset.max() - subset.min()
+
+    @staticmethod
+    def get_mixed_constraint_satisfaction(x_full: pd.DataFrame,
+                                          y: pd.DataFrame,
+                                          x_constraint_functions: list,
+                                          y_regression_constraints: dict,
+                                          y_category_constraints: dict,
+                                          y_proba_constraints: dict):
+        n_proba_constrains = len(list(itertools.chain.from_iterable(y_proba_constraints.keys())))
+
+        n_cf = len(x_constraint_functions)
+        n_total_constraints = n_cf + len(y_regression_constraints) + len(y_category_constraints) + n_proba_constrains
+
+        result = np.zeros((x_full.shape[0], n_total_constraints))
+
+        MultiObjectiveCounterfactualsGenerator._append_x_constraint_satisfaction(result, x_full, x_constraint_functions,
+                                                                                 n_total_constraints)
+        MultiObjectiveCounterfactualsGenerator._append_proba_satisfaction(result, y, y_proba_constraints)
+        MultiObjectiveCounterfactualsGenerator._append_regression_satisfaction(result, y, y_regression_constraints)
+        MultiObjectiveCounterfactualsGenerator._append_category_satisfaction(result, y, y_category_constraints)
+
+        return result
+
+    @staticmethod
+    def _append_category_satisfaction(result, y, y_category_constraints):
+        category_satisfaction = MultiObjectiveCounterfactualsGenerator.\
+            _evaluate_categorical_satisfaction(y, y_category_constraints)
+        indices = [list(y.columns).index(key) for key in y_category_constraints]
+        result[:, indices] = 1 - category_satisfaction
+
+    @staticmethod
+    def _append_regression_satisfaction(result, y, y_regression_constraints):
+        regression_satisfaction = MultiObjectiveCounterfactualsGenerator \
+            ._evaluate_regression_satisfaction(y, y_regression_constraints)
+        indices = [list(y.columns).index(key) for key in y_regression_constraints.keys()]
+        result[:, indices] = 1 - regression_satisfaction
+
+    @staticmethod
+    def _append_proba_satisfaction(g, y, y_proba_constraints):
+        c_evaluator = ClassificationEvaluator()
+        for proba_key, proba_targets in y_proba_constraints.items():
+            proba_consts = y.loc[:, proba_key]
+            proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
+            g[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
+
+    @staticmethod
+    def _append_x_constraint_satisfaction(g, x_full, x_constraint_functions, n_total_constraints):
+        for i in range(len(x_constraint_functions)):
+            # TODO: discuss this change with Lyle
+            g[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
+
+    @staticmethod
+    def _evaluate_categorical_satisfaction(y: pd.DataFrame, y_category_constraints: dict):
+        actual = y.loc[:, y_category_constraints.keys()]
+        targets = np.array([[i for i in j] for j in y_category_constraints.values()])
+        return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
+
+    @staticmethod
+    def _evaluate_regression_satisfaction(y: pd.DataFrame, y_regression_constraints: dict):
+        _, query_lb, query_ub = MultiObjectiveCounterfactualsGenerator.sort_regression_constraints(
+            y_regression_constraints)
+        actual = y.loc[:, y_regression_constraints.keys()].values
+        satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))
+        return satisfaction
+
+    @staticmethod
+    def sort_regression_constraints(regression_constraints: dict):
+        query_constraints = []
+        query_lb = []
+        query_ub = []
+        for key in regression_constraints.keys():
+            query_constraints.append(key)
+            query_lb.append(regression_constraints[key][0])
+            query_ub.append(regression_constraints[key][1])
+        return query_constraints, np.array(query_lb), np.array(query_ub)
 
     def build_full_df(self, x):
         if x.empty:
