@@ -2,7 +2,11 @@ import __main__
 import os
 import unittest
 
-import data_package
+import numpy as np
+import pandas as pd
+
+from data_package import DataPackage
+from pymoo.core.variable import Real, Integer, Binary, Choice
 import multi_objective_cfe_generator as MOCG
 from sklearn.model_selection import train_test_split
 from alt_multi_label_predictor import MultilabelPredictor
@@ -18,15 +22,38 @@ class McdEndToEndTest(unittest.TestCase):
         __main__.MultilabelPredictor = MultilabelPredictor
         self.MODEL_PATH = os.getenv("MODEL_FULL_PATH",
                                     DEFAULT_MODEL_PATH)
+        try:
+            self.predictor = MultilabelPredictor.load(self.MODEL_PATH)
+        except Exception as e:
+            print(e)
+            raise EnvironmentError("Could not resolve model path. Override the MODEL_FULL_PATH environment variable.")
+        self.x, self.y = self._load_data()
 
-    def test_model_loaded(self):
+    def _test_model_loaded(self):
         predictor = MultilabelPredictor.load(self.MODEL_PATH)
         x, y = self._load_data()
         predictions = predictor.predict(x)
         self.assertGreater(r2_score(y, predictions), 0.72)
 
     def test_framed_example(self):
-        pass
+        x, y = self.x, self.y
+        lbs = np.quantile(x.values, 0.01, axis=0)
+        ubs = np.quantile(x.values, 0.99, axis=0)
+        datatypes = []
+        for i in range(len(x.columns)):
+            datatypes.append(Real(bounds=(lbs[i], ubs[i])))
+        dp = DataPackage(x, y, x.iloc[0:1], x.columns, {"Model Mass Magnitude": (2, 4)}, None)
+        problem = MOCG.MultiObjectiveCounterfactualsGenerator(dp, self.call_predictor, [], [], datatypes)
+        cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
+        cf_set.optimize(5)
+        num_samples = 10
+        cfs = cf_set.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
+        print(cfs)
+
+    def call_predictor(self, x):
+
+        return self.predictor.predict(pd.DataFrame(x, columns=self.x.columns)).drop(
+            columns=self.y.columns.difference(["Model Mass Magnitude"]))
 
     def _load_data(self):
         x_scaled, y_scaled, _, _ = load_scaled_framed_dataset()
