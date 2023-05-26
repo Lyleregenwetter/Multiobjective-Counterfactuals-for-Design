@@ -7,6 +7,7 @@ import pandas as pd
 from classification_evaluator import ClassificationEvaluator
 
 from data_package import DataPackage
+import itertools
 
 
 class McdPredictor(metaclass=ABCMeta):
@@ -101,35 +102,56 @@ class McdPredictor(metaclass=ABCMeta):
                                           y_regression_constraints: dict,
                                           y_category_constraints: dict,
                                           y_proba_constraints: dict):
-        _, query_lb, query_ub = McdPredictor.sort_regression_constraints(y_regression_constraints)
-        n_proba_constrains = len(McdPredictor.flatten_list_of_tuples(list(y_proba_constraints.keys())))
-
-        wrapper = ClassificationEvaluator()
+        n_proba_constrains = len(list(itertools.chain.from_iterable(y_proba_constraints.keys())))
 
         n_cf = len(x_constraint_functions)
         n_total_constraints = n_cf + len(y_regression_constraints) + len(y_category_constraints) + n_proba_constrains
-        g = np.zeros((x_full.shape[0], n_total_constraints))
-        for i in range(n_cf):
+
+        result = np.zeros((x_full.shape[0], n_total_constraints))
+
+        McdPredictor._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, n_total_constraints)
+        McdPredictor._append_proba_satisfaction(result, y, y_proba_constraints)
+        McdPredictor._append_regression_satisfaction(result, y, y_regression_constraints)
+        McdPredictor._append_category_satisfaction(result, y, y_category_constraints)
+
+        return result
+
+    @staticmethod
+    def _append_category_satisfaction(result, y, y_category_constraints):
+        category_satisfaction = McdPredictor._evaluate_categorical_satisfaction(y, y_category_constraints)
+        result[:, list(y_category_constraints.keys())] = 1 - category_satisfaction
+
+    @staticmethod
+    def _append_regression_satisfaction(result, y, y_regression_constraints):
+        regression_satisfaction = McdPredictor._evaluate_regression_satisfaction(y, y_regression_constraints)
+        result[:, list(y_regression_constraints.keys())] = 1 - regression_satisfaction
+
+    @staticmethod
+    def _append_proba_satisfaction(g, y, y_proba_constraints):
+        c_evaluator = ClassificationEvaluator()
+        for proba_key, proba_targets in y_proba_constraints.items():
+            proba_consts = y.loc[:, proba_key]
+            proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
+            g[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
+
+    @staticmethod
+    def _append_x_constraint_satisfaction(g, x_full, x_constraint_functions, n_total_constraints):
+        for i in range(len(x_constraint_functions)):
             # TODO: discuss this change with Lyle
             g[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
 
-        pred_consts = y.loc[:, y_regression_constraints.keys()].values
-        indiv_satisfaction = np.logical_and(np.less(pred_consts, query_ub), np.greater(pred_consts, query_lb))
+    @staticmethod
+    def _evaluate_categorical_satisfaction(y: pd.DataFrame, y_category_constraints: dict):
+        actual = y.loc[:, y_category_constraints.keys()]
+        targets = np.array([[i for i in j] for j in y_category_constraints.values()])
+        return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
 
-        category_consts = y.loc[:, y_category_constraints.keys()]
-        category_satisfaction = wrapper.evaluate_categorical(category_consts,
-                                                             targets=np.array([[i for i in j] for j in
-                                                                               y_category_constraints.values()]))
-        for proba_key, proba_targets in y_proba_constraints.items():
-            proba_consts = y.loc[:, proba_key]
-            proba_satisfaction = wrapper.evaluate_proba(proba_consts, proba_targets)
-            g[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
-
-        g[:, list(y_regression_constraints.keys())] = 1 - indiv_satisfaction
-        g[:, list(y_category_constraints.keys())] = 1 - category_satisfaction
-
-        # g[:, n_cf:] = 1 - indiv_satisfaction
-        return g
+    @staticmethod
+    def _evaluate_regression_satisfaction(y: pd.DataFrame, y_regression_constraints: dict):
+        _, query_lb, query_ub = McdPredictor.sort_regression_constraints(y_regression_constraints)
+        actual = y.loc[:, y_regression_constraints.keys()].values
+        satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))
+        return satisfaction
 
     @staticmethod
     def sort_regression_constraints(regression_constraints: dict):

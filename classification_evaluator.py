@@ -8,6 +8,8 @@ class ClassificationEvaluator:
         Checks that for each row in n, the value of each column in m is in the corresponding targets array.
         Examples provided in ClassifierWrapperTest.
         """
+        if actual.empty:
+            return np.array([])
         # TODO: make this more efficient.
         actual_values = actual.values
         assert actual_values.shape[1] == targets.shape[0], "Dimensional mismatch between actual performances and targets array"
@@ -23,6 +25,8 @@ class ClassificationEvaluator:
         return result
 
     def evaluate_proba(self, actual: pd.DataFrame, target_classes_indices: tuple):
+        if actual.empty:
+            return np.array([])
         unwanted_classes = tuple(set([_ for _ in actual.columns]) - set(target_classes_indices))
         max_desired = np.max(actual.loc[:, target_classes_indices], axis=1)
         max_undesired = np.max(actual.loc[:, unwanted_classes], axis=1)

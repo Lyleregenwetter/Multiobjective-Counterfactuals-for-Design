@@ -11,6 +11,13 @@ class ClassifierWrapperTest(unittest.TestCase):
     def setUp(self) -> None:
         self.classifier = ClassificationEvaluator()
 
+    def test_evaluate_empty(self):
+        dataframe = pd.DataFrame()
+        categorical = self.classifier.evaluate_categorical(dataframe, targets=np.array([]))
+        proba = self.classifier.evaluate_proba(dataframe, np.array([]))
+        np_test.assert_equal(categorical, np.array([]))
+        np_test.assert_equal(proba, np.array([]))
+
     def test_evaluate_simple_percentages(self):
         array = np.array([[0.4, 0.3, 0.3], [0.25, 0.25, 0.5], [0.2, 0.8, 0]])
         evaluation = self.classifier.evaluate_proba(pd.DataFrame.from_records(array),
