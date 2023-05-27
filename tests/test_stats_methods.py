@@ -1,5 +1,9 @@
 import unittest
+
+import pandas as pd
+
 import pandas_utility as pd_util
+import numpy.testing as np_test
 from stats_methods import *
 
 
@@ -106,3 +110,35 @@ class StatsMethodsTest(unittest.TestCase):
                                gower_distance(x1, x2, np.array([10, 10, 10]))[0][0],
                                places=3
                                )
+
+    def test_high_dimensional_mixed_gower(self):
+        x1 = np.array([[i + j for i in range(1, 7)] for j in range(1, 6)])
+        x2 = np.array([[i + j for i in range(1, 7)] for j in range(5, 8)])
+        x1 = pd.DataFrame.from_records(x1)
+        x2 = pd.DataFrame.from_records(x2)
+        data_types = {"r": (0, 1, 3, 5), "c": (2, 4)}
+        results = mixed_gower(x1, x2, np.array([5, 1, 10, 20]), data_types)
+        self.assertIsNotNone(results)
+
+    def test_mixed_gower_full(self):
+        x1 = pd.DataFrame.from_records(np.array([[15., 0, 20., 500], [15., 1, 25., 500], [100., 2, 50., 501]]))
+        x2 = pd.DataFrame.from_records(np.array([[15., 0, 20., 500], [16., 1, 25., 5000]]))
+        datatypes = {"r": (0, 2), "c": (1, 3)}
+        ranges = np.array([10, 5])
+        distance = mixed_gower(x1, x2, ranges, datatypes)
+        np_test.assert_equal(distance, np.array([[0, 0.775], [0.5, 0.275], [4.125, 3.85]]))
+
+    def test_mixed_gower_same_as_gower_when_all_real(self):
+        features_dataset = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [12, 13, 15]]), columns=["x", "y", "z"])
+        ranges = pd.Series({
+            "x": 11,
+            "y": 11,
+            "z": 12})
+
+        features = pd.concat([features_dataset, pd.DataFrame(np.array([[1, 2, 3]]), columns=['x', 'y', 'z'])],
+                             axis=0)
+        distance = gower_distance(features, features_dataset.iloc[0], ranges.values)
+        mixed_distance = mixed_gower(features,
+                                     features_dataset.iloc[0:1],
+                                     np.array(ranges), {"r": (0, 1, 2)})
+        np_test.assert_equal(distance, mixed_distance)

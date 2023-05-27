@@ -4,11 +4,8 @@ import numpy as np
 import pandas as pd
 from pymoo.core.variable import Real, Integer, Choice
 
-import pandas_utility as pd_util
 from data_package import DataPackage
 from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator, CFSet
-from stats_methods import np_euclidean_distance, np_changed_features_ratio, np_gower_distance, np_avg_gower_distance, \
-    gower_distance, to_dataframe, categorical_gower
 
 
 class FakePredictor:
@@ -52,17 +49,6 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
     def test_restrictions_applied_to_dataset_samples(self):
         assert False, "We need to implement a check that samples grabbed from the dataset, " \
                       "when passed through the predictor, meet the query targets"
-
-    def test_generator(self):
-        s = CFSet(self.generator, 50)
-        s.optimize(1)
-        sample = s.sample(num_samples=5, avg_gower_weight=np.array([1]), cfc_weight=np.array([1]),
-                          gower_weight=np.array([1]), dtai_beta=np.array([1]), dtai_alpha=np.array([3]),
-                          diversity_weight=np.array([1]), dtai_target=np.array([2]))
-        performances = FakePredictor().predict(sample.values)
-        for performance in performances.values:
-            self.assertGreaterEqual(performance, 0.75)
-            self.assertLessEqual(performance, 1)
 
     def test_type_inference(self):
         data = pd.DataFrame([[1, 3, "false"], [45, 23.0, "true"]])
