@@ -81,26 +81,28 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def calculate_scores(self, x, datasetflag):
         x = pd.DataFrame.from_records(x)
         x_full = self.build_full_df(x)
-        if datasetflag:
-            prediction = self.data_package.predictions_dataset.copy()
-        else:
-            prediction = pd.DataFrame(self.predictor(x_full), columns=self.data_package.predictions_dataset.columns)
+        predictions = self._get_predictions(x_full, datasetflag)
+
         all_scores = np.zeros((len(x), self.number_of_objectives))
-        all_scores[:, :-3] = prediction.loc[:, self.bonus_objs]
-        # n + 1 is gower distance
-        all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values,
-                                        self._build_gower_types()).T
-        # n + 2 is changed features
+
+        gower_types = self._build_gower_types()
+
+        all_scores[:, :-3] = predictions.loc[:, self.bonus_objs]
+        all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
         all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
-        # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
-        all_scores[:, -1] = avg_gower_distance(x, self.data_package.features_dataset,
-                                               self.ranges.values, self._build_gower_types())
+        all_scores[:, -1] = avg_gower_distance(x, self.data_package.features_dataset, self.ranges.values, gower_types)
+
         return all_scores, self.get_mixed_constraint_satisfaction(x_full,
-                                                                  prediction,
+                                                                  predictions,
                                                                   self.constraint_functions,
                                                                   self.data_package.query_y,
                                                                   {},
                                                                   {})
+
+    def _get_predictions(self, x_full, datasetflag):
+        if datasetflag:
+            return self.data_package.predictions_dataset.copy()
+        return pd.DataFrame(self.predictor(x_full), columns=self.data_package.predictions_dataset.columns)
 
     def _build_gower_types(self):
         return {
