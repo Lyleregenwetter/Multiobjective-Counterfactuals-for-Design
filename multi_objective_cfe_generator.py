@@ -74,30 +74,30 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def _evaluate(self, x, out, *args, **kwargs):
         # This flag will avoid passing the dataset through the predictor, when the y values are already known
         datasetflag = kwargs.get("datasetflag", False)
-        score, validity = self.calculate_scores(x, datasetflag)
+        score, validity = self._calculate_evaluation_metrics(x, datasetflag)
         out["F"] = score
         out["G"] = validity
 
-    def calculate_scores(self, x, datasetflag):
+    def _calculate_evaluation_metrics(self, x, datasetflag):
         x = pd.DataFrame.from_records(x)
         x_full = self.build_full_df(x)
         predictions = self._get_predictions(x_full, datasetflag)
 
+        return self._get_scores(x, predictions), self.get_mixed_constraint_satisfaction(x_full,
+                                                                                        predictions,
+                                                                                        self.constraint_functions,
+                                                                                        self.data_package.query_y,
+                                                                                        {},
+                                                                                        {})
+
+    def _get_scores(self, x, predictions):
         all_scores = np.zeros((len(x), self.number_of_objectives))
-
         gower_types = self._build_gower_types()
-
         all_scores[:, :-3] = predictions.loc[:, self.bonus_objs]
         all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
         all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
         all_scores[:, -1] = avg_gower_distance(x, self.data_package.features_dataset, self.ranges.values, gower_types)
-
-        return all_scores, self.get_mixed_constraint_satisfaction(x_full,
-                                                                  predictions,
-                                                                  self.constraint_functions,
-                                                                  self.data_package.query_y,
-                                                                  {},
-                                                                  {})
+        return all_scores
 
     def _get_predictions(self, x_full, datasetflag):
         if datasetflag:
