@@ -42,7 +42,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             predictor=predictor.predict,
             bonus_objs=[],
             constraint_functions=[],
-            datatypes=[Real, Real, Real]
+            datatypes=[Real(), Real(), Real()]
         )
         self.static_generator = MultiObjectiveCounterfactualsGenerator
 
