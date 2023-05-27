@@ -166,22 +166,15 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
         self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, n_total_constraints)
         self._append_proba_satisfaction(result, y, y_proba_constraints)
-        self._append_regression_satisfaction(result, y, y_regression_constraints)
-        self._append_category_satisfaction(result, y, y_category_constraints)
+        self._append_satisfaction(result, self._evaluate_regression_satisfaction, y, y_regression_constraints)
+        self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, y_category_constraints)
 
         return result
 
-    def _append_category_satisfaction(self, result, y, y_category_constraints):
-        # TODO: refactor
-        category_satisfaction = self._evaluate_categorical_satisfaction(y, y_category_constraints)
-        indices = [list(y.columns).index(key) for key in y_category_constraints]
-        result[:, indices] = 1 - category_satisfaction
-
-    def _append_regression_satisfaction(self, result, y, y_regression_constraints):
-        # TODO: refactor
-        regression_satisfaction = self._evaluate_regression_satisfaction(y, y_regression_constraints)
-        indices = [list(y.columns).index(key) for key in y_regression_constraints.keys()]
-        result[:, indices] = 1 - regression_satisfaction
+    def _append_satisfaction(self, result, evaluation_function, y, y_constraints):
+        satisfaction = evaluation_function(y, y_constraints)
+        indices = [list(y.columns).index(key) for key in y_constraints]
+        result[:, indices] = 1 - satisfaction
 
     def _append_proba_satisfaction(self, result, y, y_proba_constraints):
         c_evaluator = ClassificationEvaluator()
