@@ -19,7 +19,7 @@ import calculate_dtai as calculate_dtai
 import DPPsampling as DPPsampling
 from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
-from stat_methods import mixed_gower, euclidean_distance, avg_gower_distance, changed_features_ratio, np_gower_distance
+from stat_methods import mixed_gower, avg_gower_distance, changed_features_ratio, np_gower_distance
 
 # from main.evaluation.Predictor import Predictor
 
