@@ -97,7 +97,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
     def test_changed_features(self):
         x1 = [[1, 2, 5], [2, 4, 5], [1, 3, 6]]
         x2 = [[1, 3, 6]]
-        changes = self.generator.np_changed_features(np.array(x1), np.array(x2))
+        changes = self.generator.np_changed_features_ratio(np.array(x1), np.array(x2), 3)
         self.assertAlmostEqual(2 / 3, changes[0], places=5)
         self.assertEqual(1, changes[1])
         self.assertEqual(0, changes[2])
@@ -106,7 +106,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
     def test_gower_distance_with_different_dimensions(self):
         x1 = np.array([[5, 10, 3], [5, 10, 3]])
         x2 = np.array([[6, 10, 3]])
-        gower_distance = self.generator.np_gower_distance(x1, x2)
+        gower_distance = self.generator.np_gower_distance(x1, x2, self.generator.ranges.values)
         self.assertEqual((2, 1), gower_distance.shape)
         self.assertAlmostEqual(0.033, gower_distance[0][0], places=3)
         self.assertAlmostEqual(0.033, gower_distance[1][0], places=3)
@@ -168,7 +168,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             "z": 3
         })
         self.assertAlmostEqual(0.033,
-                               self.generator.np_gower_distance(x1.values, x2.values)[0][0],
+                               self.generator.np_gower_distance(x1.values, x2.values, self.generator.ranges.values)[0][0],
                                places=3
                                )
 
@@ -184,6 +184,6 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             "z": 3
         })
         self.assertAlmostEqual(0.033,
-                               self.generator.gower_distance(x1, x2)[0][0],
+                               self.generator.gower_distance(x1, x2, self.generator.ranges.values)[0][0],
                                places=3
                                )

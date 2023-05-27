@@ -88,7 +88,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values,
                                         self._build_gower_types()).T
         # n + 2 is changed features
-        all_scores[:, -2] = self.changed_features(x, self.data_package.query_x)
+        all_scores[:, -2] = self.changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
         all_scores[:, -1] = self.avg_gower_distance(x, self.data_package.features_dataset)
         return all_scores, self.get_mixed_constraint_satisfaction(x_full,
@@ -103,16 +103,6 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             "r": tuple(self.get_features_by_type([Real, Integer])),
             "c": tuple(self.get_features_by_type([Choice, Binary]))
         }
-
-    def get_constraint_satisfaction(self, x_full, y):
-        n_cf = len(self.constraint_functions)
-        g = np.zeros((len(x_full), n_cf + len(self.query_constraints)))
-        for i in range(n_cf):
-            g[:, i] = self.constraint_functions[i](x_full).flatten()
-        pred_consts = y.loc[:, self.query_constraints].values
-        indiv_satisfaction = np.logical_and(np.less(pred_consts, self.query_ub), np.greater(pred_consts, self.query_lb))
-        g[:, n_cf:] = 1 - indiv_satisfaction
-        return g
 
     def set_valid_datasets_subset(self):
         # Scans the features_dataset and returns the subset violating the variable categories and ranges,
@@ -248,7 +238,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                                        self.alt_to_dataframe(reference_design, n_columns))
 
     def np_avg_gower_distance(self, designs_matrix: np.array, reference_designs: np.array, k=3) -> np.array:
-        GD = self.np_gower_distance(designs_matrix, reference_designs)
+        GD = self.np_gower_distance(designs_matrix, reference_designs, self.ranges.values)
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
 
@@ -258,27 +248,31 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
 
-    def gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
-        ranges = self.ranges.values
+    @staticmethod
+    def gower_distance(dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame, ranges):
         dists = np.expand_dims(dataframe.values, 1) - np.expand_dims(reference_dataframe.values, 0)
         scaled_dists = np.divide(dists, ranges)
         GD = np.mean(np.abs(scaled_dists), axis=2)
         return GD
 
-    def np_changed_features(self, designs_matrix: np.array, reference_design: np.array):
+    def np_changed_features_ratio(self, designs_matrix: np.array, reference_design: np.array, n_features: int):
         designs_matrix, reference_design = self.to_dataframe(designs_matrix), self.to_dataframe(reference_design)
-        return self.changed_features(designs_matrix, reference_design)
+        return self.changed_features_ratio(designs_matrix, reference_design, n_features)
 
-    def changed_features(self, designs_dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
+    def changed_features_ratio(self, designs_dataframe: pd.DataFrame,
+                               reference_dataframe: pd.DataFrame,
+                               n_features: int):
         changes = designs_dataframe.apply(
             lambda row: np.count_nonzero(row.values - reference_dataframe.iloc[0].values), axis=1)
-        return changes.values / self.x_dimension
+        return changes.values / n_features
 
-    def np_gower_distance(self, designs_matrix: np.array, reference_design: np.array):
+    @staticmethod
+    def np_gower_distance(designs_matrix: np.array, reference_design: np.array, ranges):
+        m = MultiObjectiveCounterfactualsGenerator
+        return m.gower_distance(m.to_dataframe(designs_matrix), m.to_dataframe(reference_design), ranges)
 
-        return self.gower_distance(self.to_dataframe(designs_matrix), self.to_dataframe(reference_design))
-
-    def alt_to_dataframe(self, matrix: np.array, number_of_columns: int):
+    @staticmethod
+    def alt_to_dataframe(matrix: np.array, number_of_columns: int):
         return pd.DataFrame(matrix, columns=[_ for _ in range(number_of_columns)])
 
     @staticmethod
@@ -289,7 +283,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def get_ranges(self):
         return self.ranges
 
-    def euclidean_distance(self, dataframe: pd.DataFrame, reference: pd.DataFrame):
+    @staticmethod
+    def euclidean_distance(dataframe: pd.DataFrame, reference: pd.DataFrame):
         reference_row = reference.iloc[0]
         changes = dataframe.apply(lambda row: np.linalg.norm(row - reference_row), axis=1)
         return changes.values
@@ -505,7 +500,7 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
     def diverse_sample(self, x, y, num_samples, diversity_weight, eps=1e-7):
         self.verbose_log("Calculating diversity matrix!")
         y = np.power(self.min2max(y), 1 / diversity_weight)
-        matrix = self.problem.np_gower_distance(x, x)
+        matrix = self.problem.np_gower_distance(x, x, self.problem.ranges.values)
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self.verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.kDPPGreedySample(weighted_matrix, num_samples)
