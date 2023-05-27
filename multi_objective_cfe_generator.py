@@ -181,13 +181,13 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         for proba_key, proba_targets in y_proba_constraints.items():
             proba_consts = y.loc[:, proba_key]
             proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
-            # TODO: proba_key to indices
-            result[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
+            indices = [list(y.columns).index(key) for key in proba_key]
+            result[:, indices] = 1 - np.greater(proba_satisfaction, 0)
 
-    def _append_x_constraint_satisfaction(self, g, x_full, x_constraint_functions, n_total_constraints):
+    def _append_x_constraint_satisfaction(self, result, x_full, x_constraint_functions, n_total_constraints):
         for i in range(len(x_constraint_functions)):
             # TODO: discuss this change with Lyle
-            g[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
+            result[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
 
     def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: dict):
         actual = y.loc[:, y_category_constraints.keys()]
