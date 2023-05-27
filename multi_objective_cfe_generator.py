@@ -9,7 +9,7 @@ from pymoo.termination.max_gen import MaximumGenerationTermination
 from pymoo.core.callback import Callback
 from pymoo.core.repair import Repair
 from pymoo.core.variable import Real, Integer, Binary, Choice
-from pymoo.core.mutation import Mutation
+# from pymoo.core.mutation import Mutation
 from pymoo.core.problem import Problem
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.optimize import minimize
@@ -58,15 +58,18 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self.query_constraints, self.query_lb, self.query_ub = self.data_package.sort_query_y()
         self.constraint_functions = constraint_functions
         self.datatypes = datatypes
-        variables = {}
-        for i in range(len(self.data_package.features_to_vary)):
-            variables[self.data_package.features_to_vary[i]] = datatypes[i]
-        super().__init__(vars=variables,
+        super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self.number_of_objectives,
                          n_constr=len(constraint_functions) + len(self.query_constraints),
                          )
         self.ranges = self.build_ranges(self.data_package.features_dataset, self.data_package.features_to_vary)
         self.set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions dataset
+
+    def _build_problem_var_dict(self):
+        variables = {}
+        for i in range(len(self.data_package.features_to_vary)):
+            variables[self.data_package.features_to_vary[i]] = self.datatypes[i]
+        return variables
 
     def _evaluate(self, x, out, *args, **kwargs):
         # This flag will avoid passing the dataset through the predictor, when the y values are already known
@@ -145,8 +148,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         subset = features_dataset.drop(columns=features_dataset.columns.difference(features_to_vary))
         return subset.max() - subset.min()
 
-    @staticmethod
-    def get_mixed_constraint_satisfaction(x_full: pd.DataFrame,
+    def get_mixed_constraint_satisfaction(self,
+                                          x_full: pd.DataFrame,
                                           y: pd.DataFrame,
                                           x_constraint_functions: list,
                                           y_regression_constraints: dict,
@@ -159,32 +162,26 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
         result = np.zeros((x_full.shape[0], n_total_constraints))
 
-        MultiObjectiveCounterfactualsGenerator._append_x_constraint_satisfaction(result, x_full, x_constraint_functions,
-                                                                                 n_total_constraints)
-        MultiObjectiveCounterfactualsGenerator._append_proba_satisfaction(result, y, y_proba_constraints)
-        MultiObjectiveCounterfactualsGenerator._append_regression_satisfaction(result, y, y_regression_constraints)
-        MultiObjectiveCounterfactualsGenerator._append_category_satisfaction(result, y, y_category_constraints)
+        self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, n_total_constraints)
+        self._append_proba_satisfaction(result, y, y_proba_constraints)
+        self._append_regression_satisfaction(result, y, y_regression_constraints)
+        self._append_category_satisfaction(result, y, y_category_constraints)
 
         return result
 
-    @staticmethod
-    def _append_category_satisfaction(result, y, y_category_constraints):
+    def _append_category_satisfaction(self, result, y, y_category_constraints):
         # TODO: refactor
-        category_satisfaction = MultiObjectiveCounterfactualsGenerator. \
-            _evaluate_categorical_satisfaction(y, y_category_constraints)
+        category_satisfaction = self._evaluate_categorical_satisfaction(y, y_category_constraints)
         indices = [list(y.columns).index(key) for key in y_category_constraints]
         result[:, indices] = 1 - category_satisfaction
 
-    @staticmethod
-    def _append_regression_satisfaction(result, y, y_regression_constraints):
+    def _append_regression_satisfaction(self, result, y, y_regression_constraints):
         # TODO: refactor
-        regression_satisfaction = MultiObjectiveCounterfactualsGenerator \
-            ._evaluate_regression_satisfaction(y, y_regression_constraints)
+        regression_satisfaction = self._evaluate_regression_satisfaction(y, y_regression_constraints)
         indices = [list(y.columns).index(key) for key in y_regression_constraints.keys()]
         result[:, indices] = 1 - regression_satisfaction
 
-    @staticmethod
-    def _append_proba_satisfaction(result, y, y_proba_constraints):
+    def _append_proba_satisfaction(self, result, y, y_proba_constraints):
         c_evaluator = ClassificationEvaluator()
         for proba_key, proba_targets in y_proba_constraints.items():
             proba_consts = y.loc[:, proba_key]
@@ -192,21 +189,18 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             # TODO: proba_key to indices
             result[:, proba_key] = 1 - np.greater(proba_satisfaction, 0)
 
-    @staticmethod
-    def _append_x_constraint_satisfaction(g, x_full, x_constraint_functions, n_total_constraints):
+    def _append_x_constraint_satisfaction(self, g, x_full, x_constraint_functions, n_total_constraints):
         for i in range(len(x_constraint_functions)):
             # TODO: discuss this change with Lyle
             g[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
 
-    @staticmethod
-    def _evaluate_categorical_satisfaction(y: pd.DataFrame, y_category_constraints: dict):
+    def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: dict):
         actual = y.loc[:, y_category_constraints.keys()]
         targets = np.array([[i for i in j] for j in y_category_constraints.values()])
         return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
 
-    @staticmethod
-    def _evaluate_regression_satisfaction(y: pd.DataFrame, y_regression_constraints: dict):
-        _, query_lb, query_ub = MultiObjectiveCounterfactualsGenerator.sort_regression_constraints(
+    def _evaluate_regression_satisfaction(self, y: pd.DataFrame, y_regression_constraints: dict):
+        _, query_lb, query_ub = self.sort_regression_constraints(
             y_regression_constraints)
         actual = y.loc[:, y_regression_constraints.keys()].values
         satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))

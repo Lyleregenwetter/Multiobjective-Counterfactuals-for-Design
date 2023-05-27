@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+from pymoo.core.variable import Real
 
 from data_package import DataPackage
 from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
@@ -147,22 +148,28 @@ class McdPredictorTest(unittest.TestCase):
             [3, 250, 10, 550, 0.7, 0.3],
             [5, 300, 15, 500, 0.0, 1.0]
         ]))
-        satisfaction = MOCFG.get_mixed_constraint_satisfaction(x_full=x_full,
-                                                               y=y,
-                                                               x_constraint_functions=[],
-                                                               y_regression_constraints={
-                                                                   0: (2, 6),
-                                                                   2: (10, 16)
-                                                               },
-                                                               y_category_constraints={
-                                                                   1: (200, 300),
-                                                                   3: (550,)},
-                                                               y_proba_constraints={(4, 5): (5,)})
+        generator = self.build_generator()
+        satisfaction = generator.get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                   y=y,
+                                                                   x_constraint_functions=[],
+                                                                   y_regression_constraints={
+                                                                       0: (2, 6),
+                                                                       2: (10, 16)
+                                                                   },
+                                                                   y_category_constraints={
+                                                                       1: (200, 300),
+                                                                       3: (550,)},
+                                                                   y_proba_constraints={(4, 5): (5,)})
         np_test.assert_array_almost_equal(satisfaction, np.array([
             [1, 0, 1, 1, 0, 0],
             [0, 1, 1, 0, 1, 1],
             [0, 0, 0, 1, 0, 0],
         ]))
+
+    def build_generator(self):
+        package = self.build_package()
+        return MOCFG(data_package=package, predictor=None, bonus_objs=[], constraint_functions=[],
+                     datatypes=[Real() for _ in range(len(package.features_dataset.columns))])
 
     def test_strict_inequality_of_regression_constraints(self):
         """this is the current behavior, but is it desired?"""
@@ -174,13 +181,13 @@ class McdPredictorTest(unittest.TestCase):
                                                 [3, 12], [3, 8],
                                                 [4, 20], [5, 21]]))
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
-        satisfaction = MOCFG.get_mixed_constraint_satisfaction(x_full=x_full,
-                                                               y=y,
-                                                               x_constraint_functions=[],
-                                                               y_regression_constraints={0: (2, 4),
-                                                                                         1: (10, 20)},
-                                                               y_category_constraints={},
-                                                               y_proba_constraints={})
+        satisfaction = self.build_generator().get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                                y=y,
+                                                                                x_constraint_functions=[],
+                                                                                y_regression_constraints={0: (2, 4),
+                                                                                                          1: (10, 20)},
+                                                                                y_category_constraints={},
+                                                                                y_proba_constraints={})
         np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def test_mixed_gower_full(self):
