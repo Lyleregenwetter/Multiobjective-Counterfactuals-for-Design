@@ -83,12 +83,12 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         x_full = self.build_full_df(x)
         predictions = self._get_predictions(x_full, datasetflag)
 
-        return self._get_scores(x, predictions), self.get_mixed_constraint_satisfaction(x_full,
-                                                                                        predictions,
-                                                                                        self.constraint_functions,
-                                                                                        self.data_package.query_y,
-                                                                                        {},
-                                                                                        {})
+        scores = self._get_scores(x, predictions)
+        validity = self.get_mixed_constraint_satisfaction(x_full, predictions, self.constraint_functions,
+                                                          self.data_package.query_y,
+                                                          self.data_package.y_classification_targets,
+                                                          self.data_package.y_proba_targets)
+        return scores, validity
 
     def _get_scores(self, x, predictions):
         all_scores = np.zeros((len(x), self.number_of_objectives))
