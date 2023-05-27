@@ -232,10 +232,12 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         df = df[self.data_package.features_dataset.columns]
         return df.values
 
-    def np_euclidean_distance(self, designs_matrix: np.array, reference_design: np.array):
+    @staticmethod
+    def np_euclidean_distance(designs_matrix: np.array, reference_design: np.array):
+        m = MultiObjectiveCounterfactualsGenerator
         n_columns = reference_design.shape[1]
-        return self.euclidean_distance(self.alt_to_dataframe(designs_matrix, n_columns),
-                                       self.alt_to_dataframe(reference_design, n_columns))
+        return m.euclidean_distance(m.alt_to_dataframe(designs_matrix, n_columns),
+                                    m.alt_to_dataframe(reference_design, n_columns))
 
     def np_avg_gower_distance(self, designs_matrix: np.array, reference_designs: np.array, k=3) -> np.array:
         GD = self.np_gower_distance(designs_matrix, reference_designs, self.ranges.values)
@@ -255,11 +257,14 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         GD = np.mean(np.abs(scaled_dists), axis=2)
         return GD
 
-    def np_changed_features_ratio(self, designs_matrix: np.array, reference_design: np.array, n_features: int):
-        designs_matrix, reference_design = self.to_dataframe(designs_matrix), self.to_dataframe(reference_design)
-        return self.changed_features_ratio(designs_matrix, reference_design, n_features)
+    @staticmethod
+    def np_changed_features_ratio(designs_matrix: np.array, reference_design: np.array, n_features: int):
+        m = MultiObjectiveCounterfactualsGenerator
+        designs_matrix, reference_design = m.to_dataframe(designs_matrix), m.to_dataframe(reference_design)
+        return m.changed_features_ratio(designs_matrix, reference_design, n_features)
 
-    def changed_features_ratio(self, designs_dataframe: pd.DataFrame,
+    @staticmethod
+    def changed_features_ratio(designs_dataframe: pd.DataFrame,
                                reference_dataframe: pd.DataFrame,
                                n_features: int):
         changes = designs_dataframe.apply(
