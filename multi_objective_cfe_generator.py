@@ -90,7 +90,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         # n + 2 is changed features
         all_scores[:, -2] = self.changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
-        all_scores[:, -1] = self.avg_gower_distance(x, self.data_package.features_dataset)
+        all_scores[:, -1] = self.avg_gower_distance(x, self.data_package.features_dataset,
+                                                    self.ranges.values, self._build_gower_types())
         return all_scores, self.get_mixed_constraint_satisfaction(x_full,
                                                                   prediction,
                                                                   self.constraint_functions,
@@ -239,14 +240,17 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         return m.euclidean_distance(m.alt_to_dataframe(designs_matrix, n_columns),
                                     m.alt_to_dataframe(reference_design, n_columns))
 
-    def np_avg_gower_distance(self, designs_matrix: np.array, reference_designs: np.array, k=3) -> np.array:
-        GD = self.np_gower_distance(designs_matrix, reference_designs, self.ranges.values)
+    @staticmethod
+    def np_avg_gower_distance(designs_matrix: np.array, reference_designs: np.array, ranges, k=3) -> np.array:
+        m = MultiObjectiveCounterfactualsGenerator
+        GD = m.np_gower_distance(designs_matrix, reference_designs, ranges)
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
 
-    def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
-                           k=3) -> np.array:  # TODO batch this for memory savings
-        GD = mixed_gower(dataframe, reference_dataframe, self.ranges.values, self._build_gower_types())
+    @staticmethod
+    def avg_gower_distance(dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
+                           ranges, datatypes, k=3) -> np.array:  # TODO batch this for memory savings
+        GD = mixed_gower(dataframe, reference_dataframe, ranges, datatypes)
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
 
