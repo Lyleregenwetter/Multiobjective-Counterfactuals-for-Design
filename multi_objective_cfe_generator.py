@@ -226,13 +226,6 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         return self.ranges
 
     @staticmethod
-    def build_from_template(template_array, new_values, modifiable_indices):
-        base = np.array([template_array for _ in range(new_values.shape[1])])
-        for i in range(len(modifiable_indices)):
-            base[:, modifiable_indices[i]] = new_values[i, :]
-        return base
-
-    @staticmethod
     def infer_if_necessary(datatypes: list, reference_df: pd.DataFrame) -> list:
         # TODO: this will not work with the way datatypes are used right now.
         #  Bounds should be separated out into separate field?
