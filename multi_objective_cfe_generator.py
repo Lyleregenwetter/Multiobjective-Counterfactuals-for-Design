@@ -19,6 +19,7 @@ import calculate_dtai as calculate_dtai
 import DPPsampling as DPPsampling
 from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
+from stat_methods import mixed_gower
 
 # from main.evaluation.Predictor import Predictor
 
@@ -65,7 +66,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                          n_constr=len(constraint_functions) + len(self.query_constraints),
                          )
         self.ranges = self.build_ranges(self.data_package.features_dataset, self.data_package.features_to_vary)
-        self.set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predicitons dataset
+        self.set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions dataset
 
     def _evaluate(self, x, out, *args, **kwargs):
         # This flag will avoid passing the dataset through the predictor, when the y values are already known
@@ -84,8 +85,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         all_scores = np.zeros((len(x), self.number_of_objectives))
         all_scores[:, :-3] = prediction.loc[:, self.bonus_objs]
         # n + 1 is gower distance
-        all_scores[:, -3] = self.mixed_gower(x, self.data_package.query_x, self.ranges.values,
-                                             self._build_gower_types()).T
+        all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values,
+                                        self._build_gower_types()).T
         # n + 2 is changed features
         all_scores[:, -2] = self.changed_features(x, self.data_package.query_x)
         # all_scores[:, -1] = self.np_euclidean_distance(prediction, self.target_design)
@@ -93,8 +94,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         return all_scores, self.get_mixed_constraint_satisfaction(x_full,
                                                                   prediction,
                                                                   self.constraint_functions,
-                                                                  {key: value for key, value in
-                                                                   self.data_package.query_y.items()},
+                                                                  self.data_package.query_y,
                                                                   {},
                                                                   {})
 
@@ -140,8 +140,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self.data_package.features_dataset = f_d
         self.data_package.predictions_dataset = p_d
 
-    def get_features_by_type(self,
-                             types):  # Helper function to get a list of parameter indices of a particular datatype
+    def get_features_by_type(self, types: list) -> list:
+        """Helper function to get a list of parameter indices of a particular datatype"""
         dts = self.datatypes
         matching_idxs = []
         for i in range(len(dts)):
@@ -179,7 +179,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     @staticmethod
     def _append_category_satisfaction(result, y, y_category_constraints):
         # TODO: refactor
-        category_satisfaction = MultiObjectiveCounterfactualsGenerator.\
+        category_satisfaction = MultiObjectiveCounterfactualsGenerator. \
             _evaluate_categorical_satisfaction(y, y_category_constraints)
         indices = [list(y.columns).index(key) for key in y_category_constraints]
         result[:, indices] = 1 - category_satisfaction
@@ -254,30 +254,9 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def avg_gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
                            k=3) -> np.array:  # TODO batch this for memory savings
-        GD = self.mixed_gower(dataframe, reference_dataframe, self.ranges.values, self._build_gower_types())
+        GD = mixed_gower(dataframe, reference_dataframe, self.ranges.values, self._build_gower_types())
         bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
         return np.mean(bottomk, axis=1)
-
-    @staticmethod
-    def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatypes: dict):
-
-        real_indices = datatypes.get("r", ())
-        x1_real = x1.values[:, real_indices]
-        x2_real = x2.values[:, real_indices]
-        dists = np.expand_dims(x1_real, 1) - np.expand_dims(x2_real, 0)
-        # TODO: check whether np.divide will broadcast shapes as desired in all cases
-        scaled_dists = np.divide(dists, ranges)
-
-        categorical_indices = datatypes.get("c", ())
-        x1_categorical = x1.values[:, categorical_indices]
-        x2_categorical = x2.values[:, categorical_indices]
-        categorical_dists = np.not_equal(np.expand_dims(x1_categorical, 1), np.expand_dims(x2_categorical, 0))
-
-        all_dists = np.concatenate([scaled_dists, categorical_dists], axis=2)
-        total_number_of_features = x1.shape[1]
-        GD = np.divide(np.abs(all_dists), total_number_of_features)
-        GD = np.sum(GD, axis=2)
-        return GD
 
     def gower_distance(self, dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame):
         ranges = self.ranges.values
