@@ -7,7 +7,7 @@ import pandas as pd
 
 from data_package import DataPackage
 from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
-from stat_methods import mixed_gower
+from stats_methods import mixed_gower
 
 
 class McdPredictor(metaclass=ABCMeta):

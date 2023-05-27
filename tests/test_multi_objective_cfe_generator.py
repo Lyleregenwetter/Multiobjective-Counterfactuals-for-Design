@@ -7,7 +7,7 @@ from pymoo.core.variable import Real, Integer, Choice
 import pandas_utility as pd_util
 from data_package import DataPackage
 from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator, CFSet
-from stat_methods import np_euclidean_distance, np_changed_features_ratio, np_gower_distance, np_avg_gower_distance, \
+from stats_methods import np_euclidean_distance, np_changed_features_ratio, np_gower_distance, np_avg_gower_distance, \
     gower_distance, to_dataframe, categorical_gower
 
 
