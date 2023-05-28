@@ -60,7 +60,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                          n_obj=self.number_of_objectives,
                          n_constr=len(constraint_functions) + len(self.query_constraints),
                          )
-        self.ranges = self.build_ranges(self.data_package.features_dataset, self.data_package.features_to_vary)
+        self.ranges = self.build_ranges(self.data_package.features_dataset)
         self.set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions dataset
 
     def _build_problem_var_dict(self):
@@ -144,7 +144,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         return matching_idxs
 
     @staticmethod
-    def build_ranges(features_dataset: pd.DataFrame, features_to_vary: list):
+    def build_ranges(features_dataset: pd.DataFrame):
         return features_dataset.max() - features_dataset.min()
 
     def get_mixed_constraint_satisfaction(self,
