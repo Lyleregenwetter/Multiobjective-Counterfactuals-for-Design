@@ -3,9 +3,10 @@ import unittest
 import numpy as np
 import pandas as pd
 from pymoo.core.variable import Real, Integer, Choice
+import numpy.testing as np_test
 
 from data_package import DataPackage
-from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator
+from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
 
 
 class FakePredictor:
@@ -37,13 +38,13 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             query_y={"performance": [0.75, 1]},
             bonus_objectives=[]
         )
-        self.generator = MultiObjectiveCounterfactualsGenerator(
+        self.generator = MOCFG(
             data_package=self.data_package,
             predictor=predictor.predict,
             constraint_functions=[],
             datatypes=[Real(), Real(), Real()]
         )
-        self.static_generator = MultiObjectiveCounterfactualsGenerator
+        self.static_generator = MOCFG
 
     @unittest.skip
     def test_restrictions_applied_to_dataset_samples(self):
@@ -53,7 +54,75 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
     def test_type_inference(self):
         data = pd.DataFrame([[1, 3, "false"], [45, 23.0, "true"]])
         # noinspection PyTypeChecker
-        inferred_types = self.static_generator.infer_if_necessary(None, data)
+        inferred_types = MOCFG.infer_if_necessary(None, data)
         self.assertIs(inferred_types[0], Integer)
         self.assertIs(inferred_types[1], Real)
         self.assertIs(inferred_types[2], Choice)
+
+    def test_get_mixed_constraint_full(self):
+        """
+
+        """
+        x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(3)]))
+        y = pd.DataFrame.from_records(np.array([
+            [1, 200, 3, 500, 0.4, 0.6],
+            [3, 250, 10, 550, 0.7, 0.3],
+            [5, 300, 15, 500, 0.0, 1.0]
+        ]))
+        generator = self.build_generator()
+        satisfaction = generator.get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                   y=y,
+                                                                   x_constraint_functions=[],
+                                                                   y_regression_constraints={
+                                                                       0: (2, 6),
+                                                                       2: (10, 16)
+                                                                   },
+                                                                   y_category_constraints={
+                                                                       1: (200, 300),
+                                                                       3: (550,)},
+                                                                   y_proba_constraints={(4, 5): (5,)})
+        np_test.assert_array_almost_equal(satisfaction, np.array([
+            [1, 0, 1, 1, 0, 0],
+            [0, 1, 1, 0, 1, 1],
+            [0, 0, 0, 1, 0, 0],
+        ]))
+
+    def build_generator(self):
+        package = self.build_package()
+        return MOCFG(data_package=package, predictor=None, constraint_functions=[],
+                     datatypes=[Real() for _ in range(len(package.features_dataset.columns))])
+
+    def test_strict_inequality_of_regression_constraints(self):
+        """this is the current behavior, but is it desired?"""
+        self.test_get_mixed_constraint_satisfaction()
+
+    def test_get_mixed_constraint_satisfaction(self):
+        """This does not test the use of constraint functions - hence the dummy x_full"""
+        y = pd.DataFrame.from_records(np.array([[1, 9], [2, 10],
+                                                [3, 12], [3, 8],
+                                                [4, 20], [5, 21]]))
+        x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
+        satisfaction = self.build_generator().get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                                y=y,
+                                                                                x_constraint_functions=[],
+                                                                                y_regression_constraints={0: (2, 4),
+                                                                                                          1: (10, 20)},
+                                                                                y_category_constraints={},
+                                                                                y_proba_constraints={})
+        np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
+
+    def build_package(self,
+                      features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [12, 13, 15]]),
+                                                    columns=["x", "y", "z"]),
+                      predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2], [2, 1]]), columns=["A", "B"]),
+                      query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
+                      query_y=None,
+                      features_to_vary=None,
+                      datatypes=None):
+        if datatypes is None:
+            datatypes = []
+        if features_to_vary is None:
+            features_to_vary = ["x", "y", "z"]
+        if query_y is None:
+            query_y = {"A": (4, 10)}
+        return DataPackage(features_dataset, predictions_dataset, query_x, features_to_vary, query_y, datatypes)
