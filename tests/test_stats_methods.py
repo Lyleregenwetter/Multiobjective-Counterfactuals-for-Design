@@ -110,10 +110,14 @@ class StatsMethodsTest(unittest.TestCase):
                                places=3
                                )
 
-    @unittest.skip
     def test_k_edge_case(self):
-        """If the features dataset is small, the partition method fails with error (K=2) out of bounds"""
-        pass
+        x1 = np.array([[i + j for i in range(1, 7)] for j in range(1, 6)])
+        x2 = np.array([[i + j for i in range(1, 7)] for j in range(5, 6)])
+        x1 = pd.DataFrame.from_records(x1)
+        x2 = pd.DataFrame.from_records(x2)
+        data_types = {"r": (0, 1, 3, 5), "c": (2, 4)}
+        results = avg_gower_distance(x1, x2, np.array([5, 1, 10, 20]), data_types)
+        self.assertIsNotNone(results)
 
     def test_high_dimensional_mixed_gower(self):
         x1 = np.array([[i + j for i in range(1, 7)] for j in range(1, 6)])

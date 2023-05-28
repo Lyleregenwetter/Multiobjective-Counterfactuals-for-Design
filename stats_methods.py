@@ -50,6 +50,7 @@ def np_avg_gower_distance(designs_matrix: np.array, reference_designs: np.array,
 
 def avg_gower_distance(dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
                        ranges, datatypes, k=3) -> np.array:  # TODO batch this for memory savings
+    k = min(k, len(reference_dataframe))
     GD = mixed_gower(dataframe, reference_dataframe, ranges, datatypes)
     bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
     return np.mean(bottomk, axis=1)
