@@ -9,22 +9,23 @@ class DataPackage:
                  query_x: pd.DataFrame,
                  features_to_vary: list,
                  query_y: dict,
-                 bonus_objectives,
+                 bonus_objectives: list = None,
                  y_classification_targets: dict = None,
                  y_proba_targets: dict = None,
                  datatypes=None):
+        """"""
         self.features_dataset = self._attempt_features_to_dataframe(features_dataset, features_to_vary)
         self.predictions_dataset = self._attempt_predictions_to_dataframe(predictions_dataset, query_y.keys())
         self.features_to_vary = features_to_vary
         self.query_x = self._query_x_to_dataframe_if_not(query_x)
         self.query_y = query_y
-        self.bonus_objectives = bonus_objectives
         self._validate_fields(self.features_dataset, self.features_to_vary,
                               self.query_x, self.predictions_dataset, query_y)
         self.datatypes = datatypes
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
         self.y_classification_targets = self._get_or_default(y_classification_targets, {})
         self.y_proba_targets = self._get_or_default(y_proba_targets, {})
+        self.bonus_objectives = self._get_or_default(bonus_objectives, [])
 
     def _get_or_default(self, value, default_value):
         if value is None:
