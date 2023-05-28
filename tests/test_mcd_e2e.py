@@ -56,6 +56,9 @@ class McdEndToEndTest(unittest.TestCase):
         all_conditions_satisfaction = np.logical_and(np.greater(results, np.array([2])),
                                                      np.less(results, np.array([4])))
         np_test.assert_equal(all_conditions_satisfaction, 1)
+        # TODO: figure out why this fails...
+        all_within_range = np.logical_and(np.greater_equal(cfs, lbs), np.less_equal(cfs, ubs))
+        np_test.assert_equal(all_within_range, 1)
 
     def call_predictor(self, x):
 

@@ -1,9 +1,8 @@
 import unittest
 
-import pandas as pd
+import numpy.testing as np_test
 
 import pandas_utility as pd_util
-import numpy.testing as np_test
 from stats_methods import *
 
 
@@ -110,6 +109,11 @@ class StatsMethodsTest(unittest.TestCase):
                                gower_distance(x1, x2, np.array([10, 10, 10]))[0][0],
                                places=3
                                )
+
+    @unittest.skip
+    def test_k_edge_case(self):
+        """If the features dataset is small, the partition method fails with error (K=2) out of bounds"""
+        pass
 
     def test_high_dimensional_mixed_gower(self):
         x1 = np.array([[i + j for i in range(1, 7)] for j in range(1, 6)])
