@@ -15,6 +15,11 @@ class FakePredictor:
         return pd.DataFrame(np.sum(data, axis=1), columns=["performance"])
 
 
+class DummyPredictor:
+    def predict(self, x):
+        return np.arange(x.shape[0] * 2).reshape(-1, 2)
+
+
 class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
     def setUp(self) -> None:
         features = pd.DataFrame(np.random.rand(100, 3), columns=["x", "y", "z"])
@@ -46,6 +51,23 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         )
         self.static_generator = MOCFG
 
+    def test_evaluate_subset(self):
+        regressor = self.build_generator(self.build_package(features_to_vary=["x", "y"]))
+        out = {}
+        regressor._evaluate(
+            np.array([[12, 13], [14, 15], [16, 17], [16, 19]]), out, datasetflag=False)
+        self.assertTrue("F" in out)
+        self.assertTrue("G" in out)
+
+    def test_evaluate_all_features(self):
+        regressor = self.build_generator(self.build_package())
+        out = {}
+        regressor._evaluate(
+            np.array([[12, 13, 15], [14, 15, 19], [16, 17, 25], [16, 17, 25]]), out, datasetflag=False
+        )
+        self.assertTrue("F" in out)
+        self.assertTrue("G" in out)
+
     @unittest.skip
     def test_restrictions_applied_to_dataset_samples(self):
         assert False, "We need to implement a check that samples grabbed from the dataset, " \
@@ -69,7 +91,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             [3, 250, 10, 550, 0.7, 0.3],
             [5, 300, 15, 500, 0.0, 1.0]
         ]))
-        generator = self.build_generator()
+        generator = self.build_generator(self.build_package())
         satisfaction = generator.get_mixed_constraint_satisfaction(x_full=x_full,
                                                                    y=y,
                                                                    x_constraint_functions=[],
@@ -87,9 +109,8 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             [0, 0, 0, 1, 0, 0],
         ]))
 
-    def build_generator(self):
-        package = self.build_package()
-        return MOCFG(data_package=package, predictor=None, constraint_functions=[],
+    def build_generator(self, package):
+        return MOCFG(data_package=package, predictor=DummyPredictor().predict, constraint_functions=[],
                      datatypes=[Real() for _ in range(len(package.features_dataset.columns))])
 
     def test_strict_inequality_of_regression_constraints(self):
@@ -102,13 +123,14 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                                                 [3, 12], [3, 8],
                                                 [4, 20], [5, 21]]))
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
-        satisfaction = self.build_generator().get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                                y=y,
-                                                                                x_constraint_functions=[],
-                                                                                y_regression_constraints={0: (2, 4),
-                                                                                                          1: (10, 20)},
-                                                                                y_category_constraints={},
-                                                                                y_proba_constraints={})
+        satisfaction = self.build_generator(self.build_package()).get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                                                    y=y,
+                                                                                                    x_constraint_functions=[],
+                                                                                                    y_regression_constraints={
+                                                                                                        0: (2, 4),
+                                                                                                        1: (10, 20)},
+                                                                                                    y_category_constraints={},
+                                                                                                    y_proba_constraints={})
         np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def build_package(self,

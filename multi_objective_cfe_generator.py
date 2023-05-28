@@ -77,11 +77,11 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         out["G"] = validity
 
     def _calculate_evaluation_metrics(self, x, datasetflag):
-        x = pd.DataFrame.from_records(x)
+        x = pd.DataFrame.from_records(x, columns=self.data_package.features_to_vary)
         x_full = self.build_full_df(x)
         predictions = self._get_predictions(x_full, datasetflag)
 
-        scores = self._get_scores(x, predictions)
+        scores = self._get_scores(x_full, predictions)
         validity = self.get_mixed_constraint_satisfaction(x_full, predictions, self.constraint_functions,
                                                           self.data_package.query_y,
                                                           self.data_package.y_classification_targets,
@@ -145,8 +145,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     @staticmethod
     def build_ranges(features_dataset: pd.DataFrame, features_to_vary: list):
-        subset = features_dataset.drop(columns=features_dataset.columns.difference(features_to_vary))
-        return subset.max() - subset.min()
+        return features_dataset.max() - features_dataset.min()
 
     def get_mixed_constraint_satisfaction(self,
                                           x_full: pd.DataFrame,
@@ -212,13 +211,13 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def build_full_df(self, x):
         if x.empty:
-            return x.values
+            return x
         n = np.shape(x)[0]
         df = pd.concat([self.data_package.query_x] * n, axis=0, )
         df.index = list(range(n))
         df = pd.concat([df.loc[:, self.data_package.features_to_freeze], x], axis=1)
         df = df[self.data_package.features_dataset.columns]
-        return df.values
+        return df
 
     def get_ranges(self):
         return self.ranges
