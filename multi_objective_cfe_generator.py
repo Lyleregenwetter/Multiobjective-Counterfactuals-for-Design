@@ -33,7 +33,7 @@ NUMPY_TO_MOO = {
 }
 
 
-class All_Offspring_Callback(Callback):
+class AllOffspringCallback(Callback):
 
     def __init__(self) -> None:
         super().__init__()
@@ -47,14 +47,12 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def __init__(self,
                  data_package: DataPackage,
                  predictor,
-                 bonus_objs: list,
                  constraint_functions: list,
                  datatypes: list = None):
         self.data_package = data_package
-        self.number_of_objectives = len(bonus_objs) + 3
+        self.number_of_objectives = len(data_package.bonus_objectives) + 3
         self.x_dimension = len(self.data_package.features_dataset.columns)
         self.predictor = predictor
-        self.bonus_objs = bonus_objs
         self.query_constraints, self.query_lb, self.query_ub = self.data_package.sort_query_y()
         self.constraint_functions = constraint_functions
         self.datatypes = datatypes
@@ -93,7 +91,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def _get_scores(self, x, predictions):
         all_scores = np.zeros((len(x), self.number_of_objectives))
         gower_types = self._build_gower_types()
-        all_scores[:, :-3] = predictions.loc[:, self.bonus_objs]
+        all_scores[:, :-3] = predictions.loc[:, self.data_package.bonus_objectives]
         all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
         all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
         all_scores[:, -1] = avg_gower_distance(x, self.data_package.features_dataset, self.ranges.values, gower_types)
@@ -241,7 +239,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         return NUMPY_TO_MOO.get(numpy_type, Real)
 
 
-class Revert_to_Query_Repair(Repair):
+class RevertToQueryRepair(Repair):
     def __init__(self, rep_prob=0.2, elementwise_prob=0.3, *args, **kwargs):
         self.rep_prob = rep_prob
         self.elementwise_prob = elementwise_prob
@@ -287,9 +285,9 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
                 pop = Population.merge(pop, query_pop)
             algorithm = NSGA2(pop_size=self.pop_size, sampling=pop,
                               mating=MixedVariableMating(eliminate_duplicates=MixedVariableDuplicateElimination(),
-                                                         repair=Revert_to_Query_Repair()),
+                                                         repair=RevertToQueryRepair()),
                               eliminate_duplicates=MixedVariableDuplicateElimination(),
-                              callback=All_Offspring_Callback(),
+                              callback=AllOffspringCallback(),
                               save_history=False)
             self.algorithm = algorithm
 

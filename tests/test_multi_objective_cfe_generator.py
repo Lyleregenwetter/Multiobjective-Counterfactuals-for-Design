@@ -5,7 +5,7 @@ import pandas as pd
 from pymoo.core.variable import Real, Integer, Choice
 
 from data_package import DataPackage
-from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator, CFSet
+from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator
 
 
 class FakePredictor:
@@ -35,11 +35,11 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             query_x=features[0:1],
             features_to_vary=["x", "y", "z"],
             query_y={"performance": [0.75, 1]},
+            bonus_objectives=[]
         )
         self.generator = MultiObjectiveCounterfactualsGenerator(
             data_package=self.data_package,
             predictor=predictor.predict,
-            bonus_objs=[],
             constraint_functions=[],
             datatypes=[Real(), Real(), Real()]
         )

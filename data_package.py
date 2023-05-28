@@ -9,6 +9,7 @@ class DataPackage:
                  query_x: pd.DataFrame,
                  features_to_vary: list,
                  query_y: dict,
+                 bonus_objectives,
                  y_classification_targets: dict = None,
                  y_proba_targets: dict = None,
                  datatypes=None):
@@ -17,6 +18,7 @@ class DataPackage:
         self.features_to_vary = features_to_vary
         self.query_x = self._query_x_to_dataframe_if_not(query_x)
         self.query_y = query_y
+        self.bonus_objectives = bonus_objectives
         self._validate_fields(self.features_dataset, self.features_to_vary,
                               self.query_x, self.predictions_dataset, query_y)
         self.datatypes = datatypes

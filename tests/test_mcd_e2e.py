@@ -46,8 +46,8 @@ class McdEndToEndTest(unittest.TestCase):
         datatypes = []
         for i in range(len(x.columns)):
             datatypes.append(Real(bounds=(lbs[i], ubs[i])))
-        dp = DataPackage(x, y, x.iloc[0:1], x.columns, {"Model Mass Magnitude": (2, 4)}, None)
-        problem = MOCG.MultiObjectiveCounterfactualsGenerator(dp, self.call_predictor, [], [], datatypes)
+        dp = DataPackage(x, y, x.iloc[0:1], x.columns, {"Model Mass Magnitude": (2, 4)}, [])
+        problem = MOCG.MultiObjectiveCounterfactualsGenerator(dp, self.call_predictor, [], datatypes)
         cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
         cf_set.optimize(5)
         num_samples = 10

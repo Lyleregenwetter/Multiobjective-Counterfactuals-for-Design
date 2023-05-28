@@ -159,7 +159,7 @@ class McdPredictorTest(unittest.TestCase):
 
     def build_generator(self):
         package = self.build_package()
-        return MOCFG(data_package=package, predictor=None, bonus_objs=[], constraint_functions=[],
+        return MOCFG(data_package=package, predictor=None, constraint_functions=[],
                      datatypes=[Real() for _ in range(len(package.features_dataset.columns))])
 
     def test_strict_inequality_of_regression_constraints(self):
