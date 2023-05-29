@@ -121,6 +121,21 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
     def test_get_scores(self):
         """_get_scores() is not stateless - the internals of the data package and the generator
         will be manipulated to facilitate testing"""
+
+        features_dataset = pd.DataFrame.from_records(
+            np.array([
+                [15, 500, 50, 1000],
+                [34, 600, 5000, 2000],
+                [49, 500, 15.4, 2000],
+                [12, 700, 17.9, 2000],
+                [-10, 800, 12.255, 3000],
+            ])
+        )
+        datatypes = [Real(bounds=(-50, 50)),
+                     Choice(options=(500, 600, 700, 800)),
+                     Real(bounds=(0, 10000)),
+                     Choice(options=(1000, 2000, 3000))]
+
         data_package = self.build_package(bonus_objectives=["A", "B"])
         generator = self.build_generator(data_package)
 

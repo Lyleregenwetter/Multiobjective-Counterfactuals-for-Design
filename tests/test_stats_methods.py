@@ -111,6 +111,8 @@ class StatsMethodsTest(unittest.TestCase):
                                )
 
     def test_k_edge_case(self):
+        """By default, we use the k=3 nearest neighbors in average gower calculations.
+        We should not get exceptions when len(dataset) < 3"""
         x1 = np.array([[i + j for i in range(1, 7)] for j in range(1, 6)])
         small_x2 = np.array([[i + j for i in range(1, 7)] for j in range(5, 6)])
         x1 = pd.DataFrame.from_records(x1)
