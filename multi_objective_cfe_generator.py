@@ -88,7 +88,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                                                           self.data_package.y_proba_targets)
         return scores, validity
 
-    def _get_scores(self, x, predictions):
+    def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
         all_scores = np.zeros((len(x), self.number_of_objectives))
         gower_types = self._build_gower_types()
         all_scores[:, :-3] = predictions.loc[:, self.data_package.bonus_objectives]

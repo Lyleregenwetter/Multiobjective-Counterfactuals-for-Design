@@ -121,7 +121,12 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
     def test_get_scores(self):
         """_get_scores() is not stateless - the internals of the data package and the generator
         will be manipulated to facilitate testing"""
-        pass
+        data_package = self.build_package(bonus_objectives=["A", "B"])
+        generator = self.build_generator(data_package)
+
+        generator.number_of_objectives = 5
+
+        # scores = generator._get_scores(x=[], predictions=[])
 
     @unittest.skip
     def test_get_mixed_constraint_satisfaction_with_x_constraints(self):
@@ -151,12 +156,22 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                       predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2], [2, 1]]), columns=["A", "B"]),
                       query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
                       query_y=None,
+                      bonus_objectives=None,
                       features_to_vary=None,
                       datatypes=None):
-        if datatypes is None:
-            datatypes = []
-        if features_to_vary is None:
-            features_to_vary = ["x", "y", "z"]
-        if query_y is None:
-            query_y = {"A": (4, 10)}
-        return DataPackage(features_dataset, predictions_dataset, query_x, features_to_vary, query_y, datatypes)
+        datatypes = self.get_or_default(datatypes, [])
+        features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
+        query_y = self.get_or_default(query_y, {"A": (4, 10)})
+        bonus_objectives = self.get_or_default(bonus_objectives, [])
+        return DataPackage(features_dataset=features_dataset,
+                           predictions_dataset=predictions_dataset,
+                           query_x=query_x,
+                           features_to_vary=features_to_vary,
+                           query_y=query_y,
+                           bonus_objectives=bonus_objectives,
+                           datatypes=datatypes)
+
+    def get_or_default(self, value, default_value):
+        if value is None:
+            return default_value
+        return value
