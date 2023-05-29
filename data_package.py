@@ -16,16 +16,16 @@ class DataPackage:
         """"""
         self.features_dataset = self._attempt_features_to_dataframe(features_dataset, features_to_vary)
         self.predictions_dataset = self._attempt_predictions_to_dataframe(predictions_dataset, query_y.keys())
-        self.features_to_vary = features_to_vary
         self.query_x = self._query_x_to_dataframe_if_not(query_x)
+        self.features_to_vary = features_to_vary
         self.query_y = query_y
-        self._validate_fields(self.features_dataset, self.features_to_vary,
-                              self.query_x, self.predictions_dataset, query_y)
-        self.datatypes = datatypes
-        self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
         self.y_classification_targets = self._get_or_default(y_classification_targets, {})
         self.y_proba_targets = self._get_or_default(y_proba_targets, {})
         self.bonus_objectives = self._get_or_default(bonus_objectives, [])
+        self.datatypes = datatypes
+        self._validate_fields(self.features_dataset, self.features_to_vary, self.query_x,
+                              self.predictions_dataset, self.query_y, self.bonus_objectives)
+        self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 
     def _get_or_default(self, value, default_value):
         if value is None:
@@ -73,12 +73,13 @@ class DataPackage:
                          features_to_vary,
                          query_x: pd.DataFrame,
                          predictions_dataset,
-                         query_y):
+                         query_y,
+                         bonus_objectives):
         self._validate_datasets(features_dataset, predictions_dataset)
         self._validate_features_to_vary(features_dataset, features_to_vary)
         self._validate_query_x(features_dataset, query_x)
         self._validate_query_y(predictions_dataset, query_y)
-        self._validate_bonus_objs(predictions_dataset, query_y)  # TODO: fix bug here.
+        self._validate_bonus_objs(predictions_dataset, bonus_objectives)  # TODO: fix bug here.
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
     def _validate_datasets(self, features_dataset: pd.DataFrame, predictions_dataset: pd.DataFrame):
@@ -111,9 +112,8 @@ class DataPackage:
                               "User has not provided any performance targets")
 
     def _validate_bonus_objs(self, predictions_dataset: pd.DataFrame, bonus_objs: list):
-        self._validate_labels(predictions_dataset,
-                              bonus_objs,
-                              "User has not provided any performance targets")
+        self._validate(set(bonus_objs).issubset(set(predictions_dataset.columns)),
+                       "Bonus objectives should be a subset of labels!")
 
     def _validate_indices_to_vary(self, features_to_vary: list, number_of_features: int, type_error_message: str,
                                   invalid_error_message: str):

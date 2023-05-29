@@ -118,20 +118,31 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         """this is the current behavior, but is it desired?"""
         self.test_get_mixed_constraint_satisfaction()
 
+    def test_get_scores(self):
+        """_get_scores() is not stateless - the internals of the data package and the generator
+        will be manipulated to facilitate testing"""
+        pass
+
+    @unittest.skip
+    def test_get_mixed_constraint_satisfaction_with_x_constraints(self):
+        pass
+
     def test_get_mixed_constraint_satisfaction(self):
-        """This does not test the use of constraint functions - hence the dummy x_full"""
+        """get_mixed_constraint_satisfaction() is stateless
+        - the generator built and the data package don't matter"""
         y = pd.DataFrame.from_records(np.array([[1, 9], [2, 10],
                                                 [3, 12], [3, 8],
                                                 [4, 20], [5, 21]]))
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
-        satisfaction = self.build_generator(self.build_package()).get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                                                    y=y,
-                                                                                                    x_constraint_functions=[],
-                                                                                                    y_regression_constraints={
-                                                                                                        0: (2, 4),
-                                                                                                        1: (10, 20)},
-                                                                                                    y_category_constraints={},
-                                                                                                    y_proba_constraints={})
+        generator = self.build_generator(self.build_package())
+        satisfaction = generator.get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                   y=y,
+                                                                   x_constraint_functions=[],
+                                                                   y_regression_constraints={
+                                                                       0: (2, 4),
+                                                                       1: (10, 20)},
+                                                                   y_category_constraints={},
+                                                                   y_proba_constraints={})
         np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def build_package(self,

@@ -63,6 +63,7 @@ class DataPackageTest(unittest.TestCase):
         predictions = np.array([[1, 2], [3, 4]])
         data_package = self.initialize(features_dataset=features, features_to_vary=[0, 1],
                                        query_x=np.array([[1, 2, 3]]),
+                                       bonus_objectives=[0],
                                        predictions_dataset=predictions,
                                        query_y={0: (5, 10), 1: (10, 15)})
         np_test.assert_equal(data_package.features_dataset.to_numpy(), features)
@@ -72,10 +73,11 @@ class DataPackageTest(unittest.TestCase):
         self.assertEqual({0, 1, 2}, set(data_package.features_dataset.columns))
         self.assertEqual({0, 1}, set(data_package.predictions_dataset.columns))
 
-    @unittest.skip
     def test_validate_bonus_objs(self):
-        """Bug: query_y is being passed to validate_bonus_obj, and even if not behavior still buggy"""
-        pass
+        self.assert_raises_with_message(
+            lambda: self.initialize(bonus_objectives=["NON_EXISTENT"]),
+            "Bonus objectives should be a subset of labels!"
+        )
 
     def test_initialize_with_no_features_to_vary(self):
         self.assert_raises_with_message(lambda: self.initialize(features_to_vary=[]),
@@ -109,11 +111,21 @@ class DataPackageTest(unittest.TestCase):
                    query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "z"]),
                    query_y=None,
                    features_to_vary=None,
+                   bonus_objectives=None,
                    datatypes=None):
-        if datatypes is None:
-            datatypes = []
-        if features_to_vary is None:
-            features_to_vary = ["x", "y"]
-        if query_y is None:
-            query_y = {"A": (4, 10)}
-        return DataPackage(features_dataset, predictions_dataset, query_x, features_to_vary, query_y, datatypes)
+        datatypes = self.get_or_default(datatypes, [])
+        features_to_vary = self.get_or_default(features_to_vary, ["x", "y"])
+        query_y = self.get_or_default(query_y, {"A": (4, 10)})
+        bonus_objectives = self.get_or_default(bonus_objectives, ["A"])
+        return DataPackage(features_dataset=features_dataset,
+                           predictions_dataset=predictions_dataset,
+                           query_x=query_x,
+                           features_to_vary=features_to_vary,
+                           query_y=query_y,
+                           bonus_objectives=bonus_objectives,
+                           datatypes=datatypes)
+
+    def get_or_default(self, value, default_value):
+        if value is None:
+            return default_value
+        return value
