@@ -119,9 +119,9 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         self.test_get_mixed_constraint_satisfaction()
 
     def test_get_scores(self):
-        """_get_scores() is not stateless - the internals of the data package and the generator
-        will be manipulated to facilitate testing"""
+        """MOCFG()._get_scores() is not stateless """
 
+        features = ["A", "B", "C", "D"]
         features_dataset = pd.DataFrame.from_records(
             np.array([
                 [15, 500, 50, 1000],
@@ -129,19 +129,35 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                 [49, 500, 15.4, 2000],
                 [12, 700, 17.9, 2000],
                 [-10, 800, 12.255, 3000],
-            ])
+            ]), columns=features
+        )
+        predictions_dataset = pd.DataFrame.from_records(
+            np.array([
+                [15, 500, 50],
+                [34, 600, 5000],
+                [49, 500, 15.4],
+                [12, 700, 17.9],
+                [-10, 800, 12.255],
+            ]), columns=["O1", "O2", "O3"]
         )
         datatypes = [Real(bounds=(-50, 50)),
                      Choice(options=(500, 600, 700, 800)),
                      Real(bounds=(0, 10000)),
                      Choice(options=(1000, 2000, 3000))]
 
-        data_package = self.build_package(bonus_objectives=["A", "B"])
-        generator = self.build_generator(data_package)
+        data_package = DataPackage(
+            features_dataset=features_dataset,
+            predictions_dataset=predictions_dataset,
+            query_x=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
+            query_y={"O1": (100, 500)},
+            features_to_vary=features,
+            bonus_objectives=["O2", "O3"]
+        )
+        generator = MOCFG(data_package, lambda x: x, [], datatypes)
 
-        generator.number_of_objectives = 5
-
-        # scores = generator._get_scores(x=[], predictions=[])
+        scores = generator._get_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000]]), columns=features),
+                                       predictions=pd.DataFrame(np.array([[1, 2, 3]]),
+                                                                columns=["O1", "O2", "O3"]))
 
     @unittest.skip
     def test_get_mixed_constraint_satisfaction_with_x_constraints(self):

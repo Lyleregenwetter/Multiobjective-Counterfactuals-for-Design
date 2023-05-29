@@ -143,9 +143,12 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                 matching_idxs.append(i)
         return matching_idxs
 
-    @staticmethod
-    def build_ranges(features_dataset: pd.DataFrame):
-        return features_dataset.max() - features_dataset.min()
+    def build_ranges(self, features_dataset: pd.DataFrame):
+        # TODO: question this. Do we build ranges based on the
+        #  features dataset or based on the limits provided by the user in datatypes?
+        indices = self.get_features_by_type([Real, Integer])
+        numeric_features = features_dataset.iloc[:, indices]
+        return numeric_features.max() - numeric_features.min()
 
     def get_mixed_constraint_satisfaction(self,
                                           x_full: pd.DataFrame,
