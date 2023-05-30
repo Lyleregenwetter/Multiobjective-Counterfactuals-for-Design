@@ -3,12 +3,13 @@ import os
 import unittest
 
 import numpy as np
+import numpy.testing as np_test
 import pandas as pd
 from pymoo.core.variable import Real
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
-import numpy.testing as np_test
 
+import load_data
 import multi_objective_cfe_generator as MOCG
 from alt_multi_label_predictor import MultilabelPredictor
 from data_package import DataPackage
@@ -36,6 +37,30 @@ class McdEndToEndTest(unittest.TestCase):
         x, y = self._load_data()
         predictions = predictor.predict(x)
         self.assertGreater(r2_score(y, predictions), 0.72)
+
+    def test_p(self):
+        p = MultilabelPredictor.load(
+            "/home/yazan/Repositories/Personal/Multiobjective-Counterfactuals-for-Design/tests/AutogluonModels/ag-20230530_124536")
+        predictions = p.predict(pd.read_csv("toy_x.csv"))
+        r2 = r2_score(pd.read_csv("toy_y.csv"), predictions)
+        print(predictions.nunique())
+
+    def test_toy_dataset(self):
+        dataset = load_data.gen_toy_dataset()
+
+    def test_train_model(self):
+        predictor = MultilabelPredictor(
+            labels=["O_R1", "O_C1", "O_P1", "O_R2", "O_C2", "O_P2", "O_P3"]
+        )
+
+        x_data = pd.read_csv("toy_x.csv")
+        x_data["C1"] = x_data["C1"].astype("category")
+        x_data["C2"] = x_data["C2"].astype("category")
+        y_data = pd.read_csv("toy_y.csv")
+        y_data["O_C1"] = y_data["O_C1"].astype("category")
+        y_data["O_C2"] = y_data["O_C2"].astype("category")
+
+        predictor.fit(pd.concat([x_data, y_data], axis=1))
 
     def test_framed_example(self):
         # TODO: toy dataset and dummy model

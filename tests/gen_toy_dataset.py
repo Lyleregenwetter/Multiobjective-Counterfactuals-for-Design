@@ -42,4 +42,4 @@ if __name__ == "__main__":
     y = np.concatenate([r1, c1, p1, r2, c2, p2, p3], axis=1)
     pd.DataFrame.from_records(x, columns=["R1", "C1", "R2", "C2"]).to_csv("toy_x.csv", index=False)
     pd.DataFrame.from_records(y, columns=["O_R1", "O_C1", "O_P1",
-                                          "O_R2", "C2", "O_P2", "O_P3"]).to_csv("toy_y.csv", index=False)
+                                          "O_R2", "O_C2", "O_P2", "O_P3"]).to_csv("toy_y.csv", index=False)
