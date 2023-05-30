@@ -84,7 +84,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
 
     def test_get_mixed_constraint_full(self):
         """
-
+        get_mixed_constraint_satisfaction(...) is stateless
         """
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(3)]))
         y = pd.DataFrame.from_records(np.array([
@@ -124,11 +124,11 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         features = ["A", "B", "C", "D"]
         features_dataset = pd.DataFrame.from_records(
             np.array([
-                [15, 500, 50, 1000],
-                [34, 600, 5000, 2000],
-                [49, 500, 15.4, 2000],
-                [12, 700, 17.9, 2000],
-                [-10, 800, 12.255, 3000],
+                [15, 500, 45.5, 1000],
+                [34, 600, 23.3, 2000],
+                [50, 500, 15.4, 2000],
+                [12, 700, 0, 2000],
+                [-50, 800, 9.645, 3000],
             ]), columns=features
         )
         predictions_dataset = pd.DataFrame.from_records(
@@ -140,9 +140,9 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                 [-10, 800, 12.255],
             ]), columns=["O1", "O2", "O3"]
         )
-        datatypes = [Real(bounds=(-50, 50)),
+        datatypes = [Real(bounds=(-55, 55)),
                      Choice(options=(500, 600, 700, 800)),
-                     Real(bounds=(0, 10000)),
+                     Real(bounds=(-5, 50)),
                      Choice(options=(1000, 2000, 3000))]
 
         data_package = DataPackage(
@@ -155,9 +155,13 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         )
         generator = MOCFG(data_package, lambda x: x, [], datatypes)
 
-        scores = generator._get_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000]]), columns=features),
-                                       predictions=pd.DataFrame(np.array([[1, 2, 3]]),
+        scores = generator._get_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
+                                                      columns=features),
+                                       predictions=pd.DataFrame(np.array([[1, 2.35, 3.33], [1, 3.35, 4.45]]),
                                                                 columns=["O1", "O2", "O3"]))
+        np_test.assert_array_almost_equal(scores,
+                                          np.array([[2.35, 3.33, 0.339, 0.75, 0.298],
+                                                    [3.35, 4.45, 0.614, 1, 0.556]]), decimal=3)
 
     @unittest.skip
     def test_get_mixed_constraint_satisfaction_with_x_constraints(self):

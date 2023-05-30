@@ -191,12 +191,12 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: dict):
         actual = y.loc[:, y_category_constraints.keys()]
-        targets = np.array([[i for i in j] for j in y_category_constraints.values()])
+        # dtype=object is needed, otherwise the operation is deprecated
+        targets = np.array([[i for i in j] for j in y_category_constraints.values()], dtype=object)
         return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
 
     def _evaluate_regression_satisfaction(self, y: pd.DataFrame, y_regression_constraints: dict):
-        _, query_lb, query_ub = self.sort_regression_constraints(
-            y_regression_constraints)
+        _, query_lb, query_ub = self.sort_regression_constraints(y_regression_constraints)
         actual = y.loc[:, y_regression_constraints.keys()].values
         satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))
         return satisfaction

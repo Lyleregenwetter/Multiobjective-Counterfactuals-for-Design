@@ -99,6 +99,9 @@ class DataPackageTest(unittest.TestCase):
         self.assert_raises_with_message(
             lambda: self.initialize(predictions_dataset=pd.DataFrame(np.array([[5, 4]]), columns=["A", "B"])),
             "Dimensional mismatch between provided datasets")
+        self.assert_raises_with_message(
+            lambda: self.initialize(features_dataset=pd.DataFrame(np.array([[5, 4, 3]]), columns=["x", "y", "z"])),
+            "Dimensional mismatch between provided datasets")
 
     def assert_raises_with_message(self, faulty_call: callable, expected_message: str):
         with self.assertRaises(ValueError) as context:
