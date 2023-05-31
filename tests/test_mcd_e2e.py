@@ -8,6 +8,7 @@ import pandas as pd
 from pymoo.core.variable import Real
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
+from autogluon.tabular import TabularDataset
 
 import load_data
 import multi_objective_cfe_generator as MOCG
@@ -38,29 +39,40 @@ class McdEndToEndTest(unittest.TestCase):
         predictions = predictor.predict(x)
         self.assertGreater(r2_score(y, predictions), 0.72)
 
-    def test_p(self):
-        p = MultilabelPredictor.load(
-            "/home/yazan/Repositories/Personal/Multiobjective-Counterfactuals-for-Design/tests/AutogluonModels/ag-20230530_124536")
-        predictions = p.predict(pd.read_csv("toy_x.csv"))
-        r2 = r2_score(pd.read_csv("toy_y.csv"), predictions)
-        print(predictions.nunique())
+    def load_dummy_model(self):
+        model = MultilabelPredictor.load("AutogluonModels/ag-20230531_102100")
+        x = pd.read_csv("toy_x.csv")
+        x["C1"] = x["C1"].astype("category")
+        predictions = model.predict(x)
+        y = pd.read_csv("toy_y.csv")
+        y["O_C1"] = y["O_C1"].astype("category")
+        self.assertGreater(r2_score(y, predictions), 0.9)
+        return model
 
-    def test_toy_dataset(self):
-        dataset = load_data.gen_toy_dataset()
+    def grab_trained_model(self):
+        models_path_exists = "AutogluonModels" in os.listdir(os.getcwd())
+        if models_path_exists:
+            return self.find_valid_model()
 
-    def test_train_model(self):
-        predictor = MultilabelPredictor(
-            labels=["O_R1", "O_C1", "O_P1", "O_R2", "O_C2", "O_P2", "O_P3"]
-        )
+    def find_valid_model(self):
+        trained_models = os.listdir("AutogluonModels")
+        for trained_model in trained_models:
+            model_path = os.path.join("AutogluonModels", trained_model)
+            valid_model = "multilabel_predictor.pkl" in os.listdir(model_path)
+            if valid_model:
+                return model_path
+        return None
 
-        x_data = pd.read_csv("toy_x.csv")
-        x_data["C1"] = x_data["C1"].astype("category")
-        x_data["C2"] = x_data["C2"].astype("category")
-        y_data = pd.read_csv("toy_y.csv")
-        y_data["O_C1"] = y_data["O_C1"].astype("category")
-        y_data["O_C2"] = y_data["O_C2"].astype("category")
+    def train_model(self):
+        training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"])
+        y = pd.read_csv("toy_y.csv")
+        x = pd.read_csv("toy_x.csv")
+        y["O_C1"] = y["O_C1"].astype("category")
+        x["C1"] = x["C1"].astype("category")
+        training_predictor.fit(TabularDataset(pd.concat([x, y], axis=1)))
 
-        predictor.fit(pd.concat([x_data, y_data], axis=1))
+    def test_model_example(self):
+        pass
 
     def test_framed_example(self):
         # TODO: toy dataset and dummy model
