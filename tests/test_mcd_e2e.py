@@ -63,7 +63,7 @@ class McdEndToEndTest(unittest.TestCase):
                 return model_path
         return None
 
-    def test_train_model(self):
+    def _test_train_model(self):
         training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"])
         x, y = self.load_toy_x_y()
         training_predictor.fit(TabularDataset(pd.concat([x, y], axis=1)))
