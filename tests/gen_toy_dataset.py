@@ -1,45 +1,49 @@
 import numpy as np
-import numpy.testing as np_test
 import pandas as pd
+from sklearn.datasets import make_classification, make_regression
+from sklearn.preprocessing import StandardScaler
 
+NUMBER_OF_SAMPLES = 500
 
-def generate_regression_column(number_of_rows: int, lower_bound: float, upper_bound: float):
-    return (np.random.rand(number_of_rows, 1) * (upper_bound - lower_bound)) + lower_bound
+MEANING_OF_LIFE = 42
 
 
 def generate_categorical_column(number_of_rows: int, numer_of_categories: int):
     return np.round(np.random.rand(number_of_rows, 1) * (numer_of_categories - 1)).astype("int32")
 
 
+def make_proba(number_of_samples):
+    x, y = make_regression(n_samples=number_of_samples, n_features=2, n_informative=1, random_state=MEANING_OF_LIFE)
+    y = np.expand_dims(y, 1)
+    scaled_x = scale(x)
+    scaled_y = scale(y)
+    scaled_y = scaled_y + abs(scaled_y.min())  # now they're all positive
+    scaled_y = scaled_y / scaled_y.max()  # now they're all between 0 and 1
+    second_class_proba = 1 - scaled_y
+    return scaled_x, np.concatenate([scaled_y, second_class_proba], axis=1)
+
+
+def scale(x):
+    x_scaler = StandardScaler()
+    x_scaler.fit(x)
+    scaled_x = x_scaler.transform(x)
+    return scaled_x
+
+
 if __name__ == "__main__":
-    n_rows = 500
-    r1 = generate_regression_column(n_rows, 0, 100)
-    r2 = generate_regression_column(n_rows, 0, 15)
-    c1 = generate_categorical_column(n_rows, 5)
-    c2 = generate_categorical_column(n_rows, 3)
-    p1 = np.random.rand(n_rows, 1) * 0.5
-    p2 = np.random.rand(n_rows, 1) * 0.5
-    p3 = 1 - (p1 + p2)
-
-    proba_data = np.concatenate([p1, p2, p3], axis=1)
-    np_test.assert_equal(np.sum(proba_data, axis=1), 1)
-    c1_valid = np.isin(c1, np.array([0, 1, 2, 3, 4]))
-    c2_valid = np.isin(c2, np.array([0, 1, 2]))
-    np_test.assert_equal(c1_valid, 1)
-    np_test.assert_equal(c2_valid, 1)
-
-    x_r1 = generate_regression_column(500, 50, 500)
-    x_r2 = generate_regression_column(500, 30, 50)
-    x_c1 = generate_categorical_column(500, 3)
-    x_c2 = generate_categorical_column(500, 2)
-
-    x_c1_valid = np.isin(x_c1, np.array([0, 1, 2]))
-    x_c2_valid = np.isin(x_c2, np.array([0, 1]))
-    np_test.assert_equal(x_c1_valid, 1)
-    np_test.assert_equal(x_c2_valid, 1)
-
-    x = np.concatenate([x_r1, x_c1, x_r2, x_c2], axis=1)
-    y = np.concatenate([r1, c1, p1, r2, c2, p2, p3], axis=1)
-    pd.DataFrame.from_records(x, columns=["R1", "C1", "R2", "C2"]).to_csv("toy_x.csv", index=False)
-    pd.DataFrame.from_records(y, columns=["O_R1", "O_C1", "O_P1",
-                                          "O_R2", "O_C2", "O_P2", "O_P3"]).to_csv("toy_y.csv", index=False)
+    classification = make_classification(n_samples=NUMBER_OF_SAMPLES, n_features=3, n_repeated=0,
+                                         n_redundant=0, n_informative=2, random_state=MEANING_OF_LIFE)
+    regression = make_regression(n_samples=NUMBER_OF_SAMPLES, n_features=2,
+                                 n_informative=1, random_state=MEANING_OF_LIFE)
+    proba = make_proba(NUMBER_OF_SAMPLES)
+    uninformative_categorical_column = generate_categorical_column(NUMBER_OF_SAMPLES, 3)
+    x_data = np.concatenate([classification[0], uninformative_categorical_column,
+                             regression[0]], axis=1)
+    y_data = np.concatenate([np.expand_dims(classification[1], 1),
+                             np.expand_dims(regression[1], 1),
+                             proba[1]], axis=1)
+    x_df = pd.DataFrame(x_data, columns=["R1", "R2", "R3", "C1", "R4", "R5"])
+    x_df["C1"] = x_df["C1"].astype("category")
+    y_df = pd.DataFrame(y_data, columns=["O_C1", "O_R1", "O_P1", "O_P2"])
+    x_df.to_csv("toy_x.csv", index=False)
+    y_df.to_csv("toy_y.csv", index=False)
