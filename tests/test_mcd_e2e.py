@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
-from pymoo.core.variable import Real
+from pymoo.core.variable import Real, Choice
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 from autogluon.tabular import TabularDataset
@@ -40,7 +40,7 @@ class McdEndToEndTest(unittest.TestCase):
         self.assertGreater(r2_score(y, predictions), 0.72)
 
     def load_dummy_model(self):
-        model = MultilabelPredictor.load("AutogluonModels/ag-20230531_102100")
+        model = MultilabelPredictor.load("AutogluonModels/ag-20230531_104656")
         x = pd.read_csv("toy_x.csv")
         x["C1"] = x["C1"].astype("category")
         predictions = model.predict(x)
@@ -63,16 +63,34 @@ class McdEndToEndTest(unittest.TestCase):
                 return model_path
         return None
 
-    def train_model(self):
+    def test_train_model(self):
         training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"])
+        x, y = self.load_toy_x_y()
+        training_predictor.fit(TabularDataset(pd.concat([x, y], axis=1)))
+
+    def load_toy_x_y(self):
         y = pd.read_csv("toy_y.csv")
         x = pd.read_csv("toy_x.csv")
         y["O_C1"] = y["O_C1"].astype("category")
         x["C1"] = x["C1"].astype("category")
-        training_predictor.fit(TabularDataset(pd.concat([x, y], axis=1)))
+        return x, y
 
     def test_model_example(self):
-        pass
+        x, y = self.load_toy_x_y()
+        datatypes = [Real(bounds=(x[feature].min(), x[feature].max())) for feature in x.columns if "R" in feature]
+        # noinspection PyTypeChecker
+        datatypes.insert(3, Choice(options=tuple(x["C1"].unique())))
+        dp = DataPackage(x, y.drop(columns=y.columns.difference(["O_R1"])),
+                         x.iloc[0:1], x.columns, {"O_R1": (0, 12)}, [])
+        problem = MOCG.MultiObjectiveCounterfactualsGenerator(dp, self.call_toy_predictor, [], datatypes)
+        cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
+        cf_set.optimize(5)
+        num_samples = 10
+        cfs = cf_set.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
+        results = self.call_toy_predictor(cfs).values
+        all_conditions_satisfaction = np.logical_and(np.greater(results, np.array([0])),
+                                                     np.less(results, np.array([12])))
+        np_test.assert_equal(all_conditions_satisfaction, 1)
 
     def test_framed_example(self):
         # TODO: toy dataset and dummy model
@@ -96,6 +114,12 @@ class McdEndToEndTest(unittest.TestCase):
         # TODO: figure out why this fails... WHY IS IT ALWAYS ST ANGLE??
         # all_within_range = np.logical_and(np.greater_equal(cfs, lbs), np.less_equal(cfs, ubs))
         # np_test.assert_equal(all_within_range, 1)
+
+    def call_toy_predictor(self, x) -> pd.DataFrame:
+        toy_x, toy_y = self.load_toy_x_y()
+        return self.load_dummy_model().predict(pd.DataFrame(x, columns=toy_x.columns)).drop(
+            columns=toy_y.columns.difference(["O_R1"])
+        )
 
     def call_predictor(self, x):
 

@@ -19,7 +19,7 @@ import calculate_dtai as calculate_dtai
 import DPPsampling as DPPsampling
 from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
-from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, np_gower_distance
+from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, np_gower_distance, to_dataframe
 
 # from main.evaluation.Predictor import Predictor
 
@@ -90,7 +90,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
         all_scores = np.zeros((len(x), self.number_of_objectives))
-        gower_types = self._build_gower_types()
+        gower_types = self.build_gower_types()
         all_scores[:, :-3] = predictions.loc[:, self.data_package.bonus_objectives]
         all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
         all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
@@ -102,7 +102,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             return self.data_package.predictions_dataset.copy()
         return pd.DataFrame(self.predictor(x_full), columns=self.data_package.predictions_dataset.columns)
 
-    def _build_gower_types(self):
+    def build_gower_types(self):
         return {
             "r": tuple(self.get_features_by_type([Real, Integer])),
             "c": tuple(self.get_features_by_type([Choice, Binary]))
@@ -421,7 +421,8 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
     def diverse_sample(self, x, y, num_samples, diversity_weight, eps=1e-7):
         self.verbose_log("Calculating diversity matrix!")
         y = np.power(self.min2max(y), 1 / diversity_weight)
-        matrix = np_gower_distance(x, x, self.problem.ranges.values)
+        x_df = to_dataframe(x)
+        matrix = mixed_gower(x_df, x_df, self.problem.ranges.values, self.problem.build_gower_types())
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self.verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.kDPPGreedySample(weighted_matrix, num_samples)
