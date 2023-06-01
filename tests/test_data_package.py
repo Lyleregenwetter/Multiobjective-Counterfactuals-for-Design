@@ -8,12 +8,14 @@ from data_package import DataPackage
 
 
 class DataPackageTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.valid_package = self.initialize()
 
     def test_initialize_valid_package(self):
-        self.assertIsNotNone(self.initialize())
+        self.assertIsNotNone(self.valid_package)
 
     def test_get_features_to_freeze(self):
-        self.assertEqual(["z"], self.initialize().features_to_freeze)
+        self.assertEqual(["z"], self.valid_package.features_to_freeze)
 
     def test_invalid_query_x(self):
         # noinspection PyTypeChecker
