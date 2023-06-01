@@ -93,17 +93,17 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             [5, 300, 15, 500, 0.0, 1.0]
         ]))
         generator = self.build_generator(self.build_package())
-        satisfaction = generator.get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                   y=y,
-                                                                   x_constraint_functions=[],
-                                                                   y_regression_constraints={
-                                                                       0: (2, 6),
-                                                                       2: (10, 16)
-                                                                   },
-                                                                   y_category_constraints={
-                                                                       1: (200, 300),
-                                                                       3: (550,)},
-                                                                   y_proba_constraints={(4, 5): (5,)})
+        satisfaction = generator._get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                    y=y,
+                                                                    x_constraint_functions=[],
+                                                                    y_regression_constraints={
+                                                                        0: (2, 6),
+                                                                        2: (10, 16)
+                                                                    },
+                                                                    y_category_constraints={
+                                                                        1: (200, 300),
+                                                                        3: (550,)},
+                                                                    y_proba_constraints={(4, 5): (5,)})
         np_test.assert_array_almost_equal(satisfaction, np.array([
             [1, 0, 1, 1, 0, 0],
             [0, 1, 1, 0, 1, 1],
@@ -175,14 +175,14 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                                                 [4, 20], [5, 21]]))
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
         generator = self.build_generator(self.build_package())
-        satisfaction = generator.get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                   y=y,
-                                                                   x_constraint_functions=[],
-                                                                   y_regression_constraints={
-                                                                       0: (2, 4),
-                                                                       1: (10, 20)},
-                                                                   y_category_constraints={},
-                                                                   y_proba_constraints={})
+        satisfaction = generator._get_mixed_constraint_satisfaction(x_full=x_full,
+                                                                    y=y,
+                                                                    x_constraint_functions=[],
+                                                                    y_regression_constraints={
+                                                                        0: (2, 4),
+                                                                        1: (10, 20)},
+                                                                    y_category_constraints={},
+                                                                    y_proba_constraints={})
         np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def build_package(self,

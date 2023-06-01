@@ -36,7 +36,7 @@ class McdEndToEndTest(unittest.TestCase):
         self.assert_regression_target_met(cfs, "O_R1", -5, 5)
         self.assert_cfs_within_valid_range(cfs)
 
-    def test_model_example(self):
+    def test_mixed_type_targets(self):
         x, y = self.x, self.y
         datatypes = self.build_toy_x_datatypes()
         dp = DataPackage(features_dataset=x, predictions_dataset=y,

@@ -76,21 +76,20 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def _evaluate(self, x, out, *args, **kwargs):
         # This flag will avoid passing the dataset through the predictor, when the y values are already known
-        datasetflag = kwargs.get("datasetflag", False)
-        score, validity = self._calculate_evaluation_metrics(x, datasetflag)
+        dataset_flag = kwargs.get("datasetflag", False)
+        score, validity = self._calculate_evaluation_metrics(x, dataset_flag)
         out["F"] = score
         out["G"] = validity
 
-    def _calculate_evaluation_metrics(self, x, datasetflag):
-        x = pd.DataFrame.from_records(x, columns=self.data_package.features_to_vary)
+    def _calculate_evaluation_metrics(self, x: np.ndarray, dataset_flag: bool):
         x_full = self.build_full_df(x)
-        predictions = self._get_predictions(x_full, datasetflag)
+        predictions = self._get_predictions(x_full, dataset_flag)
 
         scores = self._get_scores(x_full, predictions)
-        validity = self.get_mixed_constraint_satisfaction(x_full, predictions, self.constraint_functions,
-                                                          self.data_package.query_y,
-                                                          self.data_package.y_classification_targets,
-                                                          self.data_package.y_proba_targets)
+        validity = self._get_mixed_constraint_satisfaction(x_full, predictions, self.constraint_functions,
+                                                           self.data_package.query_y,
+                                                           self.data_package.y_classification_targets,
+                                                           self.data_package.y_proba_targets)
         return scores, validity
 
     def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
@@ -108,15 +107,15 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         subset = self.data_package.features_dataset.sample(n=subset_size, axis=0)
         return subset
 
-    def _get_predictions(self, x_full, datasetflag):
-        if datasetflag:
+    def _get_predictions(self, x_full: pd.DataFrame, dataset_flag: bool):
+        if dataset_flag:
             return self.data_package.predictions_dataset.copy()
         return pd.DataFrame(self.predictor(x_full), columns=self.data_package.predictions_dataset.columns)
 
     def build_gower_types(self):
         return {
-            "r": tuple(self.get_features_by_type([Real, Integer])),
-            "c": tuple(self.get_features_by_type([Choice, Binary]))
+            "r": tuple(self._get_features_by_type([Real, Integer])),
+            "c": tuple(self._get_features_by_type([Choice, Binary]))
         }
 
     def _set_valid_datasets_subset(self):
@@ -125,13 +124,13 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         f_d = self.data_package.features_dataset
         p_d = self.data_package.predictions_dataset
         q = self.data_package.query_x
-        reals_and_ints_idx = self.get_features_by_type([Real, Integer])  # pass in the pymoo built in variable types
+        reals_and_ints_idx = self._get_features_by_type([Real, Integer])  # pass in the pymoo built in variable types
         for index in reals_and_ints_idx:  # Filter out any that don't fall into an acceptable range
             p_d = p_d[(f_d.iloc[:, index] >= self.datatypes[index].bounds[0])]
             f_d = f_d[(f_d.iloc[:, index] >= self.datatypes[index].bounds[0])]
             p_d = p_d[(f_d.iloc[:, index] <= self.datatypes[index].bounds[1])]
             f_d = f_d[(f_d.iloc[:, index] <= self.datatypes[index].bounds[1])]
-        categorical_idx = self.get_features_by_type([Choice])  # pass in the pymoo built in variable types
+        categorical_idx = self._get_features_by_type([Choice])  # pass in the pymoo built in variable types
         for parameter in categorical_idx:  # Filter out any that don't fall into an acceptable category
             p_d = p_d[(f_d.iloc[:, parameter].isin(self.datatypes[parameter].options))]
             f_d = f_d[(f_d.iloc[:, parameter].isin(self.datatypes[parameter].options))]  # TODO: fix this bug...
@@ -145,7 +144,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self.data_package.features_dataset = f_d
         self.data_package.predictions_dataset = p_d
 
-    def get_features_by_type(self, types: list) -> list:
+    def _get_features_by_type(self, types: list) -> list:
         """Helper function to get a list of parameter indices of a particular datatype"""
         dts = self.datatypes
         matching_idxs = []
@@ -157,23 +156,21 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def _build_ranges(self, features_dataset: pd.DataFrame):
         # TODO: question this. Do we build ranges based on the
         #  features dataset or based on the limits provided by the user in datatypes?
-        indices = self.get_features_by_type([Real, Integer])
+        indices = self._get_features_by_type([Real, Integer])
         numeric_features = features_dataset.iloc[:, indices]
         return numeric_features.max() - numeric_features.min()
 
-    def get_mixed_constraint_satisfaction(self,
-                                          x_full: pd.DataFrame,
-                                          y: pd.DataFrame,
-                                          x_constraint_functions: list,
-                                          y_regression_constraints: dict,
-                                          y_category_constraints: dict,
-                                          y_proba_constraints: dict):
-        n_proba_constrains = len(list(itertools.chain.from_iterable(y_proba_constraints.keys())))
-
-        n_cf = len(x_constraint_functions)
-        n_total_constraints = n_cf + len(y_regression_constraints) + len(y_category_constraints) + n_proba_constrains
-
-        result = np.zeros((x_full.shape[0], n_total_constraints))
+    def _get_mixed_constraint_satisfaction(self,
+                                           x_full: pd.DataFrame,
+                                           y: pd.DataFrame,
+                                           x_constraint_functions: list,
+                                           y_regression_constraints: dict,
+                                           y_category_constraints: dict,
+                                           y_proba_constraints: dict):
+        n_total_constraints = self._count_total_constraints(x_constraint_functions, y_category_constraints,
+                                                            y_proba_constraints, y_regression_constraints)
+        n_rows = x_full.shape[0]
+        result = np.zeros((n_rows, n_total_constraints))
 
         self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, n_total_constraints)
         self._append_proba_satisfaction(result, y, y_proba_constraints)
@@ -182,12 +179,22 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
         return result
 
-    def _append_satisfaction(self, result, evaluation_function, y, y_constraints):
+    def _count_total_constraints(self,
+                                 x_constraint_functions: list,
+                                 y_category_constraints: dict,
+                                 y_proba_constraints: dict,
+                                 y_regression_constraints: dict) -> int:
+        number_proba_constrains = len(list(itertools.chain.from_iterable(y_proba_constraints.keys())))
+        return len(x_constraint_functions) + len(y_regression_constraints) + len(
+            y_category_constraints) + number_proba_constrains
+
+    def _append_satisfaction(self, result: np.ndarray, evaluation_function: callable,
+                             y: pd.DataFrame, y_constraints: dict) -> None:
         satisfaction = evaluation_function(y, y_constraints)
         indices = [list(y.columns).index(key) for key in y_constraints]
         result[:, indices] = 1 - satisfaction
 
-    def _append_proba_satisfaction(self, result, y, y_proba_constraints):
+    def _append_proba_satisfaction(self, result, y, y_proba_constraints) -> None:
         c_evaluator = ClassificationEvaluator()
         for proba_key, proba_targets in y_proba_constraints.items():
             proba_consts = y.loc[:, proba_key]
@@ -224,6 +231,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         return query_constraints, np.array(query_lb), np.array(query_ub)
 
     def build_full_df(self, x):
+        x = pd.DataFrame.from_records(x, columns=self.data_package.features_to_vary)
         if x.empty:
             return x
         n = np.shape(x)[0]
