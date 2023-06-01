@@ -1,25 +1,26 @@
 import itertools
+import os
 
+import dill
 import numpy as np
 import pandas as pd
-import os
-import dill
-from pymoo.core.mixed import MixedVariableSampling, MixedVariableMating, MixedVariableDuplicateElimination
-from pymoo.termination.max_gen import MaximumGenerationTermination
+from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.callback import Callback
-from pymoo.core.repair import Repair
-from pymoo.core.variable import Real, Integer, Binary, Choice
+from pymoo.core.evaluator import Evaluator
+from pymoo.core.mixed import MixedVariableSampling, MixedVariableMating, MixedVariableDuplicateElimination
+from pymoo.core.population import Population
 # from pymoo.core.mutation import Mutation
 from pymoo.core.problem import Problem
-from pymoo.algorithms.moo.nsga2 import NSGA2
+from pymoo.core.repair import Repair
+from pymoo.core.variable import Real, Integer, Binary, Choice
 from pymoo.optimize import minimize
-from pymoo.core.population import Population
-from pymoo.core.evaluator import Evaluator
-import calculate_dtai as calculate_dtai
+from pymoo.termination.max_gen import MaximumGenerationTermination
+
 import DPPsampling as DPPsampling
+import calculate_dtai as calculate_dtai
 from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
-from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, np_gower_distance, to_dataframe
+from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, to_dataframe
 
 # from main.evaluation.Predictor import Predictor
 
@@ -53,15 +54,19 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self.number_of_objectives = len(data_package.bonus_objectives) + 3
         self.x_dimension = len(self.data_package.features_dataset.columns)
         self.predictor = predictor
-        self.query_constraints, self.query_lb, self.query_ub = self.data_package.sort_query_y()
+        _, self.query_lb, self.query_ub = self.data_package.sort_query_y()
         self.constraint_functions = constraint_functions
         self.datatypes = datatypes
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self.number_of_objectives,
-                         n_constr=len(constraint_functions) + len(self.query_constraints))
+                         n_constr=len(constraint_functions) + self._count_constraints())
         self.ranges = self._build_ranges(self.data_package.features_dataset)
         self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
         # dataset
+
+    def _count_constraints(self):
+        return len(self.data_package.query_y) + len(self.data_package.y_classification_targets) + len(
+            self.data_package.y_proba_targets)
 
     def _build_problem_var_dict(self):
         variables = {}
