@@ -36,18 +36,6 @@ def euclidean_distance(dataframe: pd.DataFrame, reference: pd.DataFrame):
     return changes.values
 
 
-def np_euclidean_distance(designs_matrix: np.array, reference_design: np.array):
-    n_columns = reference_design.shape[1]
-    return euclidean_distance(alt_to_dataframe(designs_matrix, n_columns),
-                              alt_to_dataframe(reference_design, n_columns))
-
-
-def np_avg_gower_distance(designs_matrix: np.array, reference_designs: np.array, ranges, k=3) -> np.array:
-    GD = np_gower_distance(designs_matrix, reference_designs, ranges)
-    bottomk = np.partition(GD, kth=k - 1, axis=1)[:, :k]
-    return np.mean(bottomk, axis=1)
-
-
 def avg_gower_distance(dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
                        ranges, datatypes, k=3) -> np.array:  # TODO batch this for memory savings
     k = min(k, len(reference_dataframe))
@@ -63,27 +51,14 @@ def gower_distance(dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame, r
     return GD
 
 
-def np_changed_features_ratio(designs_matrix: np.array, reference_design: np.array, n_features: int):
-    designs_matrix, reference_design = to_dataframe(designs_matrix), to_dataframe(reference_design)
-    return changed_features_ratio(designs_matrix, reference_design, n_features)
-
-
 def changed_features_ratio(designs_dataframe: pd.DataFrame,
                            reference_dataframe: pd.DataFrame,
                            n_features: int):
-    changes = designs_dataframe.apply(
-        lambda row: np.count_nonzero(row.values - reference_dataframe.iloc[0].values), axis=1)
+    changes = designs_dataframe.apply(lambda row: np.count_nonzero(row.values - reference_dataframe.iloc[0].values),
+                                      axis=1)
     return changes.values / n_features
-
-
-def np_gower_distance(designs_matrix: np.array, reference_design: np.array, ranges):
-    return gower_distance(to_dataframe(designs_matrix), to_dataframe(reference_design), ranges)
 
 
 def to_dataframe(numpy_array: np.ndarray):
     dummy_columns = [_ for _ in range(numpy_array.shape[1])]
     return pd.DataFrame(numpy_array, columns=dummy_columns)
-
-
-def alt_to_dataframe(matrix: np.array, number_of_columns: int):
-    return pd.DataFrame(matrix, columns=[_ for _ in range(number_of_columns)])
