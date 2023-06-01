@@ -59,14 +59,14 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self.datatypes = datatypes
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self.number_of_objectives,
-                         n_constr=len(constraint_functions) + self._count_constraints())
+                         n_constr=len(constraint_functions) + self._count_y_constraints())
         self.ranges = self._build_ranges(self.data_package.features_dataset)
         self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
         # dataset
 
-    def _count_constraints(self):
+    def _count_y_constraints(self):
         return len(self.data_package.query_y) + len(self.data_package.y_classification_targets) + len(
-            self.data_package.y_proba_targets)
+            list(itertools.chain.from_iterable(self.data_package.y_proba_targets.keys())))
 
     def _build_problem_var_dict(self):
         variables = {}

@@ -47,16 +47,15 @@ class McdEndToEndTest(unittest.TestCase):
         return x, y
 
     def test_model_example(self):
-        x, y = self.x, self.y.drop(columns=self.y.columns.difference(["O_C1", "O_R1"]))
+        x, y = self.x, self.y
         datatypes = [Real(bounds=(x[feature].min(), x[feature].max())) for feature in x.columns if "R" in feature]
         # noinspection PyTypeChecker
         datatypes.insert(3, Choice(options=tuple(x["C1"].unique())))
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
                          query_x=x.iloc[0:1], features_to_vary=x.columns, query_y={"O_R1": (0, 12)},
-                         y_classification_targets={"O_C1": (1,)})
+                         y_classification_targets={"O_C1": (1,)}, y_proba_targets={("O_P1", "O_P2"): ("O_P1",)})
         problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
-                                                              predictor=lambda any_x: self.call_toy_predictor(
-                                                                  ["O_C1", "O_R1"], any_x),
+                                                              predictor=self.call_toy_predictor_,
                                                               constraint_functions=[],
                                                               datatypes=datatypes)
         cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
@@ -70,12 +69,18 @@ class McdEndToEndTest(unittest.TestCase):
         classification_results = self.call_toy_predictor(["O_C1"], cfs).values
         np_test.assert_equal(classification_results, 1)
 
+        proba_results = self.call_toy_predictor(["O_P1", "O_P2"], cfs)
+        proba_satisfaction = np.greater(proba_results["O_P1"].values, proba_results["O_P2"].values)
+        np_test.assert_equal(proba_satisfaction, 1)
+
         regression_cfs = cfs.drop(columns=["C1"]).values
         all_within_range = np.logical_and(np.greater_equal(regression_cfs, x.min(numeric_only=True).values),
                                           np.less_equal(regression_cfs, x.max(numeric_only=True).values))
         np_test.assert_equal(all_within_range, 1)
 
     def call_toy_predictor(self, relevant_labels, x) -> pd.DataFrame:
-        toy_x, toy_y = self.load_toy_x_y()
-        return self.model.predict(pd.DataFrame(x, columns=toy_x.columns)).drop(
-            columns=toy_y.columns.difference(relevant_labels))
+        return self.model.predict(pd.DataFrame(x, columns=self.x.columns)).drop(
+            columns=self.y.columns.difference(relevant_labels))
+
+    def call_toy_predictor_(self, x):
+        return self.model.predict(pd.DataFrame(x, columns=self.x.columns))
