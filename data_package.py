@@ -23,8 +23,7 @@ class DataPackage:
         self.y_proba_targets = self._get_or_default(y_proba_targets, {})
         self.bonus_objectives = self._get_or_default(bonus_objectives, [])
         self.datatypes = datatypes
-        self._validate_fields(self.features_dataset, self.features_to_vary, self.query_x,
-                              self.predictions_dataset, self.query_y, self.bonus_objectives)
+        self._validate_fields()
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 
     def _get_or_default(self, value, default_value):
@@ -68,24 +67,18 @@ class DataPackage:
             return self._to_dataframe(dataset)
         return dataset
 
-    def _validate_fields(self,
-                         features_dataset,
-                         features_to_vary,
-                         query_x: pd.DataFrame,
-                         predictions_dataset,
-                         query_y,
-                         bonus_objectives):
-        self._validate_datasets(features_dataset, predictions_dataset)
-        self._validate_features_to_vary(features_dataset, features_to_vary)
-        self._validate_query_x(features_dataset, query_x)
-        self._validate_query_y(predictions_dataset, query_y)
-        self._validate_bonus_objs(predictions_dataset, bonus_objectives)  # TODO: fix bug here.
+    def _validate_fields(self):
+        self._validate_datasets()
+        self._validate_features_to_vary()
+        self._validate_query_x()
+        self._validate_query_y()
+        self._validate_bonus_objs()  # TODO: fix bug here.
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
-    def _validate_datasets(self, features_dataset: pd.DataFrame, predictions_dataset: pd.DataFrame):
-        self._validate(len(features_dataset) == len(predictions_dataset),
+    def _validate_datasets(self):
+        self._validate(len(self.features_dataset) == len(self.predictions_dataset),
                        "Dimensional mismatch between provided datasets")
-        nunique = features_dataset.nunique()
+        nunique = self.features_dataset.nunique()
         uniform_cols = nunique[nunique == 1].index
         self._validate(len(uniform_cols) == 0, f"""Error: The following columns were found to 
             contain completely uniform values: {uniform_cols}. This is not allowed, 
@@ -96,8 +89,9 @@ class DataPackage:
     #     assert upper_bounds.shape == (valid_length,)
     #     assert lower_bounds.shape == (valid_length,)
 
-    def _validate_features_to_vary(self, features_dataset: pd.DataFrame, features_to_vary: list):
-        self._validate_labels(features_dataset, features_to_vary, "User has not provided any features to vary")
+    def _validate_features_to_vary(self):
+        self._validate_labels(self.features_dataset, self.features_to_vary,
+                              "User has not provided any features to vary")
 
     def _validate_labels(self, dataset: pd.DataFrame, labels: list,
                          no_labels_message):
@@ -106,13 +100,13 @@ class DataPackage:
         for label in labels:
             self._validate(label in valid_labels, f"Expected label {label} to be in dataset {valid_labels}")
 
-    def _validate_query_y(self, predictions_dataset: pd.DataFrame, query_y: dict):
-        self._validate_labels(predictions_dataset,
-                              list(query_y.keys()),
+    def _validate_query_y(self):
+        self._validate_labels(self.predictions_dataset,
+                              list(self.query_y.keys()),
                               "User has not provided any performance targets")
 
-    def _validate_bonus_objs(self, predictions_dataset: pd.DataFrame, bonus_objs: list):
-        self._validate(set(bonus_objs).issubset(set(predictions_dataset.columns)),
+    def _validate_bonus_objs(self):
+        self._validate(set(self.bonus_objectives).issubset(set(self.predictions_dataset.columns)),
                        "Bonus objectives should be a subset of labels!")
 
     def _validate_indices_to_vary(self, features_to_vary: list, number_of_features: int, type_error_message: str,
@@ -130,11 +124,11 @@ class DataPackage:
         if not (is_int and int(feature) < number_of_features):
             raise ValueError(invalid_error_message)
 
-    def _validate_query_x(self, features_dataset: pd.DataFrame, query_x: pd.DataFrame):
-        self._validate(not query_x.empty, "Query x cannot be empty!")
-        self._validate(query_x.values.shape == (1, len(features_dataset.columns)),
+    def _validate_query_x(self):
+        self._validate(not self.query_x.empty, "Query x cannot be empty!")
+        self._validate(self.query_x.values.shape == (1, len(self.features_dataset.columns)),
                        "Dimensional mismatch between query x and dataset!")
-        self._validate(set(query_x.columns) == set(features_dataset.columns),
+        self._validate(set(self.query_x.columns) == set(self.features_dataset.columns),
                        "Query x columns do not match dataset columns!")
 
     def _query_x_to_dataframe_if_not(self, query_x):

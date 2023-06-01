@@ -58,10 +58,10 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self.datatypes = datatypes
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self.number_of_objectives,
-                         n_constr=len(constraint_functions) + len(self.query_constraints),
-                         )
-        self.ranges = self.build_ranges(self.data_package.features_dataset)
-        self.set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions dataset
+                         n_constr=len(constraint_functions) + len(self.query_constraints))
+        self.ranges = self._build_ranges(self.data_package.features_dataset)
+        self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
+        # dataset
 
     def _build_problem_var_dict(self):
         variables = {}
@@ -94,8 +94,14 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         all_scores[:, :-3] = predictions.loc[:, self.data_package.bonus_objectives]
         all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
         all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
-        all_scores[:, -1] = avg_gower_distance(x, self.data_package.features_dataset, self.ranges.values, gower_types)
+        subset = self._get_features_sample()
+        all_scores[:, -1] = avg_gower_distance(x, subset, self.ranges.values, gower_types)
         return all_scores
+
+    def _get_features_sample(self):
+        subset_size = min(1000, len(self.data_package.features_dataset))
+        subset = self.data_package.features_dataset.sample(n=subset_size, axis=0)
+        return subset
 
     def _get_predictions(self, x_full, datasetflag):
         if datasetflag:
@@ -108,7 +114,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             "c": tuple(self.get_features_by_type([Choice, Binary]))
         }
 
-    def set_valid_datasets_subset(self):
+    def _set_valid_datasets_subset(self):
         # Scans the features_dataset and returns the subset violating the variable categories and ranges,
         # as well as the changed feature specifications
         f_d = self.data_package.features_dataset
@@ -143,7 +149,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                 matching_idxs.append(i)
         return matching_idxs
 
-    def build_ranges(self, features_dataset: pd.DataFrame):
+    def _build_ranges(self, features_dataset: pd.DataFrame):
         # TODO: question this. Do we build ranges based on the
         #  features dataset or based on the limits provided by the user in datatypes?
         indices = self.get_features_by_type([Real, Integer])
