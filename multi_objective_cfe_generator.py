@@ -28,16 +28,6 @@ from stats_methods import mixed_gower, avg_gower_distance, changed_features_rati
 MEANING_OF_LIFE = 42
 
 
-class AllOffspringCallback(Callback):
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.data["offspring"] = []
-
-    def notify(self, algorithm):
-        self.data["offspring"].append(algorithm.off)
-
-
 class MultiObjectiveCounterfactualsGenerator(Problem):
     def __init__(self,
                  data_package: DataPackage,
@@ -250,6 +240,16 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def _validate(self, mandatory_condition, error_message):
         if not mandatory_condition:
             raise ValueError(error_message)
+
+
+class AllOffspringCallback(Callback):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.data["offspring"] = []
+
+    def notify(self, algorithm):
+        self.data["offspring"].append(algorithm.off)
 
 
 class RevertToQueryRepair(Repair):
