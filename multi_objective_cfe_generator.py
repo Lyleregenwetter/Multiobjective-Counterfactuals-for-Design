@@ -1,5 +1,6 @@
 import itertools
 import os
+from typing import List
 
 import dill
 import numpy as np
@@ -22,16 +23,8 @@ from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
 from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, to_dataframe
 
-# from main.evaluation.Predictor import Predictor
 
-NUMPY_TO_MOO = {
-    np.dtype("int64"): Integer,
-    np.dtype("int32"): Integer,
-    np.dtype("float64"): Real,
-    np.dtype("float32"): Real,
-    np.dtype("bool"): Binary,
-    np.dtype("object"): Choice
-}
+# from main.evaluation.Predictor import Predictor
 
 
 class AllOffspringCallback(Callback):
@@ -47,14 +40,13 @@ class AllOffspringCallback(Callback):
 class MultiObjectiveCounterfactualsGenerator(Problem):
     def __init__(self,
                  data_package: DataPackage,
-                 predictor,
+                 predictor: callable,
                  constraint_functions: list,
                  datatypes: list = None):
         self.data_package = data_package
         self.number_of_objectives = len(data_package.bonus_objectives) + 3
         self.x_dimension = len(self.data_package.features_dataset.columns)
         self.predictor = predictor
-        _, self.query_lb, self.query_ub = self.data_package.sort_query_y()
         self.constraint_functions = constraint_functions
         self.datatypes = datatypes
         super().__init__(vars=self._build_problem_var_dict(),
@@ -74,7 +66,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             variables[self.data_package.features_to_vary[i]] = self.datatypes[i]
         return variables
 
-    def _evaluate(self, x, out, *args, **kwargs):
+    def _evaluate(self, x: np.ndarray, out: dict, *args, **kwargs):
         # This flag will avoid passing the dataset through the predictor, when the y values are already known
         dataset_flag = kwargs.get("datasetflag", False)
         score, validity = self._calculate_evaluation_metrics(x, dataset_flag)
@@ -82,7 +74,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         out["G"] = validity
 
     def _calculate_evaluation_metrics(self, x: np.ndarray, dataset_flag: bool):
-        x_full = self.build_full_df(x)
+        x_full = self._build_full_df(x)
         predictions = self._get_predictions(x_full, dataset_flag)
 
         scores = self._get_scores(x_full, predictions)
@@ -94,7 +86,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
         all_scores = np.zeros((len(x), self.number_of_objectives))
-        gower_types = self.build_gower_types()
+        gower_types = self._build_gower_types()
         all_scores[:, :-3] = predictions.loc[:, self.data_package.bonus_objectives]
         all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
         all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
@@ -112,7 +104,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             return self.data_package.predictions_dataset.copy()
         return pd.DataFrame(self.predictor(x_full), columns=self.data_package.predictions_dataset.columns)
 
-    def build_gower_types(self):
+    def _build_gower_types(self):
         return {
             "r": tuple(self._get_features_by_type([Real, Integer])),
             "c": tuple(self._get_features_by_type([Choice, Binary]))
@@ -170,7 +162,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         n_total_constraints = self._count_total_constraints(x_constraint_functions, y_category_constraints,
                                                             y_proba_constraints, y_regression_constraints)
         n_rows = x_full.shape[0]
-        result = np.zeros((n_rows, n_total_constraints))
+        result = np.zeros(shape=(n_rows, n_total_constraints))
 
         self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, n_total_constraints)
         self._append_proba_satisfaction(result, y, y_proba_constraints)
@@ -194,7 +186,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         indices = [list(y.columns).index(key) for key in y_constraints]
         result[:, indices] = 1 - satisfaction
 
-    def _append_proba_satisfaction(self, result, y, y_proba_constraints) -> None:
+    def _append_proba_satisfaction(self, result: np.ndarray, y: pd.DataFrame,
+                                   y_proba_constraints: dict) -> None:
         c_evaluator = ClassificationEvaluator()
         for proba_key, proba_targets in y_proba_constraints.items():
             proba_consts = y.loc[:, proba_key]
@@ -202,7 +195,10 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             indices = [list(y.columns).index(key) for key in proba_key]
             result[:, indices] = 1 - np.greater(proba_satisfaction, 0)
 
-    def _append_x_constraint_satisfaction(self, result, x_full, x_constraint_functions, n_total_constraints):
+    def _append_x_constraint_satisfaction(self, result: np.ndarray,
+                                          x_full: pd.DataFrame,
+                                          x_constraint_functions: List[callable],
+                                          n_total_constraints: int):
         for i in range(len(x_constraint_functions)):
             # TODO: discuss this change with Lyle
             result[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
@@ -230,7 +226,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             query_ub.append(regression_constraints[key][1])
         return query_constraints, np.array(query_lb), np.array(query_ub)
 
-    def build_full_df(self, x):
+    def _build_full_df(self, x: np.ndarray):
         x = pd.DataFrame.from_records(x, columns=self.data_package.features_to_vary)
         if x.empty:
             return x
@@ -240,24 +236,6 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         df = pd.concat([df.loc[:, self.data_package.features_to_freeze], x], axis=1)
         df = df[self.data_package.features_dataset.columns]
         return df
-
-    def get_ranges(self):
-        return self.ranges
-
-    @staticmethod
-    def infer_if_necessary(datatypes: list, reference_df: pd.DataFrame) -> list:
-        # TODO: this will not work with the way datatypes are used right now.
-        #  Bounds should be separated out into separate field?
-        if datatypes is not None:
-            return datatypes
-        reference_df = reference_df.infer_objects()
-        numpy_data_types = list(reference_df.dtypes)
-        return [MultiObjectiveCounterfactualsGenerator.map_to_moo_type(numpy_type)
-                for numpy_type in numpy_data_types]
-
-    @staticmethod
-    def map_to_moo_type(numpy_type: np.dtype):
-        return NUMPY_TO_MOO.get(numpy_type, Real)
 
 
 class RevertToQueryRepair(Repair):
@@ -295,24 +273,30 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
             query_pop = Population.new("X", x)
             Evaluator().eval(self.problem,
                              query_pop)  # TODO: Concatenate before evaluating the query to save one call to evaluate?
-            if self.initialize_from_dataset:
-                self.generate_dataset_pop()
-                self.verbose_log(f"Initial population initialized from dataset of {len(self.dataset_pop)} samples!")
-                pop = Population.merge(self.dataset_pop, query_pop)
-            else:
-                mvs = MixedVariableSampling()
-                pop = mvs(self.problem, self.pop_size - 1)
-                self.verbose_log("Initial population randomly initialized!")
-                pop = Population.merge(pop, query_pop)
-            algorithm = NSGA2(pop_size=self.pop_size, sampling=pop,
-                              mating=MixedVariableMating(eliminate_duplicates=MixedVariableDuplicateElimination(),
-                                                         repair=RevertToQueryRepair()),
-                              eliminate_duplicates=MixedVariableDuplicateElimination(),
-                              callback=AllOffspringCallback(),
-                              save_history=False)
-            self.algorithm = algorithm
+            pop = self._initialize_population(query_pop)
+            self.algorithm = self._build_algorithm(pop)
 
-    def verbose_log(self, log_message):
+    def _build_algorithm(self, population):
+        return NSGA2(pop_size=self.pop_size, sampling=population,
+                     mating=MixedVariableMating(eliminate_duplicates=MixedVariableDuplicateElimination(),
+                                                repair=RevertToQueryRepair()),
+                     eliminate_duplicates=MixedVariableDuplicateElimination(),
+                     callback=AllOffspringCallback(),
+                     save_history=False)
+
+    def _initialize_population(self, query_pop):
+        if self.initialize_from_dataset:
+            self.generate_dataset_pop()
+            self._verbose_log(f"Initial population initialized from dataset of {len(self.dataset_pop)} samples!")
+            pop = Population.merge(self.dataset_pop, query_pop)
+        else:
+            mvs = MixedVariableSampling()
+            pop = mvs(self.problem, self.pop_size - 1)
+            self._verbose_log("Initial population randomly initialized!")
+            pop = Population.merge(pop, query_pop)
+        return pop
+
+    def _verbose_log(self, log_message):
         if self.verbose:
             print(log_message)
 
@@ -329,7 +313,7 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
         else:
             previous_train_steps = 0
         if n_gen >= previous_train_steps:
-            self.verbose_log(f"Training GA from {previous_train_steps} to {n_gen} generations!")
+            self._verbose_log(f"Training GA from {previous_train_steps} to {n_gen} generations!")
             self.algorithm.termination = MaximumGenerationTermination(n_gen)
             self.res = minimize(self.problem, self.algorithm,
                                 seed=self.seed,
@@ -339,14 +323,14 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
             print(f"GA has already trained for {previous_train_steps} generations.")
 
     def save(self, filepath):
-        self.verbose_log(f"Saving GA to {filepath}")
+        self._verbose_log(f"Saving GA to {filepath}")
         if not os.path.exists(filepath):
             os.mkdir(filepath)
         with open(f"{filepath}/checkpoint", "wb") as f:
             dill.dump(self.algorithm, f)
 
     def load(self, filepath):
-        self.verbose_log(f"Loading GA from {filepath}")
+        self._verbose_log(f"Loading GA from {filepath}")
         with open(f"{filepath}/checkpoint", "rb") as f:
             self.algorithm = dill.load(f)
             self.problem = self.algorithm.problem
@@ -356,23 +340,19 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
         assert self.res, "You must call optimize before calling generate!"
         assert num_samples > 0, "You must sample at least 1 counterfactual!"
 
-        all_cfs = self.initialize_all_cfs(include_dataset)
+        all_cfs = self._initialize_all_cfs(include_dataset)
 
-        all_cf_x, all_cf_y = self.filter_by_validity(all_cfs)
+        all_cf_x, all_cf_y = self._filter_by_validity(all_cfs)
         self.all_cf_x = all_cf_x
         self.all_cf_y = all_cf_y
 
         if len(all_cf_x) < num_samples:  # bug
-            self.log_results_found(all_cf_x, all_cf_y)
+            self._log_results_found(all_cf_x, all_cf_y)
             return self.build_res_df(all_cf_x)
 
-        self.verbose_log("Scoring all counterfactual candidates!")
+        self._verbose_log("Scoring all counterfactual candidates!")
 
-        if dtai_alpha is None:
-            dtai_alpha = np.ones_like(dtai_target)
-        if dtai_beta is None:
-            dtai_beta = np.ones_like(dtai_target) * 4
-        dtai_scores = calculate_dtai.calculateDTAI(all_cf_y[:, :-3], "minimize", dtai_target, dtai_alpha, dtai_beta)
+        dtai_scores = self._calculate_dtai(all_cf_y, dtai_alpha, dtai_beta, dtai_target)
         cf_quality = all_cf_y[:, -3] * gower_weight + all_cf_y[:, -2] * cfc_weight + all_cf_y[:, -1] * avg_gower_weight
         agg_scores = 1 - dtai_scores + cf_quality
 
@@ -392,8 +372,16 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
             samples_index = self.diverse_sample(all_cf_x[index], agg_scores[index], num_samples, diversity_weight)
             return self.build_res_df(all_cf_x[samples_index, :])
 
-    def initialize_all_cfs(self, include_dataset):
-        self.verbose_log("Collecting all counterfactual candidates!")
+    def _calculate_dtai(self, all_cf_y, dtai_alpha, dtai_beta, dtai_target):
+        if dtai_alpha is None:
+            dtai_alpha = np.ones_like(dtai_target)
+        if dtai_beta is None:
+            dtai_beta = np.ones_like(dtai_target) * 4
+        # TODO: ascertain this '-3' does not constitute a bug
+        return calculate_dtai.calculateDTAI(all_cf_y[:, :-3], "minimize", dtai_target, dtai_alpha, dtai_beta)
+
+    def _initialize_all_cfs(self, include_dataset):
+        self._verbose_log("Collecting all counterfactual candidates!")
         if include_dataset:
             self.generate_dataset_pop()
             all_cfs = self.dataset_pop
@@ -403,14 +391,14 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
             all_cfs = Population.merge(all_cfs, offspring)
         return all_cfs
 
-    def log_results_found(self, all_cf_x, all_cf_y):
+    def _log_results_found(self, all_cf_x, all_cf_y):
         if len(all_cf_x) == 0:
             print(f"No valid counterfactuals! Returning empty dataframe.")
         else:
             number_found = len(all_cf_y)
             print(f"Only found {number_found} valid counterfactuals! Returning all {number_found}.")
 
-    def filter_by_validity(self, all_cfs):
+    def _filter_by_validity(self, all_cfs):
         all_cf_y = all_cfs.get("F")
         all_cf_v = all_cfs.get("G")
         all_cf_x = all_cfs.get("X")
@@ -423,9 +411,10 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
         return np.divide(np.mean(x), x + eps)
 
     def build_res_df(self, x):
-        self.verbose_log("Done! Returning CFs")
+        self._verbose_log("Done! Returning CFs")
         x = pd.DataFrame(x, columns=self.problem.data_package.features_to_vary)
-        return pd.DataFrame(self.problem.build_full_df(x), columns=self.problem.data_package.features_dataset.columns)
+        # noinspection PyProtectedMember
+        return pd.DataFrame(self.problem._build_full_df(x), columns=self.problem.data_package.features_dataset.columns)
 
     def generate_dataset_pop(self):
         # TODO remove any that are out of range or that change features that are supposed to be fixed
@@ -435,14 +424,15 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
             pop = Population.new("X", x)
             Evaluator().eval(self.problem, pop, datasetflag=True)
             self.dataset_pop = pop
-            self.verbose_log(f"{len(pop)} dataset entries found matching problem parameters")
+            self._verbose_log(f"{len(pop)} dataset entries found matching problem parameters")
 
     def diverse_sample(self, x, y, num_samples, diversity_weight, eps=1e-7):
-        self.verbose_log("Calculating diversity matrix!")
+        self._verbose_log("Calculating diversity matrix!")
         y = np.power(self.min2max(y), 1 / diversity_weight)
         x_df = to_dataframe(x)
-        matrix = mixed_gower(x_df, x_df, self.problem.ranges.values, self.problem.build_gower_types())
+        # noinspection PyProtectedMember
+        matrix = mixed_gower(x_df, x_df, self.problem.ranges.values, self.problem._build_gower_types())
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
-        self.verbose_log("Sampling diverse set of counterfactual candidates!")
+        self._verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.kDPPGreedySample(weighted_matrix, num_samples)
         return samples_index

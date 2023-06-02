@@ -31,16 +31,6 @@ class DataPackage:
             return default_value
         return value
 
-    def sort_query_y(self):
-        query_constraints = []
-        query_lb = []
-        query_ub = []
-        for key in self.query_y.keys():
-            query_constraints.append(key)
-            query_lb.append(self.query_y[key][0])
-            query_ub.append(self.query_y[key][1])
-        return query_constraints, np.array(query_lb), np.array(query_ub)
-
     def _to_dataframe(self, numpy_array: np.ndarray):
         index_based_columns = [_ for _ in range(numpy_array.shape[1])]
         return pd.DataFrame(numpy_array, columns=index_based_columns)
