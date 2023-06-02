@@ -23,8 +23,9 @@ from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
 from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, to_dataframe
 
-
 # from main.evaluation.Predictor import Predictor
+
+MEANING_OF_LIFE = 42
 
 
 class AllOffspringCallback(Callback):
@@ -53,8 +54,16 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                          n_obj=self.number_of_objectives,
                          n_constr=len(constraint_functions) + self._count_y_constraints())
         self.ranges = self._build_ranges(self.data_package.features_dataset)
+        self._avg_gower_sample_size = 1000
+        self._avg_gower_sample_seed = MEANING_OF_LIFE
         self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
         # dataset
+
+    def set_average_gower_sampling_parameters(self, sample_size: int, sample_seed: int):
+        self._validate(sample_size > 0, "Invalid sample size; must be greater than zero")
+        self._validate(sample_seed > 0, "Invalid seed; must be greater than zero")
+        self._avg_gower_sample_size = sample_size
+        self._avg_gower_sample_seed = sample_seed
 
     def _count_y_constraints(self):
         return len(self.data_package.query_y) + len(self.data_package.y_classification_targets) + len(
@@ -95,8 +104,9 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         return all_scores
 
     def _get_features_sample(self):
-        subset_size = min(1000, len(self.data_package.features_dataset))
-        subset = self.data_package.features_dataset.sample(n=subset_size, axis=0)
+        subset_size = min(self._avg_gower_sample_size, len(self.data_package.features_dataset))
+        subset = self.data_package.features_dataset.sample(n=subset_size, axis=0,
+                                                           random_state=self._avg_gower_sample_seed)
         return subset
 
     def _get_predictions(self, x_full: pd.DataFrame, dataset_flag: bool):
@@ -236,6 +246,10 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         df = pd.concat([df.loc[:, self.data_package.features_to_freeze], x], axis=1)
         df = df[self.data_package.features_dataset.columns]
         return df
+
+    def _validate(self, mandatory_condition, error_message):
+        if not mandatory_condition:
+            raise ValueError(error_message)
 
 
 class RevertToQueryRepair(Repair):
