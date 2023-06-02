@@ -1,18 +1,12 @@
 import unittest
 
 import numpy as np
-import pandas as pd
-from pymoo.core.variable import Real, Integer, Choice
 import numpy.testing as np_test
+import pandas as pd
+from pymoo.core.variable import Real, Choice
 
 from data_package import DataPackage
 from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
-
-
-class FakePredictor:
-
-    def predict(self, data):
-        return pd.DataFrame(np.sum(data, axis=1), columns=["performance"])
 
 
 class DummyPredictor:
@@ -33,11 +27,9 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             "y": 0,
             "z": 0
         })
-        predictor = FakePredictor()
-        predictions = predictor.predict(features)
         self.data_package = DataPackage(
             features_dataset=features,
-            predictions_dataset=predictions,
+            predictions_dataset=pd.DataFrame(np.random.rand(features.shape[0], 1), columns=["performance"]),
             query_x=features[0:1],
             features_to_vary=["x", "y", "z"],
             query_y={"performance": [0.75, 1]},
@@ -45,7 +37,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         )
         self.generator = MOCFG(
             data_package=self.data_package,
-            predictor=predictor.predict,
+            predictor=lambda x: pd.DataFrame(),
             constraint_functions=[],
             datatypes=[Real(), Real(), Real()]
         )
@@ -73,15 +65,6 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         assert False, "We need to implement a check that samples grabbed from the dataset, " \
                       "when passed through the predictor, meet the query targets"
 
-    @unittest.skip
-    def test_type_inference(self):
-        data = pd.DataFrame([[1, 3, "false"], [45, 23.0, "true"]])
-        # noinspection PyTypeChecker
-        inferred_types = MOCFG.infer_if_necessary(None, data)
-        self.assertEqual(inferred_types[0], Integer(bounds=(1, 45)))
-        self.assertIs(inferred_types[1], Real(bounds=(1, 23)))
-        self.assertIs(inferred_types[2], Choice("true", "false"))
-
     def test_get_mixed_constraint_full(self):
         """
         get_mixed_constraint_satisfaction(...) is stateless
@@ -104,7 +87,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                                                                         1: (200, 300),
                                                                         3: (550,)},
                                                                     y_proba_constraints={(4, 5): (5,)})
-        np_test.assert_array_almost_equal(satisfaction, np.array([
+        np_test.assert_array_equal(satisfaction, np.array([
             [1, 0, 1, 1, 0, 0],
             [0, 1, 1, 0, 1, 1],
             [0, 0, 0, 1, 0, 0],

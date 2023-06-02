@@ -38,12 +38,23 @@ class McdEndToEndTest(unittest.TestCase):
 
     def test_mixed_type_targets(self):
         x, y = self.x, self.y
+        y["O_R2"] = y["O_R1"]
+        y["O_C2"] = y["O_C1"]
         datatypes = self.build_toy_x_datatypes()
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns, query_y={"O_R1": (0, 12)},
-                         y_classification_targets={"O_C1": (1,)}, y_proba_targets={("O_P1", "O_P2"): ("O_P1",)})
+                         query_x=x.iloc[0:1], features_to_vary=x.columns,
+                         query_y={"O_R1": (0, 12), "O_R2": (0, 6)},
+                         y_classification_targets={"O_C1": (1,2), "O_C2": (1,)},
+                         y_proba_targets={("O_P1", "O_P2"): ("O_P1",)})
+
+        def predict(any_x):
+            predictions = self.predict(any_x)
+            predictions["O_R2"] = predictions["O_R1"]
+            predictions["O_C2"] = predictions["O_C1"]
+            return predictions
+
         problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
-                                                              predictor=self.predict,
+                                                              predictor=predict,
                                                               constraint_functions=[],
                                                               datatypes=datatypes)
         cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
@@ -51,7 +62,7 @@ class McdEndToEndTest(unittest.TestCase):
         num_samples = 10
         cfs = cf_set.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
 
-        self.assert_regression_target_met(cfs, "O_R1", 0, 12)
+        self.assert_regression_target_met(cfs, "O_R1", 0, 6)
         self.assert_classification_target_met(cfs, "O_C1", [1])
         self.assert_proba_target_met(cfs, "O_P1")
         self.assert_cfs_within_valid_range(cfs)
@@ -114,8 +125,7 @@ class McdEndToEndTest(unittest.TestCase):
         return x, y
 
     def predict_subset(self, relevant_labels: list, x: pd.DataFrame) -> pd.DataFrame:
-        return self.model.predict(pd.DataFrame(x, columns=self.x.columns)).drop(
-            columns=self.y.columns.difference(relevant_labels))
+        return pd.DataFrame(self.predict(x), columns=relevant_labels)
 
     def predict(self, x):
         return self.model.predict(pd.DataFrame(x, columns=self.x.columns))
