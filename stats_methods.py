@@ -31,9 +31,9 @@ def categorical_gower_np(first: np.ndarray, second: np.ndarray):
 
 
 def euclidean_distance(dataframe: pd.DataFrame, reference: pd.DataFrame):
-    reference_row = reference.iloc[0]
-    changes = dataframe.apply(lambda row: np.linalg.norm(row - reference_row), axis=1)
-    return changes.values
+    rows = dataframe.values
+    reference_row = reference.iloc[0].values
+    return np.linalg.norm((rows - reference_row), axis=1)
 
 
 def avg_gower_distance(dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame,
@@ -54,9 +54,10 @@ def gower_distance(dataframe: pd.DataFrame, reference_dataframe: pd.DataFrame, r
 def changed_features_ratio(designs_dataframe: pd.DataFrame,
                            reference_dataframe: pd.DataFrame,
                            n_features: int):
-    changes = designs_dataframe.apply(lambda row: np.count_nonzero(row.values - reference_dataframe.iloc[0].values),
-                                      axis=1)
-    return changes.values / n_features
+    designs = designs_dataframe.values
+    reference = reference_dataframe.iloc[0].values
+    changes = np.count_nonzero((designs - reference), axis=1)
+    return changes / n_features
 
 
 def to_dataframe(numpy_array: np.ndarray):
