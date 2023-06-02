@@ -314,18 +314,19 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
         if self.verbose:
             print(log_message)
 
+    def _get_or_default(self, value, default_value):
+        if value is None:
+            return default_value
+        return value
+
     def optimize(self, n_gen, seed=None):  # Run the GA
 
-        if seed:
-            self.seed = seed
-        else:
-            self.seed = np.random.randint(1000000)
+        self.seed = self._get_or_default(seed, np.random.randint(1_000_000))
 
         self.setup()
-        if self.algorithm.n_iter:
-            previous_train_steps = self.algorithm.n_iter
-        else:
-            previous_train_steps = 0
+
+        previous_train_steps = self._get_or_default(self.algorithm.n_iter, 0)
+
         if n_gen >= previous_train_steps:
             self._verbose_log(f"Training GA from {previous_train_steps} to {n_gen} generations!")
             self.algorithm.termination = MaximumGenerationTermination(n_gen)

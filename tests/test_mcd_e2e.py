@@ -44,7 +44,7 @@ class McdEndToEndTest(unittest.TestCase):
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
                          query_x=x.iloc[0:1], features_to_vary=x.columns,
                          query_y={"O_R1": (0, 12), "O_R2": (0, 6)},
-                         y_classification_targets={"O_C1": (1,2), "O_C2": (1,)},
+                         y_classification_targets={"O_C1": (1, 2), "O_C2": (1,)},
                          y_proba_targets={("O_P1", "O_P2"): ("O_P1",)})
 
         def predict(any_x):
