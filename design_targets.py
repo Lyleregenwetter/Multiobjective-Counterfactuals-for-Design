@@ -47,5 +47,26 @@ class ClassificationTarget(McdTarget):
             self._validate(isinstance(desired_class, int), "Desired classes must be an all-integer tuple")
 
 
-class ProbabilityTarget:
-    pass
+class ProbabilityTarget(McdTarget):
+    def __init__(self, labels: Union[Tuple[str, ...], Tuple[int, ...]],
+                 preferred_labels: Union[Tuple[str, ...], Tuple[int, ...]]):
+        self.labels = labels
+        self.preferred_labels = preferred_labels
+        self._validate_fields()
+
+    def _validate_fields(self):
+        self._validate(isinstance(self.labels, tuple), "Labels must be a tuple")
+        self._validate(isinstance(self.preferred_labels, tuple), "Preferred labels must be a tuple")
+        self._validate(len(self.labels) > 1, "Labels must have a length greater than 1")
+        self._validate(len(self.preferred_labels) > 0, "Preferred labels cannot be empty")
+        self._validate_type_consistency(self.labels, "labels")
+        self._validate_type_consistency(self.preferred_labels, "preferred labels")
+        self._validate(set(self.preferred_labels).issubset(self.labels), "Preferred labels must be a subset of labels")
+
+    def _validate_type_consistency(self, _tuple, tuple_name):
+        list_of_types = [type(element) for element in _tuple]
+        count_strings = list_of_types.count(str)
+        count_integers = list_of_types.count(int)
+        exception_message = f"Expected {tuple_name} to be an all-integer or all-string tuple"
+        self._validate((count_integers == 0) or (count_strings == 0), exception_message)
+        self._validate((count_integers + count_strings) == len(list_of_types), exception_message)
