@@ -10,8 +10,13 @@ class DesignTargetsTest(unittest.TestCase):
             lambda: ClassificationTarget(None, (50,)): "Label must be of type string or an integer index",
             lambda: ClassificationTarget("", (50,)): "Label cannot be an empty string",
             lambda: ClassificationTarget("LABEL", ()): "Desired classes cannot be empty",
-            lambda: ClassificationTarget("LABEL", ["A"]): "Desired classes must be a tuple",
+            lambda: ClassificationTarget("LABEL", [1]): "Desired classes must be a tuple",
+            lambda: ClassificationTarget("LABEL", ("A",)): "Desired classes must be an all-integer tuple",
         })
+
+    def test_valid_classification_target(self):
+        ClassificationTarget("LABEL", (5,))
+        ClassificationTarget(15, (5,))
 
     # noinspection PyTypeChecker
     def test_invalid_continuous_target(self):
@@ -31,7 +36,7 @@ class DesignTargetsTest(unittest.TestCase):
 
     def _test_invalid(self, map_of_cases):
         for factory, exception_message in map_of_cases.items():
-            with self.subTest(f"Case: {exception_message[:15]} ..."):
+            with self.subTest(f"Case: {exception_message} ..."):
                 self.assert_raises_with_message(factory, exception_message)
 
     def assert_raises_with_message(self, faulty_call: callable, expected_message: str):

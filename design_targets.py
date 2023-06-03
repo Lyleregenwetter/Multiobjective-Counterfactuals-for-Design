@@ -43,6 +43,8 @@ class ClassificationTarget(McdTarget):
         self._validate(isinstance(self.desired_classes, tuple), "Desired classes must be a tuple")
         # noinspection PyTypeChecker
         self._validate(len(self.desired_classes) > 0, "Desired classes cannot be empty")
+        for desired_class in self.desired_classes:
+            self._validate(isinstance(desired_class, int), "Desired classes must be an all-integer tuple")
 
 
 class ProbabilityTarget:
