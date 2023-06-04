@@ -378,12 +378,18 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
             best_idx = np.argmin(agg_scores)
             return self.build_res_df(all_cf_x[best_idx:best_idx + 1, :])
         else:
-            if len(agg_scores) > num_dpp:
-                index = np.argpartition(agg_scores, -num_dpp)[-num_dpp:]
+            if diversity_weight==0:
+                idx = np.argpartition(agg_scores, num_samples)
+                return self.build_res_df(all_cf_x[idx, :])
             else:
-                index = range(len(agg_scores))
-            samples_index = self.diverse_sample(all_cf_x[index], agg_scores[index], num_samples, diversity_weight)
-            return self.build_res_df(all_cf_x[samples_index, :])
+                if diversity_weight<0.1: 
+                    print("Warning: Very small diversity can cause numerical instability. We recommend keeping diversity above 0.1 or setting diversity to 0")
+                if len(agg_scores) > num_dpp:
+                    index = np.argpartition(agg_scores, -num_dpp)[-num_dpp:]
+                else:
+                    index = range(len(agg_scores))
+                samples_index = self.diverse_sample(all_cf_x[index], agg_scores[index], num_samples, diversity_weight)
+                return self.build_res_df(all_cf_x[samples_index, :])
 
     def _calculate_dtai(self, all_cf_y, dtai_alpha, dtai_beta, dtai_target):
         if dtai_alpha is None:
