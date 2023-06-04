@@ -1,3 +1,4 @@
+import itertools
 import numbers
 from abc import ABCMeta, abstractmethod
 from typing import Union, Sequence
@@ -95,15 +96,24 @@ class DesignTargets:
         self.probability_targets = self._get_or_default(probability_targets, ())
         self._validate_fields()
 
+    def count_constrained_labels(self):
+        return len(self.continuous_targets) + len(self.classification_targets) + len(self._get_probability_labels())
+
     def _get_or_default(self, value, default_value):
         if value is not None:
             return value
         return default_value
 
+    def _get_probability_labels(self):
+        return tuple(itertools.chain.from_iterable([probability_target.labels for probability_target
+                                                    in self.probability_targets]))
+
     def _validate_fields(self):
         self._validate_sequence(self.continuous_targets, "Continuous targets", ContinuousTarget)
         self._validate_sequence(self.classification_targets, "Classification targets", ClassificationTarget)
         self._validate_sequence(self.probability_targets, "Probability targets", ProbabilityTarget)
+        self._validate_no_crossover()
+        self._validate(self.count_constrained_labels() > 0, "Design targets must be provided")
 
     def _validate(self, mandatory_condition: bool, exception_message: str):
         if not mandatory_condition:
@@ -112,4 +122,22 @@ class DesignTargets:
     def _validate_sequence(self, _sequence, _sequence_name, element_type):
         self._validate(isinstance(_sequence, Sequence), f"{_sequence_name} must be a sequence")
         for element in _sequence:
-            self._validate(isinstance(element, element_type), f"{_sequence_name} must be composed of {element_type}")
+            self._validate(isinstance(element, element_type),
+                           f"{_sequence_name} must be composed of elements of class {element_type.__name__}")
+
+    def _validate_no_crossover(self):
+        continuous = set([continuous_target.label for continuous_target in self.continuous_targets])
+        classification = set([classification_target.label for classification_target in self.classification_targets])
+        probability = set(self._get_probability_labels())
+        len_union = len((continuous | classification) | probability)
+        self._validate(self.count_constrained_labels() == len_union,
+                       "Label was specified twice in targets")
+
+    def get_continuous_targets(self):
+        return tuple(target.label for target in self.continuous_targets)
+
+    def get_classification_targets(self):
+        return tuple(target.label for target in self.classification_targets)
+
+    def get_probability_targets(self):
+        return tuple(target.labels for target in self.probability_targets)

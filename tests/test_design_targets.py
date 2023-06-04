@@ -4,15 +4,31 @@ from design_targets import ContinuousTarget, ClassificationTarget, ProbabilityTa
 
 
 class DesignTargetsTest(unittest.TestCase):
-    def test_valid_design_targets(self):
-        DesignTargets(
-            [ContinuousTarget("A", 12, 15)],
-            [ClassificationTarget("A", (1, 2))],
-            [ProbabilityTarget(("A", "B"), ("A",))]
-        )
+    def test_count_constrained_labels(self):
+        targets = DesignTargets([ContinuousTarget("A", 12, 15), ContinuousTarget("B", 12, 15)],
+                                [ClassificationTarget("C", (1, 2)), ClassificationTarget("D", (1, 2))],
+                                [ProbabilityTarget(("E", "F"), ("E",)),
+                                 ProbabilityTarget(("G", "H", "L"), ("H", "L"))])
+        self.assertEqual(9, targets.count_constrained_labels())
+        self.assertEqual(("A", "B"), targets.get_continuous_targets())
+        self.assertEqual(("C", "D"), targets.get_classification_targets())
+        self.assertEqual((("E", "F"), ("G", "H", "L")), targets.get_probability_targets())
 
+    # noinspection PyTypeChecker
     def test_invalid_design_targets(self):
-        pass
+        self._test_invalid({
+            lambda: DesignTargets({}): "Continuous targets must be a sequence",
+            lambda: DesignTargets(classification_targets=[None]):
+                "Classification targets must be composed of elements of class ClassificationTarget",
+            lambda: DesignTargets(): "Design targets must be provided",
+            lambda: DesignTargets(
+                continuous_targets=[ContinuousTarget("A", 12, 15),
+                                    ContinuousTarget("A", 12, 15)]): "Label was specified twice in targets",
+            lambda: DesignTargets(
+                continuous_targets=[ContinuousTarget("A", 12, 15)],
+                classification_targets=[ClassificationTarget("A", (1,))]): "Label was specified twice in targets",
+        },
+        )
 
     # noinspection PyTypeChecker
     def test_invalid_classification_target(self):
