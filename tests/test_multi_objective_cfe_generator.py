@@ -6,6 +6,7 @@ import pandas as pd
 from pymoo.core.variable import Real, Choice
 
 from data_package import DataPackage
+from design_targets import ContinuousTarget, DesignTargets, ClassificationTarget, ProbabilityTarget
 from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
 
 
@@ -32,7 +33,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             predictions_dataset=pd.DataFrame(np.random.rand(features.shape[0], 1), columns=["performance"]),
             query_x=features[0:1],
             features_to_vary=["x", "y", "z"],
-            query_y={"performance": [0.75, 1]},
+            design_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
             bonus_objectives=[]
         )
         self.generator = MOCFG(
@@ -76,17 +77,16 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             [5, 300, 15, 500, 0.0, 1.0]
         ]))
         generator = self.build_generator(self.build_package())
+        targets = DesignTargets(
+            [ContinuousTarget(0, 2, 6), ContinuousTarget(2, 10, 16)],
+            [ClassificationTarget(1, (200, 300)), ClassificationTarget(3, (550,))],
+            [ProbabilityTarget((4, 5), (5,))]
+        )
         satisfaction = generator._get_mixed_constraint_satisfaction(x_full=x_full,
                                                                     y=y,
                                                                     x_constraint_functions=[],
-                                                                    y_regression_constraints={
-                                                                        0: (2, 6),
-                                                                        2: (10, 16)
-                                                                    },
-                                                                    y_category_constraints={
-                                                                        1: (200, 300),
-                                                                        3: (550,)},
-                                                                    y_proba_constraints={(4, 5): (5,)})
+                                                                    design_targets=targets
+                                                                    )
         np_test.assert_array_equal(satisfaction, np.array([
             [1, 0, 1, 1, 0, 0],
             [0, 1, 1, 0, 1, 1],
@@ -127,12 +127,15 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                      Choice(options=(500, 600, 700, 800)),
                      Real(bounds=(-5, 50)),
                      Choice(options=(1000, 2000, 3000))]
+        targets = DesignTargets(
+            [ContinuousTarget("O1", 100, 500)]
+        )
 
         data_package = DataPackage(
             features_dataset=features_dataset,
             predictions_dataset=predictions_dataset,
             query_x=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
-            query_y={"O1": (100, 500)},
+            design_targets=targets,
             features_to_vary=features,
             bonus_objectives=["O2", "O3"]
         )
@@ -158,14 +161,11 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                                                 [4, 20], [5, 21]]))
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
         generator = self.build_generator(self.build_package())
+        targets = DesignTargets([ContinuousTarget(0, 2, 4), ContinuousTarget(1, 10, 20)])
         satisfaction = generator._get_mixed_constraint_satisfaction(x_full=x_full,
                                                                     y=y,
                                                                     x_constraint_functions=[],
-                                                                    y_regression_constraints={
-                                                                        0: (2, 4),
-                                                                        1: (10, 20)},
-                                                                    y_category_constraints={},
-                                                                    y_proba_constraints={})
+                                                                    design_targets=targets)
         np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def build_package(self,
@@ -173,19 +173,19 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                                                     columns=["x", "y", "z"]),
                       predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2], [2, 1]]), columns=["A", "B"]),
                       query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
-                      query_y=None,
+                      design_targets=None,
                       bonus_objectives=None,
                       features_to_vary=None,
                       datatypes=None):
         datatypes = self.get_or_default(datatypes, [])
         features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
-        query_y = self.get_or_default(query_y, {"A": (4, 10)})
+        design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
         bonus_objectives = self.get_or_default(bonus_objectives, [])
         return DataPackage(features_dataset=features_dataset,
                            predictions_dataset=predictions_dataset,
                            query_x=query_x,
                            features_to_vary=features_to_vary,
-                           query_y=query_y,
+                           design_targets=design_targets,
                            bonus_objectives=bonus_objectives,
                            datatypes=datatypes)
 
