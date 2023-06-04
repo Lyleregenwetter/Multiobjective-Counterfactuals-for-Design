@@ -35,6 +35,8 @@ class DesignTargetsTest(unittest.TestCase):
             lambda: ProbabilityTarget((1,), (1,)): "Labels must have a length greater than 1",
             lambda: ProbabilityTarget((1, 2), ("1",)): "Preferred labels must be a subset of labels",
             lambda: ProbabilityTarget((1, None), ("1",)): "Expected labels to be an all-integer or all-string tuple",
+            lambda: ProbabilityTarget(("A", ""), ("1",)): "Labels cannot contain empty strings",
+            lambda: ProbabilityTarget(("A", "B"), ("A", "")): "Preferred labels cannot contain empty strings",
             lambda: ProbabilityTarget((1, 2), (
                 "1", None)): "Expected preferred labels to be an all-integer or all-string tuple",
         })
