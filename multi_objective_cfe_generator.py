@@ -1,5 +1,6 @@
 import itertools
 import os
+import re
 from typing import List
 
 import dill
@@ -376,11 +377,13 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
 
         if num_samples == 1:
             best_idx = np.argmin(agg_scores)
-            return self.build_res_df(all_cf_x[best_idx:best_idx + 1, :])
+            result = self.build_res_df(all_cf_x[best_idx:best_idx + 1, :])
+            return self.final_Check(result)
         else:
             if diversity_weight==0:
                 idx = np.argpartition(agg_scores, num_samples)
-                return self.build_res_df(all_cf_x[idx, :])
+                result = self.build_res_df(all_cf_x[idx, :])
+                return self.final_check(result)
             else:
                 if diversity_weight<0.1: 
                     print("Warning: Very small diversity can cause numerical instability. We recommend keeping diversity above 0.1 or setting diversity to 0")
@@ -389,8 +392,15 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
                 else:
                     index = range(len(agg_scores))
                 samples_index = self.diverse_sample(all_cf_x[index], agg_scores[index], num_samples, diversity_weight)
-                return self.build_res_df(all_cf_x[samples_index, :])
-
+                result = self.build_res_df(all_cf_x[samples_index, :])
+                return self.final_check(result)
+    def final_check(self, result):
+        print(self.problem.data_package.query_x)
+        print(result)
+        #Check if the initial query is in the final returned set
+        if (result == self.problem.data_package.query_x.values).all(1).any():
+            print("Initial Query is valid and included in the top counterfactuals identified")
+        return result 
     def _calculate_dtai(self, all_cf_y, dtai_alpha, dtai_beta, dtai_target):
         if dtai_alpha is None:
             dtai_alpha = np.ones_like(dtai_target)
