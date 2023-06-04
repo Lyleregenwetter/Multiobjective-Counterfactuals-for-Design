@@ -1,6 +1,6 @@
 import numbers
 from abc import ABCMeta, abstractmethod
-from typing import Union, Tuple
+from typing import Union, Sequence
 
 
 class McdTarget(metaclass=ABCMeta):
@@ -37,30 +37,30 @@ class ContinuousTarget(McdTarget):
 
 
 class ClassificationTarget(McdTarget):
-    def __init__(self, label: Union[str, int], desired_classes: Tuple[Union[str, int]]):
+    def __init__(self, label: Union[str, int], desired_classes: Union[Sequence[str], Sequence[int]]):
         self.label = label
         self.desired_classes = desired_classes
         self._validate_fields()
 
     def _validate_fields(self):
         self._validate_label(self.label)
-        self._validate(isinstance(self.desired_classes, tuple), "Desired classes must be a tuple")
+        self._validate(isinstance(self.desired_classes, Sequence), "Desired classes must be a sequence")
         # noinspection PyTypeChecker
         self._validate(len(self.desired_classes) > 0, "Desired classes cannot be empty")
         for desired_class in self.desired_classes:
-            self._validate(isinstance(desired_class, int), "Desired classes must be an all-integer tuple")
+            self._validate(isinstance(desired_class, int), "Desired classes must be an all-integer sequence")
 
 
 class ProbabilityTarget(McdTarget):
-    def __init__(self, labels: Union[Tuple[str, ...], Tuple[int, ...]],
-                 preferred_labels: Union[Tuple[str, ...], Tuple[int, ...]]):
+    def __init__(self, labels: Union[Sequence[str], Sequence[int]],
+                 preferred_labels: Union[Sequence[str], Sequence[int]]):
         self.labels = labels
         self.preferred_labels = preferred_labels
         self._validate_fields()
 
     def _validate_fields(self):
-        self._validate_tuple(self.labels, "Labels")
-        self._validate_tuple(self.preferred_labels, "Preferred labels")
+        self._validate_sequence(self.labels, "Labels")
+        self._validate_sequence(self.preferred_labels, "Preferred labels")
         self._validate(len(self.labels) > 1, "Labels must have a length greater than 1")
         self._validate(len(self.preferred_labels) > 0, "Preferred labels cannot be empty")
         self._validate_type_consistency(self.labels, "labels")
@@ -70,8 +70,8 @@ class ProbabilityTarget(McdTarget):
         self._validate(set(self.preferred_labels).issubset(self.labels),
                        "Preferred labels must be a subset of labels")
 
-    def _validate_tuple(self, _tuple, tuple_name):
-        self._validate(isinstance(_tuple, tuple), f"{tuple_name} must be a tuple")
+    def _validate_sequence(self, _sequence, sequence_name):
+        self._validate(isinstance(_sequence, Sequence), f"{sequence_name} must be a sequence")
 
     def _validate_type_consistency(self, _tuple, tuple_name):
         list_of_types = [type(element) for element in _tuple]
@@ -84,3 +84,32 @@ class ProbabilityTarget(McdTarget):
     def _validate_no_empty_strings(self, _tuple, tuple_name):
         lengths = [len(str(element)) for element in _tuple]
         self._validate(0 not in lengths, f"{tuple_name} cannot contain empty strings")
+
+
+class DesignTargets:
+    def __init__(self, continuous_targets: Sequence[ContinuousTarget] = None,
+                 classification_targets: Sequence[ClassificationTarget] = None,
+                 probability_targets: Sequence[ProbabilityTarget] = None):
+        self.continuous_targets = self._get_or_default(continuous_targets, ())
+        self.classification_targets = self._get_or_default(classification_targets, ())
+        self.probability_targets = self._get_or_default(probability_targets, ())
+        self._validate_fields()
+
+    def _get_or_default(self, value, default_value):
+        if value is not None:
+            return value
+        return default_value
+
+    def _validate_fields(self):
+        self._validate_sequence(self.continuous_targets, "Continuous targets", ContinuousTarget)
+        self._validate_sequence(self.classification_targets, "Classification targets", ClassificationTarget)
+        self._validate_sequence(self.probability_targets, "Probability targets", ProbabilityTarget)
+
+    def _validate(self, mandatory_condition: bool, exception_message: str):
+        if not mandatory_condition:
+            raise ValueError(exception_message)
+
+    def _validate_sequence(self, _sequence, _sequence_name, element_type):
+        self._validate(isinstance(_sequence, Sequence), f"{_sequence_name} must be a sequence")
+        for element in _sequence:
+            self._validate(isinstance(element, element_type), f"{_sequence_name} must be composed of {element_type}")

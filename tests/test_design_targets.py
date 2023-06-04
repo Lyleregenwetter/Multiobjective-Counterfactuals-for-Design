@@ -1,17 +1,26 @@
 import unittest
 
-from design_targets import ContinuousTarget, ClassificationTarget, ProbabilityTarget
+from design_targets import ContinuousTarget, ClassificationTarget, ProbabilityTarget, DesignTargets
 
 
 class DesignTargetsTest(unittest.TestCase):
+    def test_valid_design_targets(self):
+        DesignTargets(
+            [ContinuousTarget("A", 12, 15)],
+            [ClassificationTarget("A", (1, 2))],
+            [ProbabilityTarget(("A", "B"), ("A",))]
+        )
+
+    def test_invalid_design_targets(self):
+        pass
+
     # noinspection PyTypeChecker
     def test_invalid_classification_target(self):
         self._test_invalid({
             lambda: ClassificationTarget(None, (50,)): "Label must be of type string or an integer index",
             lambda: ClassificationTarget("", (50,)): "Label cannot be an empty string",
             lambda: ClassificationTarget("LABEL", ()): "Desired classes cannot be empty",
-            lambda: ClassificationTarget("LABEL", [1]): "Desired classes must be a tuple",
-            lambda: ClassificationTarget("LABEL", ("A",)): "Desired classes must be an all-integer tuple",
+            lambda: ClassificationTarget("LABEL", ("A",)): "Desired classes must be an all-integer sequence",
         })
 
     # noinspection PyTypeChecker
@@ -30,11 +39,10 @@ class DesignTargetsTest(unittest.TestCase):
         self._test_invalid({
             lambda: ProbabilityTarget((1, 2), ()): "Preferred labels cannot be empty",
             lambda: ProbabilityTarget((1, 2), (3,)): "Preferred labels must be a subset of labels",
-            lambda: ProbabilityTarget([1, 2], (1,)): "Labels must be a tuple",
-            lambda: ProbabilityTarget((1, 2), [1]): "Preferred labels must be a tuple",
             lambda: ProbabilityTarget((1,), (1,)): "Labels must have a length greater than 1",
             lambda: ProbabilityTarget((1, 2), ("1",)): "Preferred labels must be a subset of labels",
-            lambda: ProbabilityTarget((1, None), ("1",)): "Expected labels to be an all-integer or all-string tuple",
+            lambda: ProbabilityTarget((1, None),
+                                      ("1",)): "Expected labels to be an all-integer or all-string tuple",
             lambda: ProbabilityTarget(("A", ""), ("1",)): "Labels cannot contain empty strings",
             lambda: ProbabilityTarget(("A", "B"), ("A", "")): "Preferred labels cannot contain empty strings",
             lambda: ProbabilityTarget((1, 2), (
