@@ -10,6 +10,7 @@ from pymoo.core.variable import Real, Choice
 import multi_objective_cfe_generator as MOCG
 from alt_multi_label_predictor import MultilabelPredictor
 from data_package import DataPackage
+from design_targets import DesignTargets, ContinuousTarget, ClassificationTarget, ProbabilityTarget
 
 
 class McdEndToEndTest(unittest.TestCase):
@@ -22,8 +23,11 @@ class McdEndToEndTest(unittest.TestCase):
     def test_regression_only_query_y(self):
         x, y = self.x, self.y.drop(columns=self.y.columns.difference(["O_R1"]))
         datatypes = self.build_toy_x_datatypes()
+        targets = DesignTargets(
+            [ContinuousTarget("O_R1", -5, 5)]
+        )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns, query_y={"O_R1": (-5, 5)})
+                         query_x=x.iloc[0:1], features_to_vary=x.columns, design_targets=targets)
         problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
                                                               predictor=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                           any_x),
@@ -41,11 +45,14 @@ class McdEndToEndTest(unittest.TestCase):
         y["O_R2"] = y["O_R1"]
         y["O_C2"] = y["O_C1"]
         datatypes = self.build_toy_x_datatypes()
+        targets = DesignTargets(
+            [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6)],
+            [ClassificationTarget("O_C1", (1, 2)), ClassificationTarget("O_C2", (1,))],
+            [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
+        )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
                          query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         query_y={"O_R1": (0, 12), "O_R2": (0, 6)},
-                         y_classification_targets={"O_C1": (1, 2), "O_C2": (1,)},
-                         y_proba_targets={("O_P1", "O_P2"): ("O_P1",)})
+                         design_targets=targets)
 
         def predict(any_x):
             predictions = self.predict(any_x)

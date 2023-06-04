@@ -1,6 +1,9 @@
 import unittest
 
+import numpy as np
+
 from design_targets import ContinuousTarget, ClassificationTarget, ProbabilityTarget, DesignTargets
+import numpy.testing as np_test
 
 
 class DesignTargetsTest(unittest.TestCase):
@@ -10,9 +13,10 @@ class DesignTargetsTest(unittest.TestCase):
                                 [ProbabilityTarget(("E", "F"), ("E",)),
                                  ProbabilityTarget(("G", "H", "L"), ("H", "L"))])
         self.assertEqual(9, targets.count_constrained_labels())
-        self.assertEqual(("A", "B"), targets.get_continuous_targets())
-        self.assertEqual(("C", "D"), targets.get_classification_targets())
-        self.assertEqual((("E", "F"), ("G", "H", "L")), targets.get_probability_targets())
+        self.assertEqual(("A", "B"), targets.get_continuous_labels())
+        self.assertEqual(("C", "D"), targets.get_classification_labels())
+        self.assertEqual((("E", "F"), ("G", "H", "L")), targets.get_probability_labels())
+        np_test.assert_equal(np.array([15, 15]), targets.get_continuous_boundaries()[1])
 
     # noinspection PyTypeChecker
     def test_invalid_design_targets(self):

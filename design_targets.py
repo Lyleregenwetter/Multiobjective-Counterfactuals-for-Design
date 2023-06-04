@@ -1,7 +1,9 @@
 import itertools
 import numbers
 from abc import ABCMeta, abstractmethod
-from typing import Union, Sequence
+from typing import Union, Sequence, Tuple
+
+import numpy as np
 
 
 class McdTarget(metaclass=ABCMeta):
@@ -133,11 +135,22 @@ class DesignTargets:
         self._validate(self.count_constrained_labels() == len_union,
                        "Label was specified twice in targets")
 
-    def get_continuous_targets(self):
-        return tuple(target.label for target in self.continuous_targets)
+    def get_continuous_boundaries(self) -> Tuple[np.ndarray, np.ndarray]:
+        lower_bounds = [target.lower_bound for target in self.continuous_targets]
+        upper_bounds = [target.upper_bound for target in self.continuous_targets]
+        return np.array(lower_bounds), np.array(upper_bounds)
 
     def get_classification_targets(self):
-        return tuple(target.label for target in self.classification_targets)
+        return [target.desired_classes for target in self.classification_targets]
 
     def get_probability_targets(self):
+        return [target.preferred_labels for target in self.probability_targets]
+
+    def get_continuous_labels(self) -> Tuple[str, ...]:
+        return tuple(target.label for target in self.continuous_targets)
+
+    def get_classification_labels(self) -> Tuple[str, ...]:
+        return tuple(target.label for target in self.classification_targets)
+
+    def get_probability_labels(self) -> Tuple[Tuple[str, ...], ...]:
         return tuple(target.labels for target in self.probability_targets)

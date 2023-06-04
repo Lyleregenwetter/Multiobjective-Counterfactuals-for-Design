@@ -21,6 +21,7 @@ import DPPsampling as DPPsampling
 import calculate_dtai as calculate_dtai
 from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
+from design_targets import DesignTargets
 from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, to_dataframe
 
 # from main.evaluation.Predictor import Predictor
@@ -56,8 +57,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         self._avg_gower_sample_seed = sample_seed
 
     def _count_y_constraints(self):
-        return len(self.data_package.query_y) + len(self.data_package.y_classification_targets) + len(
-            list(itertools.chain.from_iterable(self.data_package.y_proba_targets.keys())))
+        return self.data_package.design_targets.count_constrained_labels()
 
     def _build_problem_var_dict(self):
         variables = {}
@@ -78,9 +78,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
         scores = self._get_scores(x_full, predictions)
         validity = self._get_mixed_constraint_satisfaction(x_full, predictions, self.constraint_functions,
-                                                           self.data_package.query_y,
-                                                           self.data_package.y_classification_targets,
-                                                           self.data_package.y_proba_targets)
+                                                           self.data_package.design_targets)
         return scores, validity
 
     def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
@@ -156,18 +154,17 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                                            x_full: pd.DataFrame,
                                            y: pd.DataFrame,
                                            x_constraint_functions: list,
-                                           y_regression_constraints: dict,
-                                           y_category_constraints: dict,
-                                           y_proba_constraints: dict):
-        n_total_constraints = self._count_total_constraints(x_constraint_functions, y_category_constraints,
-                                                            y_proba_constraints, y_regression_constraints)
+                                           design_targets: DesignTargets):
+        n_total_constraints = design_targets.count_constrained_labels()
         n_rows = x_full.shape[0]
         result = np.zeros(shape=(n_rows, n_total_constraints))
 
         self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, n_total_constraints)
-        self._append_proba_satisfaction(result, y, y_proba_constraints)
-        self._append_satisfaction(result, self._evaluate_regression_satisfaction, y, y_regression_constraints)
-        self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, y_category_constraints)
+        self._append_proba_satisfaction(result, y, design_targets)
+        self._append_satisfaction(result, self._evaluate_regression_satisfaction, y, design_targets,
+                                  design_targets.get_continuous_labels())
+        self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, design_targets,
+                                  design_targets.get_classification_labels())
 
         return result
 
@@ -181,15 +178,16 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             y_category_constraints) + number_proba_constrains
 
     def _append_satisfaction(self, result: np.ndarray, evaluation_function: callable,
-                             y: pd.DataFrame, y_constraints: dict) -> None:
+                             y: pd.DataFrame, y_constraints: DesignTargets, labels) -> None:
         satisfaction = evaluation_function(y, y_constraints)
-        indices = [list(y.columns).index(key) for key in y_constraints]
+        indices = [list(y.columns).index(key) for key in labels]
         result[:, indices] = 1 - satisfaction
 
     def _append_proba_satisfaction(self, result: np.ndarray, y: pd.DataFrame,
-                                   y_proba_constraints: dict) -> None:
+                                   design_targets: DesignTargets) -> None:
         c_evaluator = ClassificationEvaluator()
-        for proba_key, proba_targets in y_proba_constraints.items():
+        for proba_key, proba_targets in zip(design_targets.get_probability_labels(),
+                                            design_targets.get_probability_targets()):
             proba_consts = y.loc[:, proba_key]
             proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
             indices = [list(y.columns).index(key) for key in proba_key]
@@ -203,15 +201,15 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             # TODO: discuss this change with Lyle
             result[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
 
-    def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: dict):
-        actual = y.loc[:, y_category_constraints.keys()]
+    def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: DesignTargets):
+        actual = y.loc[:, y_category_constraints.get_classification_labels()]
         # dtype=object is needed, otherwise the operation is deprecated
-        targets = np.array([[i for i in j] for j in y_category_constraints.values()], dtype=object)
+        targets = np.array([[i for i in j] for j in y_category_constraints.get_classification_targets()], dtype=object)
         return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
 
-    def _evaluate_regression_satisfaction(self, y: pd.DataFrame, y_regression_constraints: dict):
-        _, query_lb, query_ub = self.sort_regression_constraints(y_regression_constraints)
-        actual = y.loc[:, y_regression_constraints.keys()].values
+    def _evaluate_regression_satisfaction(self, y: pd.DataFrame, y_regression_constraints: DesignTargets):
+        query_lb, query_ub = y_regression_constraints.get_continuous_boundaries()
+        actual = y.loc[:, y_regression_constraints.get_continuous_labels()].values
         satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))
         return satisfaction
 
