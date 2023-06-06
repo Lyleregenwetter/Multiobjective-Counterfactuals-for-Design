@@ -22,7 +22,7 @@ class DataPackage:
         self.features_dataset = self._to_valid_dataframe(features_dataset, "features_dataset")
         self.predictions_dataset = self._to_valid_dataframe(predictions_dataset, "predictions_dataset")
         self.query_x = self._to_valid_dataframe(query_x, "query_x")
-        self.features_to_vary = self._get_or_default(features_to_vary, list(features_dataset.columns.values))
+        self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
         self.design_targets = design_targets
         self.bonus_objectives = self._get_or_default(bonus_objectives, [])
         self.datatypes = datatypes
