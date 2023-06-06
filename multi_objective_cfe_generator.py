@@ -24,6 +24,10 @@ from data_package import DataPackage
 from design_targets import DesignTargets
 from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, to_dataframe
 
+DEFAULT_BETA = 4
+
+MCD_BASE_OBJECTIVES = 3
+
 # from main.evaluation.Predictor import Predictor
 
 MEANING_OF_LIFE = 42
@@ -35,7 +39,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                  predictor: callable,
                  constraint_functions: list):
         self.data_package = data_package
-        self.number_of_objectives = len(data_package.bonus_objectives) + 3
+        self.number_of_objectives = len(data_package.bonus_objectives) + MCD_BASE_OBJECTIVES
         self.x_dimension = len(self.data_package.features_dataset.columns)
         self.predictor = predictor
         self.constraint_functions = constraint_functions
@@ -112,17 +116,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         f_d = self.data_package.features_dataset
         p_d = self.data_package.predictions_dataset
         q = self.data_package.query_x
-        reals_and_ints_idx = self._get_features_by_type([Real, Integer])  # pass in the pymoo built in variable types
-        for index in reals_and_ints_idx:  # Filter out any that don't fall into an acceptable range
-            p_d = p_d[(f_d.iloc[:, index] >= self.data_package.datatypes[index].bounds[0])]
-            f_d = f_d[(f_d.iloc[:, index] >= self.data_package.datatypes[index].bounds[0])]
-            p_d = p_d[(f_d.iloc[:, index] <= self.data_package.datatypes[index].bounds[1])]
-            f_d = f_d[(f_d.iloc[:, index] <= self.data_package.datatypes[index].bounds[1])]
-        categorical_idx = self._get_features_by_type([Choice])  # pass in the pymoo built in variable types
-        for parameter in categorical_idx:  # Filter out any that don't fall into an acceptable category
-            p_d = p_d[(f_d.iloc[:, parameter].isin(self.data_package.datatypes[parameter].options))]
-            f_d = f_d[(f_d.iloc[:, parameter].isin(self.data_package.datatypes[parameter].options))]
-            # TODO: fix this bug...
+        f_d, p_d = self._get_valid_numeric_entries(f_d, p_d)
+        f_d, p_d = self._get_valid_categorical_entries(f_d, p_d)
 
         f2f = self.data_package.features_to_freeze
         if len(f2f) > 0:
@@ -132,6 +127,37 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
             f_d = f_d[np.equal(f_d_view.values, query_view.values)]
         self.data_package.features_dataset = f_d
         self.data_package.predictions_dataset = p_d
+
+    def _get_valid_categorical_entries(self, f_d, p_d):
+        categorical_idx = self._get_features_by_type([Choice])  # pass in the pymoo built in variable types
+        for parameter in categorical_idx:  # Filter out any that don't fall into an acceptable category
+            f_d, p_d = self._filter_valid_categorical_entries(f_d, p_d, parameter)
+        return f_d, p_d
+
+    def _filter_valid_categorical_entries(self, f_d, p_d, parameter):
+        # noinspection PyUnresolvedReferences
+        features_with_valid_categories = (
+            f_d.iloc[:, parameter].isin(self.data_package.datatypes[parameter].options))
+        p_d = p_d[features_with_valid_categories]
+        f_d = f_d[features_with_valid_categories]
+        return f_d, p_d
+
+    def _get_valid_numeric_entries(self, f_d, p_d):
+        reals_and_ints_idx = self._get_features_by_type([Real, Integer])  # pass in the pymoo built in variable types
+        for index in reals_and_ints_idx:  # Filter out any that don't fall into an acceptable range
+            f_d, p_d = self._filter_entries_outside_range(f_d, p_d, index)
+        return f_d, p_d
+
+    def _filter_entries_outside_range(self, f_d, p_d, index):
+        # noinspection PyUnresolvedReferences
+        features_gt_lower_bound = (f_d.iloc[:, index] >= self.data_package.datatypes[index].bounds[0])
+        p_d = p_d[features_gt_lower_bound]
+        f_d = f_d[features_gt_lower_bound]
+        # noinspection PyUnresolvedReferences
+        features_lt_upper_bound = (f_d.iloc[:, index] <= self.data_package.datatypes[index].bounds[1])
+        p_d = p_d[features_lt_upper_bound]
+        f_d = f_d[features_lt_upper_bound]
+        return f_d, p_d
 
     def _get_features_by_type(self, types: list) -> list:
         """Helper function to get a list of parameter indices of a particular datatype"""
@@ -407,9 +433,9 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
         if dtai_alpha is None:
             dtai_alpha = np.ones_like(dtai_target)
         if dtai_beta is None:
-            dtai_beta = np.ones_like(dtai_target) * 4
-        # TODO: ascertain this '-3' does not constitute a bug
-        return calculate_dtai.calculateDTAI(all_cf_y[:, :-3], "minimize", dtai_target, dtai_alpha, dtai_beta)
+            dtai_beta = np.ones_like(dtai_target) * DEFAULT_BETA
+        return calculate_dtai.calculateDTAI(all_cf_y[:, :-MCD_BASE_OBJECTIVES], "minimize", dtai_target, dtai_alpha,
+                                            dtai_beta)
 
     def _initialize_all_cfs(self, include_dataset):
         self._verbose_log("Collecting all counterfactual candidates!")
@@ -443,7 +469,6 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
 
     def build_res_df(self, x):
         self._verbose_log("Done! Returning CFs")
-        x = pd.DataFrame(x, columns=self.problem.data_package.features_to_vary)
         # noinspection PyProtectedMember
         return pd.DataFrame(self.problem._build_full_df(x), columns=self.problem.data_package.features_dataset.columns)
 
