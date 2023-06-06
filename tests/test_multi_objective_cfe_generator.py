@@ -34,13 +34,13 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             query_x=features[0:1],
             features_to_vary=["x", "y", "z"],
             design_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
-            bonus_objectives=[]
+            bonus_objectives=[],
+            datatypes=[Real(), Real(), Real()]
         )
         self.generator = MOCFG(
             data_package=self.data_package,
             predictor=lambda x: pd.DataFrame(),
             constraint_functions=[],
-            datatypes=[Real(), Real(), Real()]
         )
         self.static_generator = MOCFG
 
@@ -94,8 +94,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
         ]))
 
     def build_generator(self, package):
-        return MOCFG(data_package=package, predictor=DummyPredictor().predict, constraint_functions=[],
-                     datatypes=[Real() for _ in range(len(package.features_dataset.columns))])
+        return MOCFG(data_package=package, predictor=DummyPredictor().predict, constraint_functions=[])
 
     def test_strict_inequality_of_regression_constraints(self):
         """this is the current behavior, but is it desired?"""
@@ -137,9 +136,10 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             query_x=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
             design_targets=targets,
             features_to_vary=features,
-            bonus_objectives=["O2", "O3"]
+            bonus_objectives=["O2", "O3"],
+            datatypes=datatypes
         )
-        generator = MOCFG(data_package, lambda x: x, [], datatypes)
+        generator = MOCFG(data_package, lambda x: x, [])
 
         scores = generator._get_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
                                                       columns=features),
@@ -177,7 +177,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                       bonus_objectives=None,
                       features_to_vary=None,
                       datatypes=None):
-        datatypes = self.get_or_default(datatypes, [])
+        datatypes = self.get_or_default(datatypes, [Real(), Real(), Real()])
         features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
         design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
         bonus_objectives = self.get_or_default(bonus_objectives, [])

@@ -16,7 +16,7 @@ class DesignTargetsTest(unittest.TestCase):
         self.assertEqual(("A", "B"), targets.get_continuous_labels())
         self.assertEqual(("C", "D"), targets.get_classification_labels())
         self.assertEqual((("E", "F"), ("G", "H", "L")), targets.get_probability_labels())
-        np_test.assert_equal(np.array([15, 15]), targets.get_continuous_boundaries()[1])
+        np_test.assert_equal(np.array([[12, 12], [15, 15]]), targets.get_continuous_boundaries())
 
     # noinspection PyTypeChecker
     def test_invalid_design_targets(self):
@@ -62,15 +62,15 @@ class DesignTargetsTest(unittest.TestCase):
             lambda: ProbabilityTarget((1,), (1,)): "Labels must have a length greater than 1",
             lambda: ProbabilityTarget((1, 2), ("1",)): "Preferred labels must be a subset of labels",
             lambda: ProbabilityTarget((1, None),
-                                      ("1",)): "Expected labels to be an all-integer or all-string tuple",
+                                      ("1",)): "Expected labels to be an all-integer or all-string sequence",
             lambda: ProbabilityTarget(("A", ""), ("1",)): "Labels cannot contain empty strings",
             lambda: ProbabilityTarget(("A", "B"), ("A", "")): "Preferred labels cannot contain empty strings",
             lambda: ProbabilityTarget((1, 2), (
-                "1", None)): "Expected preferred labels to be an all-integer or all-string tuple",
+                "1", None)): "Expected preferred labels to be an all-integer or all-string sequence",
         })
 
     def test_valid_probability_target(self):
-        ProbabilityTarget(labels=("A", "B", "C"), preferred_labels=("A", "B"))
+        ProbabilityTarget(labels=("A", "B", "C"), preferred_labels=["A", "B"])
         ProbabilityTarget(labels=(5, 6, 7), preferred_labels=(5,))
 
     def test_valid_classification_target(self):

@@ -40,8 +40,6 @@ class McdEndToEndTest(unittest.TestCase):
 
     @unittest.skip
     def test_framed_example(self):
-        # TODO: toy dataset and dummy model
-        """Test should use some toy dataset and a dummy model - both for speed and easy reproducibility"""
         x, y = self.x, self.y.drop(columns=self.y.columns.difference(["Model Mass Magnitude"]))
         lbs = np.quantile(x.values, 0.01, axis=0)
         ubs = np.quantile(x.values, 0.99, axis=0)

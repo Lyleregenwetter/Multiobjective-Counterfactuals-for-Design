@@ -1,6 +1,5 @@
 import itertools
 import os
-import re
 from typing import List
 
 import dill
@@ -34,14 +33,12 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def __init__(self,
                  data_package: DataPackage,
                  predictor: callable,
-                 constraint_functions: list,
-                 datatypes: list = None):
+                 constraint_functions: list):
         self.data_package = data_package
         self.number_of_objectives = len(data_package.bonus_objectives) + 3
         self.x_dimension = len(self.data_package.features_dataset.columns)
         self.predictor = predictor
         self.constraint_functions = constraint_functions
-        self.datatypes = datatypes
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self.number_of_objectives,
                          n_constr=len(constraint_functions) + self._count_y_constraints())
@@ -63,7 +60,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def _build_problem_var_dict(self):
         variables = {}
         for i in range(len(self.data_package.features_to_vary)):
-            variables[self.data_package.features_to_vary[i]] = self.datatypes[i]
+            variables[self.data_package.features_to_vary[i]] = self.data_package.datatypes[i]
         return variables
 
     def _evaluate(self, x: np.ndarray, out: dict, *args, **kwargs):
@@ -117,14 +114,15 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         q = self.data_package.query_x
         reals_and_ints_idx = self._get_features_by_type([Real, Integer])  # pass in the pymoo built in variable types
         for index in reals_and_ints_idx:  # Filter out any that don't fall into an acceptable range
-            p_d = p_d[(f_d.iloc[:, index] >= self.datatypes[index].bounds[0])]
-            f_d = f_d[(f_d.iloc[:, index] >= self.datatypes[index].bounds[0])]
-            p_d = p_d[(f_d.iloc[:, index] <= self.datatypes[index].bounds[1])]
-            f_d = f_d[(f_d.iloc[:, index] <= self.datatypes[index].bounds[1])]
+            p_d = p_d[(f_d.iloc[:, index] >= self.data_package.datatypes[index].bounds[0])]
+            f_d = f_d[(f_d.iloc[:, index] >= self.data_package.datatypes[index].bounds[0])]
+            p_d = p_d[(f_d.iloc[:, index] <= self.data_package.datatypes[index].bounds[1])]
+            f_d = f_d[(f_d.iloc[:, index] <= self.data_package.datatypes[index].bounds[1])]
         categorical_idx = self._get_features_by_type([Choice])  # pass in the pymoo built in variable types
         for parameter in categorical_idx:  # Filter out any that don't fall into an acceptable category
-            p_d = p_d[(f_d.iloc[:, parameter].isin(self.datatypes[parameter].options))]
-            f_d = f_d[(f_d.iloc[:, parameter].isin(self.datatypes[parameter].options))]  # TODO: fix this bug...
+            p_d = p_d[(f_d.iloc[:, parameter].isin(self.data_package.datatypes[parameter].options))]
+            f_d = f_d[(f_d.iloc[:, parameter].isin(self.data_package.datatypes[parameter].options))]
+            # TODO: fix this bug...
 
         f2f = self.data_package.features_to_freeze
         if len(f2f) > 0:
@@ -137,7 +135,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def _get_features_by_type(self, types: list) -> list:
         """Helper function to get a list of parameter indices of a particular datatype"""
-        dts = self.datatypes
+        dts = self.data_package.datatypes
         matching_idxs = []
         for i in range(len(dts)):
             if type(dts[i]) in types:
@@ -378,15 +376,17 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
         if num_samples == 1:
             best_idx = np.argmin(agg_scores)
             result = self.build_res_df(all_cf_x[best_idx:best_idx + 1, :])
-            return self.final_Check(result)
+            return self.final_check(result)
         else:
-            if diversity_weight==0:
+            if diversity_weight == 0:
                 idx = np.argpartition(agg_scores, num_samples)
                 result = self.build_res_df(all_cf_x[idx, :])
                 return self.final_check(result)
             else:
-                if diversity_weight<0.1: 
-                    print("Warning: Very small diversity can cause numerical instability. We recommend keeping diversity above 0.1 or setting diversity to 0")
+                if diversity_weight < 0.1:
+                    print(
+                        """Warning: Very small diversity can cause numerical instability. 
+                        We recommend keeping diversity above 0.1 or setting diversity to 0""")
                 if len(agg_scores) > num_dpp:
                     index = np.argpartition(agg_scores, -num_dpp)[-num_dpp:]
                 else:
@@ -394,13 +394,15 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
                 samples_index = self.diverse_sample(all_cf_x[index], agg_scores[index], num_samples, diversity_weight)
                 result = self.build_res_df(all_cf_x[samples_index, :])
                 return self.final_check(result)
+
     def final_check(self, result):
         print(self.problem.data_package.query_x)
         print(result)
-        #Check if the initial query is in the final returned set
+        # Check if the initial query is in the final returned set
         if (result == self.problem.data_package.query_x.values).all(1).any():
             print("Initial Query is valid and included in the top counterfactuals identified")
-        return result 
+        return result
+
     def _calculate_dtai(self, all_cf_y, dtai_alpha, dtai_beta, dtai_target):
         if dtai_alpha is None:
             dtai_alpha = np.ones_like(dtai_target)

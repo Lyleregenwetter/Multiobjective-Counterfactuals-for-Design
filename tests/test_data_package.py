@@ -18,6 +18,10 @@ class DataPackageTest(unittest.TestCase):
     def test_get_features_to_freeze(self):
         self.assertEqual(["z"], self.valid_package.features_to_freeze)
 
+    @unittest.skip
+    def test_validate_labels_in_all_design_targets(self):
+        pass
+
     def test_invalid_query_x(self):
         # noinspection PyTypeChecker
         self.assert_raises_with_message(
@@ -40,29 +44,28 @@ class DataPackageTest(unittest.TestCase):
     def test_raises_when_index_out_of_bounds(self):
         self.assert_raises_with_message(
             lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]]), features_to_vary=[5]),
-            "Invalid index provided in list of features to vary")
+            """Invalid value in features_to_vary: expected columns [5] to be in features_dataset columns [0 1 2]""")
         self.assert_raises_with_message(
             lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]]),
                                     design_targets=DesignTargets([ContinuousTarget(5, 3, 10)])),
-            "Invalid index provided in query y")
+            """Invalid value in design_targets: expected columns [5] to be in predictions_dataset columns [0 1]""")
 
-    @unittest.skip
     def test_raises_when_index_not_int(self):
         self.assert_raises_with_message(
             lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]]), features_to_vary=[5.4]),
-            "Invalid index provided in list of features to vary")
+            """Invalid value in features_to_vary: expected columns [5.4] to be in features_dataset columns [0 1 2]""")
         self.assert_raises_with_message(
             lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]]),
                                     design_targets=DesignTargets([ContinuousTarget(5.4, 3, 10)])),
-            "Invalid index provided in query y")
+            """Label must be of type string or an integer index""")
 
     def test_raises_meaningful_exception_when_inconsistent(self):
         self.assert_raises_with_message(
             lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]])),
-            "The list of features to vary must be a list of indices when the features dataset is a numpy array")
+            """Invalid value in features_to_vary: expected columns ['x', 'y'] to be in features_dataset columns [0 1 2]""")
         self.assert_raises_with_message(
             lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]])),
-            "Query y must contain indices when the predictions dataset is a numpy array")
+            """Invalid value in design_targets: expected columns ['A'] to be in predictions_dataset columns [0 1]""")
 
     def test_initialize_with_numpy_arrays(self):
         features = np.array([[1, 2, 3], [4, 5, 6]])
@@ -89,21 +92,20 @@ class DataPackageTest(unittest.TestCase):
 
     def test_initialize_with_no_features_to_vary(self):
         self.assert_raises_with_message(lambda: self.initialize(features_to_vary=[]),
-                                        "User has not provided any features to vary")
+                                        "features_to_vary cannot be an empty sequence")
 
     def test_initialize_with_invalid_features_to_vary(self):
         self.assert_raises_with_message(lambda: self.initialize(features_to_vary=["NON_EXISTENT"]),
-                                        "Expected label NON_EXISTENT to be in dataset ['x' 'y' 'z']")
+                                        """Invalid value in features_to_vary: expected columns ['NON_EXISTENT'] to be in features_dataset columns ['x' 'y' 'z']""")
 
-    @unittest.skip
     def test_initialize_with_no_targets(self):
         self.assert_raises_with_message(lambda: self.initialize(design_targets=DesignTargets()),
-                                        "User has not provided any performance targets")
+                                        "Design targets must be provided")
 
     def test_initialize_with_invalid_targets(self):
         self.assert_raises_with_message(lambda: self.initialize(
             design_targets=DesignTargets([ContinuousTarget("NON_EXISTENT", 3, 10)])),
-                                        "Expected label NON_EXISTENT to be in dataset ['A' 'B']")
+                                        """Invalid value in design_targets: expected columns ['NON_EXISTENT'] to be in predictions_dataset columns ['A' 'B']""")
 
     def test_data_package_with_mismatch(self):
         self.assert_raises_with_message(

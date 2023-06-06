@@ -73,20 +73,20 @@ class ProbabilityTarget(McdTarget):
         self._validate(set(self.preferred_labels).issubset(self.labels),
                        "Preferred labels must be a subset of labels")
 
-    def _validate_sequence(self, _sequence, sequence_name):
-        self._validate(isinstance(_sequence, Sequence), f"{sequence_name} must be a sequence")
+    def _validate_sequence(self, _object, object_name):
+        self._validate(isinstance(_object, Sequence), f"{object_name} must be a sequence")
 
-    def _validate_type_consistency(self, _tuple, tuple_name):
-        list_of_types = [type(element) for element in _tuple]
+    def _validate_type_consistency(self, _sequence, sequence_name):
+        list_of_types = [type(element) for element in _sequence]
         count_strings = list_of_types.count(str)
         count_integers = list_of_types.count(int)
-        exception_message = f"Expected {tuple_name} to be an all-integer or all-string tuple"
+        exception_message = f"Expected {sequence_name} to be an all-integer or all-string sequence"
         self._validate((count_integers == 0) or (count_strings == 0), exception_message)
         self._validate((count_integers + count_strings) == len(list_of_types), exception_message)
 
-    def _validate_no_empty_strings(self, _tuple, tuple_name):
-        lengths = [len(str(element)) for element in _tuple]
-        self._validate(0 not in lengths, f"{tuple_name} cannot contain empty strings")
+    def _validate_no_empty_strings(self, _sequence, sequence_name):
+        lengths = [len(str(element)) for element in _sequence]
+        self._validate(0 not in lengths, f"{sequence_name} cannot contain empty strings")
 
 
 class DesignTargets:

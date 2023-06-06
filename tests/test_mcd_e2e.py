@@ -27,12 +27,12 @@ class McdEndToEndTest(unittest.TestCase):
             [ContinuousTarget("O_R1", -5, 5)]
         )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns, design_targets=targets)
+                         query_x=x.iloc[0:1], features_to_vary=x.columns,
+                         design_targets=targets, datatypes=datatypes)
         problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
                                                               predictor=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                           any_x),
-                                                              constraint_functions=[],
-                                                              datatypes=datatypes)
+                                                              constraint_functions=[])
         cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
         cf_set.optimize(5)
         num_samples = 10
@@ -52,7 +52,7 @@ class McdEndToEndTest(unittest.TestCase):
         )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
                          query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         design_targets=targets)
+                         design_targets=targets, datatypes=datatypes)
 
         def predict(any_x):
             predictions = self.predict(any_x)
@@ -62,8 +62,7 @@ class McdEndToEndTest(unittest.TestCase):
 
         problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
                                                               predictor=predict,
-                                                              constraint_functions=[],
-                                                              datatypes=datatypes)
+                                                              constraint_functions=[])
         cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
         cf_set.optimize(5)
         num_samples = 10

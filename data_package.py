@@ -1,5 +1,8 @@
+from typing import List, Sequence
+
 import numpy as np
 import pandas as pd
+from pymoo.core.variable import Variable
 
 from design_targets import DesignTargets
 
@@ -10,13 +13,13 @@ class DataPackage:
                  predictions_dataset: pd.DataFrame,
                  query_x: pd.DataFrame,
                  design_targets: DesignTargets,
-                 features_to_vary: list,
+                 datatypes: List[Variable],
+                 features_to_vary: list = None,
                  bonus_objectives: list = None,
-                 datatypes=None):
+                 ):
         """"""
-        self.features_dataset = self._attempt_features_to_dataframe(features_dataset, features_to_vary)
-        self.predictions_dataset = self._attempt_predictions_to_dataframe(predictions_dataset,
-                                                                          design_targets.get_continuous_labels())
+        self.features_dataset = self._features_to_dataframe(features_dataset)
+        self.predictions_dataset = self._predictions_to_dataframe(predictions_dataset)
         self.query_x = self._query_x_to_dataframe_if_not(query_x)
         self.features_to_vary = features_to_vary
         self.design_targets = design_targets
@@ -34,25 +37,16 @@ class DataPackage:
         index_based_columns = [_ for _ in range(numpy_array.shape[1])]
         return pd.DataFrame(numpy_array, columns=index_based_columns)
 
-    def _attempt_features_to_dataframe(self, features_dataset, features_to_vary):
-        return self._attempt_to_dataframe(
-            features_dataset, features_to_vary,
-            "The list of features to vary must be a list of indices when the features dataset is a numpy array",
-            "Invalid index provided in list of features to vary")
+    def _features_to_dataframe(self, features_dataset):
+        return self._to_dataframe_if_not(features_dataset, "features_dataset")
 
-    def _attempt_predictions_to_dataframe(self, predictions_dataset, query_y):
-        return self._attempt_to_dataframe(
-            predictions_dataset, query_y,
-            "Query y must contain indices when the predictions dataset is a numpy array",
-            "Invalid index provided in query y"
-        )
+    def _predictions_to_dataframe(self, predictions_dataset):
+        return self._to_dataframe_if_not(predictions_dataset, "predictions_dataset")
 
-    def _attempt_to_dataframe(self, dataset, provided_features, type_error_message, invalid_error_message):
+    def _to_dataframe_if_not(self, dataset, dataset_name):
+        self._validate(isinstance(dataset, (np.ndarray, pd.DataFrame)),
+                       f"{dataset_name} must either be a pandas dataframe or a numpy ndarray")
         if isinstance(dataset, np.ndarray):
-            self._validate_indices_to_vary(provided_features,
-                                           dataset.shape[1],
-                                           type_error_message,
-                                           invalid_error_message)
             return self._to_dataframe(dataset)
         return dataset
 
@@ -61,7 +55,7 @@ class DataPackage:
         self._validate_features_to_vary()
         self._validate_query_x()
         self._validate_query_y()
-        self._validate_bonus_objs()  # TODO: fix bug here.
+        self._validate_bonus_objs()
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
     def _validate_datasets(self):
@@ -79,39 +73,35 @@ class DataPackage:
     #     assert lower_bounds.shape == (valid_length,)
 
     def _validate_features_to_vary(self):
-        self._validate_labels(self.features_dataset, self.features_to_vary,
-                              "User has not provided any features to vary")
+        self._validate_columns(self.features_dataset, self.features_to_vary,
+                               "features_dataset", "features_to_vary")
 
-    def _validate_labels(self, dataset: pd.DataFrame, labels: list,
-                         no_labels_message):
-        self._validate(len(labels) > 0, no_labels_message)
-        valid_labels = dataset.columns.values
-        for label in labels:
-            self._validate(label in valid_labels, f"Expected label {label} to be in dataset {valid_labels}")
+    def _validate_columns(self,
+                          dataset: pd.DataFrame,
+                          columns: Sequence,
+                          dataset_name,
+                          features_name):
+        self._validate(len(columns) > 0, f"{features_name} cannot be an empty sequence")
+        valid_columns = dataset.columns.values
+        invalid_columns = set(columns).difference(set(valid_columns))
+        invalid_columns = list(invalid_columns)
+        invalid_columns.sort()
+        self._validate_with_message_supplier(len(invalid_columns) == 0, lambda:
+        f"Invalid value in {features_name}: expected columns {list(invalid_columns)} to "
+        f"be in {dataset_name} columns {valid_columns}")
+        for column in columns:
+            self._validate(column in valid_columns,
+                           f"Expected column {column} to be in dataset {valid_columns}")
 
     def _validate_query_y(self):
-        self._validate_labels(self.predictions_dataset,
-                              self.design_targets.get_continuous_labels(),
-                              "User has not provided any performance targets")
+        self._validate_columns(self.predictions_dataset,
+                               self.design_targets.get_continuous_labels(),
+                               "predictions_dataset",
+                               "design_targets")
 
     def _validate_bonus_objs(self):
         self._validate(set(self.bonus_objectives).issubset(set(self.predictions_dataset.columns)),
                        "Bonus objectives should be a subset of labels!")
-
-    def _validate_indices_to_vary(self, features_to_vary: list, number_of_features: int, type_error_message: str,
-                                  invalid_error_message: str):
-        for feature in features_to_vary:
-            self._validate_int(feature, number_of_features, type_error_message, invalid_error_message)
-
-    def _validate_int(self, feature, number_of_features: int,
-                      type_error_message,
-                      invalid_error_message):
-        try:
-            is_int = (float(feature) == int(feature))
-        except ValueError:
-            raise ValueError(type_error_message)
-        if not (is_int and int(feature) < number_of_features):
-            raise ValueError(invalid_error_message)
 
     def _validate_query_x(self):
         self._validate(not self.query_x.empty, "Query x cannot be empty!")
@@ -125,6 +115,10 @@ class DataPackage:
             return self._to_dataframe(query_x)
         self._validate(isinstance(query_x, pd.DataFrame), "Query x is neither a dataframe nor an ndarray!")
         return query_x
+
+    def _validate_with_message_supplier(self, mandatory_condition: bool, message_supplier: callable):
+        if not mandatory_condition:
+            raise ValueError(message_supplier())
 
     def _validate(self, mandatory_condition: bool, exception_message: str):
         if not mandatory_condition:
