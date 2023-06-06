@@ -8,6 +8,7 @@ from data_package import DataPackage
 from design_targets import DesignTargets, ContinuousTarget
 
 
+# noinspection PyTypeChecker
 class DataPackageTest(unittest.TestCase):
     def setUp(self) -> None:
         self.valid_package = self.initialize()
@@ -26,20 +27,20 @@ class DataPackageTest(unittest.TestCase):
         # noinspection PyTypeChecker
         self.assert_raises_with_message(
             lambda: self.initialize(query_x=None),
-            "Query x is neither a dataframe nor an ndarray!")
+            "query_x must either be a pandas dataframe or a numpy ndarray")
         # noinspection PyTypeChecker
         self.assert_raises_with_message(
             lambda: self.initialize(query_x={}),
-            "Query x is neither a dataframe nor an ndarray!")
+            "query_x must either be a pandas dataframe or a numpy ndarray")
         self.assert_raises_with_message(
             lambda: self.initialize(query_x=pd.DataFrame()),
-            "Query x cannot be empty!")
+            "query_x cannot be empty")
         self.assert_raises_with_message(
             lambda: self.initialize(query_x=pd.DataFrame(np.array([[1]]), columns=["x"])),
-            "Dimensional mismatch between query x and dataset!")
+            "query_x must have 1 row and 3 columns")
         self.assert_raises_with_message(
             lambda: self.initialize(query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "zz"])),
-            "Query x columns do not match dataset columns!")
+            "query_x columns do not match dataset columns!")
 
     def test_raises_when_index_out_of_bounds(self):
         self.assert_raises_with_message(

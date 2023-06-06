@@ -49,8 +49,8 @@ class McdEndToEndTest(unittest.TestCase):
         design_targets = DesignTargets(
             [ContinuousTarget("Model Mass Magnitude", 2, 4)]
         )
-        dp = DataPackage(x, y, x.iloc[0:1], design_targets, x.columns, [])
-        problem = MOCG.MultiObjectiveCounterfactualsGenerator(dp, self.call_predictor, [], datatypes)
+        dp = DataPackage(x, y, x.iloc[0:1], design_targets, datatypes)
+        problem = MOCG.MultiObjectiveCounterfactualsGenerator(dp, self.call_predictor, [])
         cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
         cf_set.optimize(5)
         num_samples = 10
