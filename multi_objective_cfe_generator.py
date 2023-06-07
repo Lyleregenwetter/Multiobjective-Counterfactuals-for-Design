@@ -1,6 +1,6 @@
 import itertools
 import os
-from typing import List
+from typing import List, Callable, Union
 
 import dill
 import numpy as np
@@ -36,7 +36,7 @@ MEANING_OF_LIFE = 42
 class MultiObjectiveCounterfactualsGenerator(Problem):
     def __init__(self,
                  data_package: DataPackage,
-                 predictor: callable,
+                 predictor: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
                  constraint_functions: list):
         self.data_package = data_package
         self.number_of_objectives = len(data_package.bonus_objectives) + MCD_BASE_OBJECTIVES

@@ -10,7 +10,7 @@ from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
 import multi_objective_cfe_generator as MOCG
-from alt_multi_label_predictor import MultilabelPredictor
+from tests.alt_multi_label_predictor import MultilabelPredictor
 from data_package import DataPackage
 from design_targets import DesignTargets, ContinuousTarget
 from load_data import load_scaled_framed_dataset
