@@ -1,7 +1,7 @@
 import itertools
 import numbers
 from abc import ABCMeta, abstractmethod
-from typing import Union, Sequence, Tuple
+from typing import Union, Sequence, Tuple, List
 
 import numpy as np
 
@@ -98,15 +98,18 @@ class DesignTargets:
         self.probability_targets = self._get_or_default(probability_targets, ())
         self._validate_fields()
 
+    def get_all_constrained_labels(self):
+        return self._get_probability_labels() + self.get_continuous_labels() + self.get_classification_labels()
+
     def count_constrained_labels(self):
-        return len(self.continuous_targets) + len(self.classification_targets) + len(self._get_probability_labels())
+        return len(self.get_all_constrained_labels())
 
     def _get_or_default(self, value, default_value):
         if value is not None:
             return value
         return default_value
 
-    def _get_probability_labels(self):
+    def _get_probability_labels(self) -> Tuple[str, ...]:
         return tuple(itertools.chain.from_iterable([probability_target.labels for probability_target
                                                     in self.probability_targets]))
 
@@ -140,10 +143,10 @@ class DesignTargets:
         upper_bounds = [target.upper_bound for target in self.continuous_targets]
         return np.array(lower_bounds), np.array(upper_bounds)
 
-    def get_classification_targets(self):
+    def get_desired_classes(self) -> List[Union[Sequence[str], Sequence[int]]]:
         return [target.desired_classes for target in self.classification_targets]
 
-    def get_probability_targets(self):
+    def get_preferred_probability_targets(self) -> List[Union[Sequence[str], Sequence[int]]]:
         return [target.preferred_labels for target in self.probability_targets]
 
     def get_continuous_labels(self) -> Tuple[str, ...]:

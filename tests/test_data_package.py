@@ -3,9 +3,10 @@ import unittest
 import numpy as np
 import pandas as pd
 import numpy.testing as np_test
+from pymoo.core.variable import Real
 
 from data_package import DataPackage
-from design_targets import DesignTargets, ContinuousTarget
+from design_targets import DesignTargets, ContinuousTarget, ClassificationTarget
 
 
 # noinspection PyTypeChecker
@@ -19,54 +20,72 @@ class DataPackageTest(unittest.TestCase):
     def test_get_features_to_freeze(self):
         self.assertEqual(["z"], self.valid_package.features_to_freeze)
 
-    @unittest.skip
-    def test_validate_labels_in_all_design_targets(self):
-        pass
+    def test_invalid_features_dataset(self):
+        self._test_invalid(
+            {
+                lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]])):
+                    "Invalid value in features_to_vary: expected columns ['x', 'y'] "
+                    "to be in features_dataset columns [0 1 2]",
+                lambda:
+                self.initialize(features_to_vary=["N"]):
+                    "Invalid value in features_to_vary: expected columns ['N'] "
+                    "to be in features_dataset columns ['x' 'y' 'z']"
+            })
+
+    def test_invalid_predictions_dataset(self):
+        self._test_invalid({
+            lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]])):
+                "Invalid value in design_targets: expected columns ['A'] "
+                "to be in predictions_dataset columns [0 1]",
+            lambda: self.initialize(predictions_dataset=pd.DataFrame(np.array([[5, 4]]), columns=["A", "B"])):
+                "features_dataset and predictions_dataset do not have the same number of rows (2, 1)"
+        })
+
+    def test_invalid_design_targets(self):
+        self._test_invalid({
+            lambda: self.initialize(design_targets=DesignTargets()):
+                "Design targets must be provided",
+            lambda: self.initialize(design_targets={}): "design_targets must be an instance of DesignTargets",
+            lambda: self.initialize(design_targets=DesignTargets([ContinuousTarget("Z", 3, 10)])):
+                "Invalid value in design_targets: expected columns ['Z'] "
+                "to be in predictions_dataset columns ['A' 'B']",
+            lambda: self.initialize(design_targets=DesignTargets([ContinuousTarget("A", 3, 10)],
+                                                                 [ClassificationTarget("Z", (1, 2))])):
+                "Invalid value in design_targets: expected columns ['Z'] "
+                "to be in predictions_dataset columns ['A' 'B']"
+        })
+
+    def test_invalid_datatypes(self):
+        self.assert_raises_with_message(
+            lambda: self.initialize(datatypes=[]),
+            "datatypes has length 0, expected length 3 matching features_dataset columns ['x' 'y' 'z']")
+
+    def test_invalid_bonus_objectives(self):
+        self.assert_raises_with_message(
+            lambda: self.initialize(bonus_objectives=["NON_EXISTENT"]),
+            "Bonus objectives should be a subset of labels!"
+        )
+
+    def test_invalid_features_to_vary(self):
+        self.assert_raises_with_message(lambda: self.initialize(features_to_vary=[]),
+                                        "features_to_vary cannot be an empty sequence")
 
     def test_invalid_query_x(self):
         # noinspection PyTypeChecker
-        self.assert_raises_with_message(
-            lambda: self.initialize(query_x=None),
-            "query_x must either be a pandas dataframe or a numpy ndarray")
-        # noinspection PyTypeChecker
-        self.assert_raises_with_message(
-            lambda: self.initialize(query_x={}),
-            "query_x must either be a pandas dataframe or a numpy ndarray")
-        self.assert_raises_with_message(
-            lambda: self.initialize(query_x=pd.DataFrame()),
-            "query_x cannot be empty")
-        self.assert_raises_with_message(
-            lambda: self.initialize(query_x=pd.DataFrame(np.array([[1]]), columns=["x"])),
-            "query_x must have 1 row and 3 columns")
-        self.assert_raises_with_message(
-            lambda: self.initialize(query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "zz"])),
-            "query_x columns do not match dataset columns!")
-
-    def test_raises_when_index_out_of_bounds(self):
-        self.assert_raises_with_message(
-            lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]]), features_to_vary=[5]),
-            """Invalid value in features_to_vary: expected columns [5] to be in features_dataset columns [0 1 2]""")
-        self.assert_raises_with_message(
-            lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]]),
-                                    design_targets=DesignTargets([ContinuousTarget(5, 3, 10)])),
-            """Invalid value in design_targets: expected columns [5] to be in predictions_dataset columns [0 1]""")
-
-    def test_raises_when_index_not_int(self):
-        self.assert_raises_with_message(
-            lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]]), features_to_vary=[5.4]),
-            """Invalid value in features_to_vary: expected columns [5.4] to be in features_dataset columns [0 1 2]""")
-        self.assert_raises_with_message(
-            lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]]),
-                                    design_targets=DesignTargets([ContinuousTarget(5.4, 3, 10)])),
-            """Label must be of type string or an integer index""")
-
-    def test_raises_meaningful_exception_when_inconsistent(self):
-        self.assert_raises_with_message(
-            lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]])),
-            """Invalid value in features_to_vary: expected columns ['x', 'y'] to be in features_dataset columns [0 1 2]""")
-        self.assert_raises_with_message(
-            lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]])),
-            """Invalid value in design_targets: expected columns ['A'] to be in predictions_dataset columns [0 1]""")
+        self._test_invalid(
+            {
+                lambda: self.initialize(query_x=None):
+                    "query_x must either be a pandas dataframe or a numpy ndarray",
+                lambda: self.initialize(query_x={}):
+                    "query_x must either be a pandas dataframe or a numpy ndarray",
+                lambda: self.initialize(query_x=pd.DataFrame()):
+                    "query_x cannot be empty",
+                lambda: self.initialize(query_x=pd.DataFrame(np.array([[1]]), columns=["x"])):
+                    "query_x must have 1 row and 3 columns",
+                lambda: self.initialize(query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "zz"])):
+                    "query_x columns do not match dataset columns!"
+            }
+        )
 
     def test_initialize_with_numpy_arrays(self):
         features = np.array([[1, 2, 3], [4, 5, 6]])
@@ -85,37 +104,6 @@ class DataPackageTest(unittest.TestCase):
         self.assertEqual({0, 1, 2}, set(data_package.features_dataset.columns))
         self.assertEqual({0, 1}, set(data_package.predictions_dataset.columns))
 
-    def test_validate_bonus_objs(self):
-        self.assert_raises_with_message(
-            lambda: self.initialize(bonus_objectives=["NON_EXISTENT"]),
-            "Bonus objectives should be a subset of labels!"
-        )
-
-    def test_initialize_with_no_features_to_vary(self):
-        self.assert_raises_with_message(lambda: self.initialize(features_to_vary=[]),
-                                        "features_to_vary cannot be an empty sequence")
-
-    def test_initialize_with_invalid_features_to_vary(self):
-        self.assert_raises_with_message(lambda: self.initialize(features_to_vary=["NON_EXISTENT"]),
-                                        """Invalid value in features_to_vary: expected columns ['NON_EXISTENT'] to be in features_dataset columns ['x' 'y' 'z']""")
-
-    def test_initialize_with_no_targets(self):
-        self.assert_raises_with_message(lambda: self.initialize(design_targets=DesignTargets()),
-                                        "Design targets must be provided")
-
-    def test_initialize_with_invalid_targets(self):
-        self.assert_raises_with_message(lambda: self.initialize(
-            design_targets=DesignTargets([ContinuousTarget("NON_EXISTENT", 3, 10)])),
-                                        """Invalid value in design_targets: expected columns ['NON_EXISTENT'] to be in predictions_dataset columns ['A' 'B']""")
-
-    def test_data_package_with_mismatch(self):
-        self.assert_raises_with_message(
-            lambda: self.initialize(predictions_dataset=pd.DataFrame(np.array([[5, 4]]), columns=["A", "B"])),
-            "Dimensional mismatch between provided datasets")
-        self.assert_raises_with_message(
-            lambda: self.initialize(features_dataset=pd.DataFrame(np.array([[5, 4, 3]]), columns=["x", "y", "z"])),
-            "Dimensional mismatch between provided datasets")
-
     def assert_raises_with_message(self, faulty_call: callable, expected_message: str):
         with self.assertRaises(ValueError) as context:
             faulty_call()
@@ -129,7 +117,7 @@ class DataPackageTest(unittest.TestCase):
                    features_to_vary=None,
                    bonus_objectives=None,
                    datatypes=None):
-        datatypes = self.get_or_default(datatypes, [])
+        datatypes = self.get_or_default(datatypes, [Real(1, 4), Real(2, 5), Real(3, 6)])
         features_to_vary = self.get_or_default(features_to_vary, ["x", "y"])
         design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
         bonus_objectives = self.get_or_default(bonus_objectives, ["A"])
@@ -140,6 +128,11 @@ class DataPackageTest(unittest.TestCase):
                            design_targets=design_targets,
                            bonus_objectives=bonus_objectives,
                            datatypes=datatypes)
+
+    def _test_invalid(self, invalid_scenarios: dict):
+        for factory, exception_message in invalid_scenarios.items():
+            with self.subTest(f"Case: {exception_message} ..."):
+                self.assert_raises_with_message(factory, exception_message)
 
     def get_or_default(self, value, default_value):
         if value is None:

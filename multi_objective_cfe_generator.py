@@ -212,7 +212,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                                    design_targets: DesignTargets) -> None:
         c_evaluator = ClassificationEvaluator()
         for proba_key, proba_targets in zip(design_targets.get_probability_labels(),
-                                            design_targets.get_probability_targets()):
+                                            design_targets.get_preferred_probability_targets()):
             proba_consts = y.loc[:, proba_key]
             proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
             indices = [list(y.columns).index(key) for key in proba_key]
@@ -229,7 +229,7 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
     def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: DesignTargets):
         actual = y.loc[:, y_category_constraints.get_classification_labels()]
         # dtype=object is needed, otherwise the operation is deprecated
-        targets = np.array([[i for i in j] for j in y_category_constraints.get_classification_targets()], dtype=object)
+        targets = np.array([[i for i in j] for j in y_category_constraints.get_desired_classes()], dtype=object)
         return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
 
     def _evaluate_regression_satisfaction(self, y: pd.DataFrame, y_regression_constraints: DesignTargets):

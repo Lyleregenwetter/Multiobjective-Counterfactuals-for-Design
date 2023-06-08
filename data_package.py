@@ -22,10 +22,10 @@ class DataPackage:
         self.features_dataset = self._to_valid_dataframe(features_dataset, "features_dataset")
         self.predictions_dataset = self._to_valid_dataframe(predictions_dataset, "predictions_dataset")
         self.query_x = self._to_valid_dataframe(query_x, "query_x")
-        self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
         self.design_targets = design_targets
-        self.bonus_objectives = self._get_or_default(bonus_objectives, [])
         self.datatypes = datatypes
+        self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
+        self.bonus_objectives = self._get_or_default(bonus_objectives, [])
         self._validate_fields()
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 
@@ -50,13 +50,16 @@ class DataPackage:
         self._cross_validate_datasets()
         self._cross_validate_features_to_vary()
         self._cross_validate_query_x()
-        self._validate_query_y()
+        self._validate_design_targets()
         self._validate_bonus_objs()
+        self._validate_datatypes()
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
     def _cross_validate_datasets(self):
-        self._validate(len(self.features_dataset) == len(self.predictions_dataset),
-                       "Dimensional mismatch between provided datasets")
+        n_f = len(self.features_dataset)
+        n_p = len(self.predictions_dataset)
+        self._validate(n_f == n_p,
+                       f"features_dataset and predictions_dataset do not have the same number of rows ({n_f}, {n_p})")
         nunique = self.features_dataset.nunique()
         uniform_cols = nunique[nunique == 1].index
         self._validate(len(uniform_cols) == 0, f"""Error: The following columns were found to 
@@ -79,18 +82,21 @@ class DataPackage:
                           features_name):
         self._validate(len(columns) > 0, f"{features_name} cannot be an empty sequence")
         valid_columns = dataset.columns.values
+        invalid_columns = self._get_invalid_columns(columns, valid_columns)
+        self._raise_if_invalid_columns(dataset_name, features_name, invalid_columns, valid_columns)
+
+    def _get_invalid_columns(self, columns, valid_columns):
         invalid_columns = set(columns).difference(set(valid_columns))
         invalid_columns = list(invalid_columns)
         invalid_columns.sort()
-        if len(invalid_columns) != 0:
-            self._validate(False,
-                           f"""Invalid value in {features_name}: expected columns {invalid_columns} to be in {dataset_name} columns {valid_columns}""")
+        return invalid_columns
 
-    def _validate_query_y(self):
-        self._validate_columns(self.predictions_dataset,
-                               self.design_targets.get_continuous_labels(),
-                               "predictions_dataset",
-                               "design_targets")
+    def _raise_if_invalid_columns(self, dataset_name, features_name, invalid_columns, valid_columns):
+        if len(invalid_columns) != 0:
+            self._validate(
+                False,
+                f"Invalid value in {features_name}: expected columns "
+                f"{invalid_columns} to be in {dataset_name} columns {valid_columns}")
 
     def _validate_bonus_objs(self):
         self._validate(set(self.bonus_objectives).issubset(set(self.predictions_dataset.columns)),
@@ -104,6 +110,22 @@ class DataPackage:
         self._validate(set(self.query_x.columns) == set(self.features_dataset.columns),
                        "query_x columns do not match dataset columns!")
 
+    def _validate_datatypes(self):
+        n_dt = len(self.datatypes)
+        f_columns = self.features_dataset.columns.values
+        n_f = len(f_columns)
+        self._validate(
+            n_dt == n_f,
+            f"datatypes has length {n_dt}, expected length {n_f} matching features_dataset columns {f_columns}")
+
     def _validate(self, mandatory_condition: bool, exception_message: str):
         if not mandatory_condition:
             raise ValueError(exception_message)
+
+    def _validate_design_targets(self):
+        self._validate(isinstance(self.design_targets, DesignTargets),
+                       "design_targets must be an instance of DesignTargets")
+        invalid_columns = self._get_invalid_columns(self.design_targets.get_all_constrained_labels(),
+                                                    self.predictions_dataset.columns)
+        self._raise_if_invalid_columns("predictions_dataset", "design_targets",
+                                       invalid_columns, self.predictions_dataset.columns.values)
