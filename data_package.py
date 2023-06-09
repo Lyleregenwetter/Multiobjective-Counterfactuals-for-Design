@@ -3,7 +3,7 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from pymoo.core.variable import Variable
+from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 
 from design_targets import DesignTargets
 
@@ -118,6 +118,11 @@ class DataPackage:
         self._validate(
             n_dt == n_f,
             f"datatypes has length {n_dt}, expected length {n_f} matching features_dataset columns {f_columns}")
+        invalid_types = [datatype for datatype in self.datatypes if
+                         type(datatype) not in [Real, Choice, Binary, Integer]]
+        self._validate(len(invalid_types) == 0,
+                       "datatypes must strictly be a sequence of objects belonging to "
+                       "the types [Real, Integer, Choice, Binary]")
 
     def _validate(self, mandatory_condition: bool, exception_message: str):
         if not mandatory_condition:

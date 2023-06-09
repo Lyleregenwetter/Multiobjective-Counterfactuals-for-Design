@@ -59,6 +59,9 @@ class DataPackageTest(unittest.TestCase):
         self.assert_raises_with_message(
             lambda: self.initialize(datatypes=[]),
             "datatypes has length 0, expected length 3 matching features_dataset columns ['x' 'y' 'z']")
+        self.assert_raises_with_message(
+            lambda: self.initialize(datatypes=[Real(), None, Real()]),
+            "datatypes must strictly be a sequence of objects belonging to the types [Real, Integer, Choice, Binary]")
 
     def test_invalid_bonus_objectives(self):
         self.assert_raises_with_message(
