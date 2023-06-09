@@ -22,7 +22,7 @@ import calculate_dtai as calculate_dtai
 from classification_evaluator import ClassificationEvaluator
 from data_package import DataPackage
 from design_targets import DesignTargets
-from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio, to_dataframe
+from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio
 
 DEFAULT_BETA = 4
 
@@ -63,8 +63,9 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
 
     def _build_problem_var_dict(self):
         variables = {}
-        for i in range(len(self.data_package.features_to_vary)):
-            variables[self.data_package.features_to_vary[i]] = self.data_package.datatypes[i]
+        for feature in self.data_package.features_to_vary:
+            absolute_feature_index = self.data_package.features_dataset.columns.to_list().index(feature)
+            variables[feature] = self.data_package.datatypes[absolute_feature_index]
         return variables
 
     def _evaluate(self, x: np.ndarray, out: dict, *args, **kwargs):
@@ -192,15 +193,6 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                                   design_targets.get_classification_labels())
 
         return result
-
-    def _count_total_constraints(self,
-                                 x_constraint_functions: list,
-                                 y_category_constraints: dict,
-                                 y_proba_constraints: dict,
-                                 y_regression_constraints: dict) -> int:
-        number_proba_constrains = len(list(itertools.chain.from_iterable(y_proba_constraints.keys())))
-        return len(x_constraint_functions) + len(y_regression_constraints) + len(
-            y_category_constraints) + number_proba_constrains
 
     def _append_satisfaction(self, result: np.ndarray, evaluation_function: callable,
                              y: pd.DataFrame, y_constraints: DesignTargets, labels) -> None:
@@ -482,11 +474,11 @@ class CFSet:  # For calling the optimization and sampling counterfactuals
             self.dataset_pop = pop
             self._verbose_log(f"{len(pop)} dataset entries found matching problem parameters")
 
+    # noinspection PyProtectedMember
     def diverse_sample(self, x, y, num_samples, diversity_weight, eps=1e-7):
         self._verbose_log("Calculating diversity matrix!")
         y = np.power(self.min2max(y), 1 / diversity_weight)
-        x_df = to_dataframe(x)
-        # noinspection PyProtectedMember
+        x_df = self.problem._build_full_df(x)
         matrix = mixed_gower(x_df, x_df, self.problem.ranges.values, self.problem._build_gower_types())
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self._verbose_log("Sampling diverse set of counterfactual candidates!")

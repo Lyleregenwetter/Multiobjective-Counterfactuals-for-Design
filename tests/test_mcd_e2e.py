@@ -35,7 +35,6 @@ class McdEndToEndTest(unittest.TestCase):
         predictions["O_C2"] = predictions["O_C1"]
         return predictions
 
-    @unittest.skip
     def test_multi_objectives_with_subset_of_features_to_vary(self):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
@@ -45,7 +44,7 @@ class McdEndToEndTest(unittest.TestCase):
             [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
+                         query_x=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
                          design_targets=targets, datatypes=datatypes)
 
         problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
