@@ -23,22 +23,22 @@ class DataPackageTest(unittest.TestCase):
     def test_invalid_features_dataset(self):
         self._test_invalid(
             {
-                lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]])):
-                    "Invalid value in features_to_vary: expected columns ['x', 'y'] "
-                    "to be in features_dataset columns [0 1 2]",
-                lambda:
-                self.initialize(features_to_vary=["N"]):
-                    "Invalid value in features_to_vary: expected columns ['N'] "
-                    "to be in features_dataset columns ['x' 'y' 'z']"
+                lambda: self.initialize(features_dataset=pd.DataFrame()): "features_dataset cannot be empty",
+                lambda: self.initialize(features_dataset={}):
+                    "features_dataset must either be a pandas dataframe or a numpy ndarray",
+                lambda: self.initialize(features_dataset=np.array([])):
+                    "features_dataset must be a valid numpy array (non-empty, 2D...)",
             })
 
     def test_invalid_predictions_dataset(self):
         self._test_invalid({
-            lambda: self.initialize(predictions_dataset=np.array([[1, 2], [4, 5]])):
-                "Invalid value in design_targets: expected columns ['A'] "
-                "to be in predictions_dataset columns [0 1]",
+            lambda: self.initialize(predictions_dataset=pd.DataFrame()): "predictions_dataset cannot be empty",
+            lambda: self.initialize(predictions_dataset={}):
+                "predictions_dataset must either be a pandas dataframe or a numpy ndarray",
+            lambda: self.initialize(predictions_dataset=np.array([])):
+                "predictions_dataset must be a valid numpy array (non-empty, 2D...)",
             lambda: self.initialize(predictions_dataset=pd.DataFrame(np.array([[5, 4]]), columns=["A", "B"])):
-                "features_dataset and predictions_dataset do not have the same number of rows (2, 1)"
+                "features_dataset and predictions_dataset do not have the same number of rows (2, 1)",
         })
 
     def test_invalid_design_targets(self):
@@ -67,8 +67,18 @@ class DataPackageTest(unittest.TestCase):
         )
 
     def test_invalid_features_to_vary(self):
-        self.assert_raises_with_message(lambda: self.initialize(features_to_vary=[]),
-                                        "features_to_vary cannot be an empty sequence")
+        self._test_invalid({
+            lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]])):
+                "Invalid value in features_to_vary: expected columns ['x', 'y'] "
+                "to be in features_dataset columns [0 1 2]",
+            lambda:
+            self.initialize(features_to_vary=["N"]):
+                "Invalid value in features_to_vary: expected columns ['N'] "
+                "to be in features_dataset columns ['x' 'y' 'z']",
+            lambda: self.initialize(features_to_vary=[]):
+                "features_to_vary cannot be an empty sequence"
+
+        })
 
     def test_invalid_query_x(self):
         # noinspection PyTypeChecker

@@ -34,7 +34,8 @@ class DataPackage:
             return default_value
         return value
 
-    def _to_dataframe(self, numpy_array: np.ndarray):
+    def _to_dataframe(self, numpy_array: np.ndarray, dataset_name: str):
+        self._validate(len(numpy_array.shape) == 2, f"{dataset_name} must be a valid numpy array (non-empty, 2D...)")
         index_based_columns = [_ for _ in range(numpy_array.shape[1])]
         return pd.DataFrame(numpy_array, columns=index_based_columns)
 
@@ -42,7 +43,7 @@ class DataPackage:
         self._validate(isinstance(dataset, (np.ndarray, pd.DataFrame)),
                        f"{dataset_name} must either be a pandas dataframe or a numpy ndarray")
         if isinstance(dataset, np.ndarray):
-            return self._to_dataframe(dataset)
+            return self._to_dataframe(dataset, dataset_name)
         self._validate(not dataset.empty, f"{dataset_name} cannot be empty")
         return dataset
 
