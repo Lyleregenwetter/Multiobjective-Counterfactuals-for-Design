@@ -1,4 +1,3 @@
-import itertools
 import os
 from typing import List, Callable, Union
 
@@ -38,11 +37,11 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
                  data_package: DataPackage,
                  predictor: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
                  constraint_functions: list):
+        self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
         self.data_package = data_package
-        self.number_of_objectives = len(data_package.bonus_objectives) + MCD_BASE_OBJECTIVES
-        self.x_dimension = len(self.data_package.features_dataset.columns)
         self.predictor = predictor
         self.constraint_functions = constraint_functions
+        self.number_of_objectives = MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self.number_of_objectives,
                          n_constr=len(constraint_functions) + self._count_y_constraints())
@@ -89,7 +88,8 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         gower_types = self._build_gower_types()
         all_scores[:, :-3] = predictions.loc[:, self.data_package.bonus_objectives]
         all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
-        all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x, self.x_dimension)
+        all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x,
+                                                   len(self.data_package.features_dataset.columns))
         subset = self._get_features_sample()
         all_scores[:, -1] = avg_gower_distance(x, subset, self.ranges.values, gower_types)
         return all_scores
@@ -116,7 +116,6 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         # as well as the changed feature specifications
         f_d = self.data_package.features_dataset
         p_d = self.data_package.predictions_dataset
-        q = self.data_package.query_x
         f_d, p_d = self._get_valid_numeric_entries(f_d, p_d)
         f_d, p_d = self._get_valid_categorical_entries(f_d, p_d)
 
@@ -229,17 +228,6 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         actual = y.loc[:, y_regression_constraints.get_continuous_labels()].values
         satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))
         return satisfaction
-
-    @staticmethod
-    def sort_regression_constraints(regression_constraints: dict):
-        query_constraints = []
-        query_lb = []
-        query_ub = []
-        for key in regression_constraints.keys():
-            query_constraints.append(key)
-            query_lb.append(regression_constraints[key][0])
-            query_ub.append(regression_constraints[key][1])
-        return query_constraints, np.array(query_lb), np.array(query_ub)
 
     def _build_full_df(self, x: np.ndarray):
         x = pd.DataFrame.from_records(x, columns=self.data_package.features_to_vary)
