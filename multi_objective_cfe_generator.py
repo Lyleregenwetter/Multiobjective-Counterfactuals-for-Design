@@ -223,9 +223,9 @@ class MultiObjectiveCounterfactualsGenerator(Problem):
         targets = np.array([[i for i in j] for j in y_category_constraints.get_desired_classes()], dtype=object)
         return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
 
-    def _evaluate_regression_satisfaction(self, y: pd.DataFrame, y_regression_constraints: DesignTargets):
-        query_lb, query_ub = y_regression_constraints.get_continuous_boundaries()
-        actual = y.loc[:, y_regression_constraints.get_continuous_labels()].values
+    def _evaluate_regression_satisfaction(self, y: pd.DataFrame, design_targets: DesignTargets):
+        query_lb, query_ub = design_targets.get_continuous_boundaries()
+        actual = y.loc[:, design_targets.get_continuous_labels()].values
         satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))
         return satisfaction
 
