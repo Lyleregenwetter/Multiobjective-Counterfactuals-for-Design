@@ -50,7 +50,7 @@ Official Repository for Multi-Objective Counterfactuals for Design (MCD)
       </ul>
     </li>
     <li>
-      <a href="#getting-started">Getting Started</a>
+      <a href="#getting-started">Quick-Start Guide</a>
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#installation">Installation</a></li>
@@ -112,25 +112,13 @@ Performance targets can be any combination of:
 
 <!-- GETTING STARTED -->
 
-## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+## Quick-Start Guide
 
 ### Installation
 
-You can install MCD with:
-```pip install decode-mcd```
-
-Alternatively,
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- USAGE EXAMPLES -->
-
-## Quick-Start Guide
+1. Install MCD with:
+   ```pip install decode-mcd```
+2. Run:
 
 ```python
 import random
@@ -160,14 +148,46 @@ counterfactuals = cf_set.sample(10, 1, 1, 1, 1, 50)
 print(counterfactuals)
 ```
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos
-work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
+
+<!-- USAGE EXAMPLES -->
+
+## I-Got-Time Guide
+
+1. Either install MCD with pip as shown in the Quick-Start Guide, or fork the repo with
+   ```git clone git@github.com:Lyleregenwetter/Multiobjective-Counterfactuals-for-Design.git```
+2. Now, customize the code below to fit your datasets and model. The template below assumes the following:
+    * The features_dataset _X_ has 4 columns: R1, R2, B1, C1. R1 and R2 are real variables
+      with the following respective ranges (0, 10) and (-50, 50). B1 is a binary variable [True, False].
+      C1 is a choice variable (0, 1, 2).
+    * The predictions_dataset _Y_ has 5 columns. O_R1 and O_R2 are real variables.
+      O_C1 is a choice variable. O_P1 and O_P2 represent dependant probabilities of belonging to classes A and B,
+      respectively.
+    *
+
+```python
+import random
+from pymoo.core.variable import Real
+from data_package import DataPackage
+from design_targets import *
+from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator, CFSet
+
+x, y = ...  # load your data
+model = ...  # load your model
+
+data_package = DataPackage(x, y, x[0].reshape(1, 1),
+                           design_targets=DesignTargets([ContinuousTarget(label=0,
+                                                                          lower_bound=25,
+                                                                          upper_bound=75)]),
+                           datatypes=[Real(bounds=(0, 1))])
+gen = MultiObjectiveCounterfactualsGenerator(data_package, lambda design: predict(design), [])
+cf_set = CFSet(gen, 10, False)
+cf_set.optimize(10)
+counterfactuals = cf_set.sample(10, 1, 1, 1, 1, 50)
+print(counterfactuals)
+```
 
 <!-- ROADMAP -->
 
@@ -263,7 +283,7 @@ Link: [https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Des
 
 [license-shield]: https://img.shields.io/github/license/github_username/repo_name.svg?style=for-the-badge
 
-[license-url]: https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/blob/master/LICENSE.txt
+[license-url]: https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/blob/master/LICENSE
 
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 
