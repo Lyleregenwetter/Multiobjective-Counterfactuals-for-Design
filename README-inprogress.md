@@ -24,7 +24,7 @@ Official Repository for Multi-Objective Counterfactuals for Design (MCD)
 <h3 align="center">Multiobjective Counterfactuals for Design (MCD)</h3>
 
   <p align="center">
-    project_description
+    MCD generates counterfactuals that meet multiple, customizable objectives in both the feature and performance spaces.  
     <br />
     <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design"><strong>Explore the docs »</strong></a>
     <br />
@@ -56,7 +56,7 @@ Official Repository for Multi-Objective Counterfactuals for Design (MCD)
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
+    <li><a href="#usage">Quick-Start Guide</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -71,33 +71,40 @@ Official Repository for Multi-Objective Counterfactuals for Design (MCD)
 
 ## About The Project
 
-Multiobjective Counterfactuals for Design (MCD) is a framework primarily intended for the generation of design alternatives that meet user-specified 
-performance criteria while remaining within a certain region of the design space. To use MCD, you need a dataset of designs, including performance metrics, 
-as well as a model capable of predicting the performance metrics of a given design. MCD is model agnostic - this means that the model need not be gradient based or, 
-in fact, a machine learning model in the first place. MCD also offers high flexibility in terms of the number and 'type' of performance targets that can be specified. 
-Performance targets can be any combination of: 
+Multiobjective Counterfactuals for Design (MCD) is a framework primarily intended for the generation of design
+alternatives that meet user-specified
+performance criteria while remaining within a certain region of the design space. To use MCD, you need a dataset of
+designs that are reasonably representative of the desired region of the design space, including performance metrics,
+as well as a model capable of predicting the performance metrics of a given design. MCD is model agnostic - this means
+that the model need not be gradient based or,
+in fact, a machine learning model in the first place. MCD also offers high flexibility in terms of the number and 'type'
+of performance targets that can be specified.
+Performance targets can be any combination of:
 
-1. 'Continuous Targets': (e.g. I want suggested bike designs to weigh between 2 and 4 kilograms)
-2. 
+* 'Continuous Targets': (e.g. I want suggested bike designs to weigh between 2 and 4 kilograms)
+* 'Classification Targets': (e.g. I want suggested bike designs to be classified as dirt bikes)
+* 'Probability Targets': (e.g. I want each suggested design to have a higher probability of
+  belonging to classes A or B than of
+  belonging to C or D)
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+[//]: # ([![Product Name Screen Shot][product-screenshot]]&#40;https://example.com&#41;)
 
-Here's a blank template to get started: To avoid retyping too much info. Do a search and replace with your text editor
-for the
-following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`
+[//]: # ()
+
+[//]: # (Here's a blank template to get started: To avoid retyping too much info. Do a search and replace with your text editor)
+
+[//]: # (for the)
+
+[//]: # (following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
 
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
+* [![Python][python-badge-url]][python-url]
+* [![Pymoo][pymoo-badge-url]][pymoo-url]
+* [![Pandas][pandas-badge-url]][pandas-url]
+* [![Numpy][numpy-badge-url]][numpy-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -110,30 +117,12 @@ following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`
 This is an example of how you may give instructions on setting up your project locally.
 To get a local copy up and running follow these simple example steps.
 
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
-
 ### Installation
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-   ```sh
-   git clone https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
+You can install MCD with:
+```pip install decode-mcd```
+
+Alternatively,
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -141,7 +130,35 @@ This is an example of how to list things you need to use the software and how to
 
 <!-- USAGE EXAMPLES -->
 
-## Usage
+## Quick-Start Guide
+
+```python
+import random
+from pymoo.core.variable import Real
+from data_package import DataPackage
+from design_targets import *
+from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator, CFSet
+
+x = np.random.random(100)
+x = x.reshape(100, 1)
+y = x * 100 + random.random()
+
+
+def predict(_x):
+    return _x * 100
+
+
+data_package = DataPackage(x, y, x[0].reshape(1, 1),
+                           design_targets=DesignTargets([ContinuousTarget(label=0,
+                                                                          lower_bound=25,
+                                                                          upper_bound=75)]),
+                           datatypes=[Real(bounds=(0, 1))])
+gen = MultiObjectiveCounterfactualsGenerator(data_package, lambda design: predict(design), [])
+cf_set = CFSet(gen, 10, False)
+cf_set.optimize(10)
+counterfactuals = cf_set.sample(10, 1, 1, 1, 1, 50)
+print(counterfactuals)
+```
 
 Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos
 work well in this space. You may also link to more resources.
@@ -161,7 +178,8 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 - [ ] Feature 3
     - [ ] Nested Feature
 
-See the [open issues](https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues) for a full list of proposed features (and
+See the [open issues](https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues) for a full
+list of proposed features (and
 known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -205,7 +223,8 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
 
-Project Link: [https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design](https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design)
+Project
+Link: [https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design](https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -267,6 +286,22 @@ Project Link: [https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals
 [Angular.io]: https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white
 
 [Angular-url]: https://angular.io/
+
+[python-badge-url]: https://img.shields.io/badge/language-python-purple
+
+[python-url]: https://www.python.org/
+
+[pandas-badge-url]: https://img.shields.io/badge/framework-pandas-red
+
+[pandas-url]: https://pandas.pydata.org/
+
+[numpy-badge-url]: https://img.shields.io/badge/frameowrk-numpy-green
+
+[numpy-url]: https://numpy.org/
+
+[pymoo-badge-url]: https://img.shields.io/badge/framework-pymoo-blue
+
+[pymoo-url]: https://pymoo.org/
 
 [Svelte.dev]: https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00
 
