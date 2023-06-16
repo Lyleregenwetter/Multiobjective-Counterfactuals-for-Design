@@ -3,3 +3,5 @@
 */AutogluonModels
 *.coverage
 /htmlcov
+*/build
+*/dist
