@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 
-from decode_mcd.design_targets import DesignTargets
+from src.decode_mcd.design_targets import DesignTargets
 
 
 class DataPackage:

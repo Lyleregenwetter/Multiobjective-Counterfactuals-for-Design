@@ -2,7 +2,7 @@ import unittest
 
 import numpy.testing as np_test
 
-from decode_mcd.stats_methods import *
+from src.decode_mcd.stats_methods import *
 
 
 class StatsMethodsTest(unittest.TestCase):

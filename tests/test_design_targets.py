@@ -2,7 +2,7 @@ import unittest
 
 import numpy.testing as np_test
 
-from decode_mcd.design_targets import *
+from src.decode_mcd.design_targets import *
 
 
 class DesignTargetsTest(unittest.TestCase):
