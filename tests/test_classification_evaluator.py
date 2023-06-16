@@ -4,7 +4,7 @@ import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 
-from decode_mcd.classification_evaluator import ClassificationEvaluator
+from private.classification_evaluator import ClassificationEvaluator
 
 
 class ClassifierWrapperTest(unittest.TestCase):
