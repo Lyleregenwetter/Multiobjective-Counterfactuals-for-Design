@@ -3,9 +3,9 @@ import unittest
 
 import random
 from pymoo.core.variable import Real
-from data_package import DataPackage
-from design_targets import *
-from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator, CFSet
+from decode_mcd.data_package import DataPackage
+from decode_mcd.design_targets import *
+from decode_mcd.multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator, CFSet
 
 
 class QuickStartTest(unittest.TestCase):

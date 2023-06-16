@@ -2,8 +2,7 @@ import unittest
 
 import numpy.testing as np_test
 
-import pandas_utility as pd_util
-from stats_methods import *
+from decode_mcd.stats_methods import *
 
 
 class StatsMethodsTest(unittest.TestCase):
@@ -55,31 +54,31 @@ class StatsMethodsTest(unittest.TestCase):
         np_test.assert_array_almost_equal(distance, np.array([0.0811, 0.0667, 0.1433, 0.0667]), decimal=4)
 
     def test_categorical_gower(self):
-        x1 = pd_util.get_one_row_dataframe_from_dict({
+        x1 = pd.DataFrame.from_records([{
             "x": 5,
             "y": 10,
             "z": 3
-        })
-        original = pd_util.get_one_row_dataframe_from_dict({
+        }])
+        original = pd.DataFrame.from_records([{
             "x": 12,
             "y": 10,
             "z": 3
-        })
+        }])
         x1 = pd.concat([x1, x1], axis=0)
         result = categorical_gower(x1, original)
         np_test.assert_array_almost_equal(result, np.array([0.333, 0.333]), decimal=3)
 
     def test_gower_distance(self):
-        x1 = pd_util.get_one_row_dataframe_from_dict({
-            "x": 5,
-            "y": 10,
-            "z": 3
-        })
-        x2 = pd_util.get_one_row_dataframe_from_dict({
-            "x": 6,
-            "y": 10,
-            "z": 3
-        })
+        x1 = pd.DataFrame.from_records([
+            {"x": 5,
+             "y": 10,
+             "z": 3}
+        ])
+        x2 = pd.DataFrame.from_records([
+            {"x": 6,
+             "y": 10,
+             "z": 3}
+        ])
         self.assertAlmostEqual(0.033,
                                gower_distance(x1, x2, np.array([10, 10, 10]))[0][0],
                                places=3

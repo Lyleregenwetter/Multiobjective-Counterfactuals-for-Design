@@ -5,9 +5,9 @@ import numpy.testing as np_test
 import pandas as pd
 from pymoo.core.variable import Real, Choice
 
-from data_package import DataPackage
-from design_targets import ContinuousTarget, DesignTargets, ClassificationTarget, ProbabilityTarget
-from multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
+from decode_mcd.data_package import DataPackage
+from decode_mcd.design_targets import ContinuousTarget, DesignTargets, ClassificationTarget, ProbabilityTarget
+from decode_mcd.multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
 
 
 class DummyPredictor:

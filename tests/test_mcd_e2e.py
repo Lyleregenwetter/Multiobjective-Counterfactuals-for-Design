@@ -9,10 +9,10 @@ import pandas as pd
 from autogluon.tabular import TabularDataset
 from pymoo.core.variable import Real, Choice
 
-import multi_objective_cfe_generator as MOCG
+import decode_mcd.multi_objective_cfe_generator as MOCG
 from tests.alt_multi_label_predictor import MultilabelPredictor
-from data_package import DataPackage
-from design_targets import DesignTargets, ContinuousTarget, ClassificationTarget, ProbabilityTarget
+from decode_mcd.data_package import DataPackage
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget, ProbabilityTarget
 
 sys.path.append(os.path.dirname(__file__))
 

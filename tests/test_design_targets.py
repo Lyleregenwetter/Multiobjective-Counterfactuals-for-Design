@@ -1,9 +1,8 @@
 import unittest
 
-import numpy as np
-
-from design_targets import ContinuousTarget, ClassificationTarget, ProbabilityTarget, DesignTargets
 import numpy.testing as np_test
+
+from decode_mcd.design_targets import *
 
 
 class DesignTargetsTest(unittest.TestCase):

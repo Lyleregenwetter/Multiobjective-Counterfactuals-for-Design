@@ -9,11 +9,11 @@ from pymoo.core.variable import Real
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
-import multi_objective_cfe_generator as MOCG
+import decode_mcd.multi_objective_cfe_generator as MOCG
 from tests.alt_multi_label_predictor import MultilabelPredictor
-from data_package import DataPackage
-from design_targets import DesignTargets, ContinuousTarget
-from load_data import load_scaled_framed_dataset
+from decode_mcd.data_package import DataPackage
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget
+from notebooks.load_data import load_scaled_framed_dataset
 
 DEFAULT_MODEL_PATH = "/home/yazan/Repositories/Personal/BikeCAD-integration/service_resources/generated/models" \
                      "/Trained Models/AutogluonModels/ag-20230311_154304"

@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from calculate_dtai import calculateDTAI
+from decode_mcd.calculate_dtai import calculateDTAI
 
 
 class CalculateDtaiTest(unittest.TestCase):

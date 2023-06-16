@@ -5,8 +5,8 @@ import pandas as pd
 import numpy.testing as np_test
 from pymoo.core.variable import Real
 
-from data_package import DataPackage
-from design_targets import DesignTargets, ContinuousTarget, ClassificationTarget
+from decode_mcd.data_package import DataPackage
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget
 
 
 # noinspection PyTypeChecker

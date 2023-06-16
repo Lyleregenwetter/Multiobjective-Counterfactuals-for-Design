@@ -16,12 +16,12 @@ from pymoo.core.variable import Real, Integer, Binary, Choice
 from pymoo.optimize import minimize
 from pymoo.termination.max_gen import MaximumGenerationTermination
 
-import DPPsampling as DPPsampling
-import calculate_dtai as calculate_dtai
-from classification_evaluator import ClassificationEvaluator
-from data_package import DataPackage
-from design_targets import DesignTargets
-from stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio
+import decode_mcd.DPPsampling as DPPsampling
+import decode_mcd.calculate_dtai as calculate_dtai
+from decode_mcd.classification_evaluator import ClassificationEvaluator
+from decode_mcd.data_package import DataPackage
+from decode_mcd.design_targets import DesignTargets
+from decode_mcd.stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio
 
 DEFAULT_BETA = 4
 
