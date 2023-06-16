@@ -1,0 +1,30 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "decode-mcd"
+version = "0.0.1"
+description = "MCD generates counterfactuals that meet multiple, customizable objectives in both the feature and performance spaces."
+readme = "README.md"
+authors = [{ name = "Lyle Regenwetter", email = "regenwet@mit.edu" },
+    { name = "Yazan Abu Obaideh", email = "yazan.amer@protonmail.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["counterfactuals", "design", "multi-objective", "multiobjective", "machine-learning"]
+dependencies = [
+    "numpy",
+    "pandas",
+    "pymoo",
+    "dill"
+]
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design"
