@@ -35,7 +35,7 @@ class MultiObjectiveProblemTest(unittest.TestCase):
             features_to_vary=["x", "y", "z"],
             design_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
             bonus_objectives=[],
-            datatypes=[Real(), Real(), Real()]
+            datatypes=[Real(bounds=(-100, 100)), Real(bounds=(-100, 100)), Real(bounds=(-100, 100))]
         )
         self.problem = MOP(
             data_package=self.data_package,
@@ -177,7 +177,8 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                       bonus_objectives=None,
                       features_to_vary=None,
                       datatypes=None):
-        datatypes = self.get_or_default(datatypes, [Real(), Real(), Real()])
+        datatypes = self.get_or_default(datatypes, [Real(bounds=(-100, 100)), Real(bounds=(-100, 100)),
+                                                    Real(bounds=(-100, 100))])
         features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
         design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
         bonus_objectives = self.get_or_default(bonus_objectives, [])

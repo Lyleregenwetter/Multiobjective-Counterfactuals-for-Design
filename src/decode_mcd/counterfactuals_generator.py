@@ -27,16 +27,16 @@ class RevertToQueryRepair(Repair):
 
     def _do(self, problem: MultiObjectiveProblem, Z, **kwargs):
         # noinspection PyProtectedMember
-        revertible_indexes = problem._get_revertible_indexes()
+        revertible_indexes = problem._revertible_indexes
         qxs = problem.data_package.query_x.values[:, revertible_indexes]
-        Z_pd = pd.DataFrame.from_records(Z)
-        Z_np = Z_pd.values
-        revertible_subset = Z_np[:, revertible_indexes]
+        full_Z_dataframe = pd.DataFrame.from_records(Z)
+        full_Z_np = full_Z_dataframe.values
+        revertible_subset = full_Z_np[:, revertible_indexes]
         mask = np.random.binomial(size=np.shape(revertible_subset), n=1, p=self.elementwise_prob)
         mask = mask * np.random.binomial(size=(np.shape(revertible_subset)[0], 1), n=1, p=self.rep_prob)
         revertible_subset = qxs * mask + revertible_subset * (1 - mask)
-        Z_np[:, revertible_indexes] = revertible_subset
-        Z = pd.DataFrame(Z_np, columns=Z_pd.columns)
+        full_Z_np[:, revertible_indexes] = revertible_subset
+        Z = pd.DataFrame(full_Z_np, columns=full_Z_dataframe.columns)
         return Z.to_dict("records")
 
 
