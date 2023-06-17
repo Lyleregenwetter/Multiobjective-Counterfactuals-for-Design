@@ -12,11 +12,12 @@ from pymoo.core.repair import Repair
 from pymoo.optimize import minimize
 from pymoo.termination.max_gen import MaximumGenerationTermination
 
-from decode_mcd.multi_objective_problem import MultiObjectiveProblem, MCD_BASE_OBJECTIVES
+from decode_mcd.multi_objective_problem import MultiObjectiveProblem, _MCD_BASE_OBJECTIVES, _GOWER_INDEX, \
+    _CHANGED_FEATURE_INDEX, _AVG_GOWER_INDEX
 from private import calculate_dtai as calculate_dtai, DPPsampling as DPPsampling
 from private.stats_methods import mixed_gower
 
-DEFAULT_BETA = 4
+_DEFAULT_BETA = 4
 
 
 class RevertToQueryRepair(Repair):
@@ -95,6 +96,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         if self.verbose:
             print(log_message)
 
+    def _log(self, log_message):
+        print(log_message)
+
     def _get_or_default(self, value, default_value):
         if value is None:
             return default_value
@@ -116,7 +120,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                                 copy_algorithm=False,
                                 verbose=self.verbose)
         else:
-            print(f"GA has already trained for {previous_train_steps} generations.")
+            self._log(f"GA has already trained for {previous_train_steps} generations.")
 
     def save(self, filepath):
         self._verbose_log(f"Saving GA to {filepath}")
@@ -131,8 +135,15 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self.algorithm = dill.load(f)
             self.problem = self.algorithm.problem
 
-    def sample(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight, diversity_weight, dtai_target,
-               dtai_alpha=None, dtai_beta=None, include_dataset=True, num_dpp=1000):  # Query from pareto front
+    def sample_with_weights(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
+                            diversity_weight, dtai_target, dtai_alpha=None, dtai_beta=None,
+                            include_dataset=True, num_dpp=1000):
+        assert self.res, "You must call generate before calling sample!"
+        assert num_samples > 0, "You must sample at least 1 counterfactual!"
+        all_cfs = self._initialize_all_cfs(include_dataset)
+        all_cf_x, all_cf_y = self._filter_by_validity(all_cfs)
+        self.all_cf_x = all_cf_x
+        self.all_cf_y = all_cf_y
         assert self.res, "You must call generate before calling sample!"
         assert num_samples > 0, "You must sample at least 1 counterfactual!"
 
@@ -142,33 +153,48 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self.all_cf_x = all_cf_x
         self.all_cf_y = all_cf_y
 
-        if len(all_cf_x) < num_samples:  # bug
+        if len(all_cf_x) < num_samples:
             self._log_results_found(all_cf_x, all_cf_y)
             return self.build_res_df(all_cf_x)
 
         self._verbose_log("Scoring all counterfactual candidates!")
 
-        dtai_scores = self._calculate_dtai(all_cf_y, dtai_alpha, dtai_beta, dtai_target)
-        cf_quality = all_cf_y[:, -3] * gower_weight + all_cf_y[:, -2] * cfc_weight + all_cf_y[:, -1] * avg_gower_weight
-        agg_scores = 1 - dtai_scores + cf_quality
+    def sample_with_dtai(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
+                         diversity_weight, dtai_target, dtai_alpha=None, dtai_beta=None,
+                         include_dataset=True, num_dpp=1000):  # Query from pareto front
+        assert self.res, "You must call generate before calling sample!"
+        assert num_samples > 0, "You must sample at least 1 counterfactual!"
 
-        # For quick debugging
+        all_cfs = self._initialize_all_cfs(include_dataset)
 
-        self.dtai_scores = dtai_scores
-        self.agg_scores = agg_scores
+        all_cf_x, all_cf_y = self._filter_by_validity(all_cfs)
+        self.all_cf_x = all_cf_x
+        self.all_cf_y = all_cf_y
 
+        if len(all_cf_x) < num_samples:
+            self._log_results_found(all_cf_x, all_cf_y)
+            return self.build_res_df(all_cf_x)
+
+        self._verbose_log("Scoring all counterfactual candidates!")
+
+        agg_scores = self._calculate_scores(all_cf_y, avg_gower_weight, cfc_weight, dtai_alpha, dtai_beta, dtai_target,
+                                            gower_weight)
+
+        return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
+
+    def _sample_based_on_scores(self, all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores):
         if num_samples == 1:
             best_idx = np.argmin(agg_scores)
             result = self.build_res_df(all_cf_x[best_idx:best_idx + 1, :])
-            return self.final_check(result)
+            return self._check_for_original_query(result)
         else:
             if diversity_weight == 0:
                 idx = np.argpartition(agg_scores, num_samples)
                 result = self.build_res_df(all_cf_x[idx, :])
-                return self.final_check(result)
+                return self._check_for_original_query(result)
             else:
                 if diversity_weight < 0.1:
-                    print(
+                    self._log(
                         """Warning: Very small diversity can cause numerical instability. 
                         We recommend keeping diversity above 0.1 or setting diversity to 0""")
                 if len(agg_scores) > num_dpp:
@@ -177,22 +203,30 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                     index = range(len(agg_scores))
                 samples_index = self.diverse_sample(all_cf_x[index], agg_scores[index], num_samples, diversity_weight)
                 result = self.build_res_df(all_cf_x[samples_index, :])
-                return self.final_check(result)
+                return self._check_for_original_query(result)
 
-    def final_check(self, result):
-        print(self.problem.data_package.query_x)
-        print(result)
+    def _calculate_scores(self, all_cf_y, avg_gower_weight, cfc_weight, dtai_alpha, dtai_beta, dtai_target,
+                          gower_weight):
+        dtai_scores = self._calculate_dtai(all_cf_y, dtai_alpha, dtai_beta, dtai_target)
+        cf_quality = all_cf_y[:, _GOWER_INDEX] * gower_weight + \
+                     all_cf_y[:, _CHANGED_FEATURE_INDEX] * cfc_weight + \
+                     all_cf_y[:, _AVG_GOWER_INDEX] * avg_gower_weight
+        agg_scores = 1 - dtai_scores + cf_quality
+        # For quick debugging
+        self.dtai_scores = dtai_scores
+        self.agg_scores = agg_scores
+        return agg_scores
+
+    def _check_for_original_query(self, result):
         # Check if the initial query is in the final returned set
         if (result == self.problem.data_package.query_x.values).all(1).any():
-            print("Initial Query is valid and included in the top counterfactuals identified")
+            self._log("Initial Query is valid and included in the top counterfactuals identified")
         return result
 
     def _calculate_dtai(self, all_cf_y, dtai_alpha, dtai_beta, dtai_target):
-        if dtai_alpha is None:
-            dtai_alpha = np.ones_like(dtai_target)
-        if dtai_beta is None:
-            dtai_beta = np.ones_like(dtai_target) * DEFAULT_BETA
-        return calculate_dtai.calculateDTAI(all_cf_y[:, :-MCD_BASE_OBJECTIVES], "minimize", dtai_target, dtai_alpha,
+        dtai_alpha = self._get_or_default(dtai_alpha, np.ones_like(dtai_target))
+        dtai_beta = self._get_or_default(dtai_beta, np.ones_like(dtai_target) * _DEFAULT_BETA)
+        return calculate_dtai.calculateDTAI(all_cf_y[:, :-_MCD_BASE_OBJECTIVES], "minimize", dtai_target, dtai_alpha,
                                             dtai_beta)
 
     def _initialize_all_cfs(self, include_dataset):
@@ -208,10 +242,10 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _log_results_found(self, all_cf_x, all_cf_y):
         if len(all_cf_x) == 0:
-            print(f"No valid counterfactuals! Returning empty dataframe.")
+            self._log(f"No valid counterfactuals! Returning empty dataframe.")
         else:
             number_found = len(all_cf_y)
-            print(f"Only found {number_found} valid counterfactuals! Returning all {number_found}.")
+            self._log(f"Only found {number_found} valid counterfactuals! Returning all {number_found}.")
 
     def _filter_by_validity(self, all_cfs):
         all_cf_y = all_cfs.get("F")

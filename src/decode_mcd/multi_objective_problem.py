@@ -11,7 +11,13 @@ from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets
 from private.stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio
 
-MCD_BASE_OBJECTIVES = 3
+_AVG_GOWER_INDEX = -1
+
+_CHANGED_FEATURE_INDEX = -2
+
+_GOWER_INDEX = -3
+
+_MCD_BASE_OBJECTIVES = 3
 
 # from main.evaluation.Predictor import Predictor
 
@@ -27,7 +33,7 @@ class MultiObjectiveProblem(Problem):
         self.data_package = data_package
         self.predictor = prediction_function
         self.constraint_functions = constraint_functions
-        self.number_of_objectives = MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
+        self.number_of_objectives = _MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self.number_of_objectives,
                          n_constr=len(constraint_functions) + self._count_y_constraints())
@@ -93,12 +99,12 @@ class MultiObjectiveProblem(Problem):
     def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
         all_scores = np.zeros((len(x), self.number_of_objectives))
         gower_types = self._build_gower_types()
-        all_scores[:, :-3] = predictions.loc[:, self.data_package.bonus_objectives]
-        all_scores[:, -3] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
-        all_scores[:, -2] = changed_features_ratio(x, self.data_package.query_x,
-                                                   len(self.data_package.features_dataset.columns))
+        all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self.data_package.bonus_objectives]
+        all_scores[:, _GOWER_INDEX] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
+        all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self.data_package.query_x,
+                                                                       len(self.data_package.features_dataset.columns))
         subset = self._get_features_sample()
-        all_scores[:, -1] = avg_gower_distance(x, subset, self.ranges.values, gower_types)
+        all_scores[:, _AVG_GOWER_INDEX] = avg_gower_distance(x, subset, self.ranges.values, gower_types)
         return all_scores
 
     def _get_features_sample(self):

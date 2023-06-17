@@ -26,5 +26,5 @@ class QuickStartTest(unittest.TestCase):
         problem = MultiObjectiveProblem(data_package, lambda design: predict(design), [])
         generator = CounterfactualsGenerator(problem, 10, False)
         generator.generate(10)
-        counterfactuals = generator.sample(10, 1, 1, 1, 1, 50)
+        counterfactuals = generator.sample_with_dtai(10, 1, 1, 1, 1, 50)
         print(counterfactuals)

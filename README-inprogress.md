@@ -145,7 +145,7 @@ data_package = DataPackage(x, y, x[0].reshape(1, 1),
 gen = MultiObjectiveProblem(data_package, lambda design: predict(design), [])
 cf_set = CounterfactualsGenerator(gen, 10, False)
 cf_set.generate(10)
-counterfactuals = cf_set.sample(10, 1, 1, 1, 1, 50)
+counterfactuals = cf_set.sample_with_dtai(10, 1, 1, 1, 1, 50)
 print(counterfactuals)
 ```
 
@@ -186,7 +186,7 @@ data_package = DataPackage(x, y, x[0].reshape(1, 1),
 gen = MultiObjectiveProblem(data_package, lambda design: model.predict(design), [])
 cf_set = CounterfactualsGenerator(gen, 10, False)
 cf_set.generate(10)
-counterfactuals = cf_set.sample(10, 1, 1, 1, 1, 50)
+counterfactuals = cf_set.sample_with_dtai(10, 1, 1, 1, 1, 50)
 print(counterfactuals)
 ```
 
