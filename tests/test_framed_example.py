@@ -59,9 +59,13 @@ class FramedExampleTest(unittest.TestCase):
         all_conditions_satisfaction = np.logical_and(np.greater(results, np.array([2])),
                                                      np.less(results, np.array([4])))
         np_test.assert_equal(all_conditions_satisfaction, 1)
-        # TODO: figure out why this fails... WHY IS IT ALWAYS ST ANGLE??
-        # all_within_range = np.logical_and(np.greater_equal(cfs, lbs), np.less_equal(cfs, ubs))
-        # np_test.assert_equal(all_within_range, 1)
+        all_within_range = np.logical_and(np.greater_equal(cfs, lbs), np.less_equal(cfs, ubs))
+        np_test.assert_equal(all_within_range.values, 1)
+
+    def test_multiple(self):
+        for i in range(10):
+            print(f"Iteration {i}")
+            self.test_framed_example()
 
     def call_predictor(self, x):
 

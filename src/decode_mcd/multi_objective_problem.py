@@ -43,6 +43,25 @@ class MultiObjectiveProblem(Problem):
         self._avg_gower_sample_size = sample_size
         self._avg_gower_sample_seed = sample_seed
 
+    def _get_revertible_indexes(self):
+        all_candidates = self.data_package.features_to_vary
+        var_dict = self._build_problem_var_dict()
+        q_x = self.data_package.query_x
+        validity = self._get_revert_validity(all_candidates, q_x, var_dict)
+        return tuple(list(self.data_package.features_to_vary).index(c) for c in all_candidates if validity[c])
+
+    def _get_revert_validity(self, all_candidates, q_x, var_dict):
+        validity = {}
+        for candidate in all_candidates:
+            if isinstance(var_dict[candidate], (Real, Integer)):
+                valid = var_dict[candidate].bounds[0] <= q_x.iloc[0][candidate] <= var_dict[candidate].bounds[1]
+            elif isinstance(var_dict[candidate], Choice):
+                valid = q_x.iloc[0][candidate] in var_dict[candidate].options
+            else:  # binary
+                valid = True
+            validity[candidate] = valid
+        return validity
+
     def _count_y_constraints(self):
         return self.data_package.design_targets.count_constrained_labels()
 
