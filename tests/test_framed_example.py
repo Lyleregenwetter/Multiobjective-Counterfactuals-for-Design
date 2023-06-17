@@ -9,7 +9,8 @@ from pymoo.core.variable import Real
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
-import decode_mcd.multi_objective_cfe_generator as MOCG
+from decode_mcd.multi_objective_problem import MultiObjectiveProblem
+from decode_mcd.counterfactuals_generator import CounterfactualsGenerator
 from tests.alt_multi_label_predictor import MultilabelPredictor
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget
@@ -38,7 +39,6 @@ class McdEndToEndTest(unittest.TestCase):
         predictions = predictor.predict(x)
         self.assertGreater(r2_score(y, predictions), 0.72)
 
-    @unittest.skip
     def test_framed_example(self):
         x, y = self.x, self.y.drop(columns=self.y.columns.difference(["Model Mass Magnitude"]))
         lbs = np.quantile(x.values, 0.01, axis=0)
@@ -50,9 +50,9 @@ class McdEndToEndTest(unittest.TestCase):
             [ContinuousTarget("Model Mass Magnitude", 2, 4)]
         )
         dp = DataPackage(x, y, x.iloc[0:1], design_targets, datatypes)
-        problem = MOCG.MultiObjectiveCounterfactualsGenerator(dp, self.call_predictor, [])
-        cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
-        cf_set.optimize(5)
+        problem = MultiObjectiveProblem(dp, self.call_predictor, [])
+        cf_set = CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        cf_set.generate(5)
         num_samples = 10
         cfs = cf_set.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
         results = self.call_predictor(cfs).values

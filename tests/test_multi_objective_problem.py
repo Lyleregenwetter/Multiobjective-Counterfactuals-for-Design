@@ -7,7 +7,7 @@ from pymoo.core.variable import Real, Choice
 
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import ContinuousTarget, DesignTargets, ClassificationTarget, ProbabilityTarget
-from decode_mcd.multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator as MOCFG
+from decode_mcd.multi_objective_problem import MultiObjectiveProblem as MOP
 
 
 class DummyPredictor:
@@ -37,25 +37,25 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             bonus_objectives=[],
             datatypes=[Real(), Real(), Real()]
         )
-        self.generator = MOCFG(
+        self.problem = MOP(
             data_package=self.data_package,
-            predictor=lambda x: pd.DataFrame(),
+            prediction_function=lambda x: pd.DataFrame(),
             constraint_functions=[],
         )
-        self.static_generator = MOCFG
+        self.static_problem = MOP
 
     def test_evaluate_subset(self):
-        regressor = self.build_generator(self.build_package(features_to_vary=["x", "y"]))
+        problem = self.build_problem(self.build_package(features_to_vary=["x", "y"]))
         out = {}
-        regressor._evaluate(
+        problem._evaluate(
             np.array([[12, 13], [14, 15], [16, 17], [16, 19]]), out, datasetflag=False)
         self.assertTrue("F" in out)
         self.assertTrue("G" in out)
 
     def test_evaluate_all_features(self):
-        regressor = self.build_generator(self.build_package())
+        problem = self.build_problem(self.build_package())
         out = {}
-        regressor._evaluate(
+        problem._evaluate(
             np.array([[12, 13, 15], [14, 15, 19], [16, 17, 25], [16, 17, 25]]), out, datasetflag=False
         )
         self.assertTrue("F" in out)
@@ -76,13 +76,13 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             [3, 250, 10, 550, 0.7, 0.3],
             [5, 300, 15, 500, 0.0, 1.0]
         ]))
-        generator = self.build_generator(self.build_package())
+        problem = self.build_problem(self.build_package())
         targets = DesignTargets(
             [ContinuousTarget(0, 2, 6), ContinuousTarget(2, 10, 16)],
             [ClassificationTarget(1, (200, 300)), ClassificationTarget(3, (550,))],
             [ProbabilityTarget((4, 5), (5,))]
         )
-        satisfaction = generator._get_mixed_constraint_satisfaction(x_full=x_full,
+        satisfaction = problem._get_mixed_constraint_satisfaction(x_full=x_full,
                                                                     y=y,
                                                                     x_constraint_functions=[],
                                                                     design_targets=targets
@@ -93,15 +93,15 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             [0, 0, 0, 1, 0, 0],
         ]))
 
-    def build_generator(self, package):
-        return MOCFG(data_package=package, predictor=DummyPredictor().predict, constraint_functions=[])
+    def build_problem(self, package):
+        return MOP(data_package=package, prediction_function=DummyPredictor().predict, constraint_functions=[])
 
     def test_strict_inequality_of_regression_constraints(self):
         """this is the current behavior, but is it desired?"""
         self.test_get_mixed_constraint_satisfaction()
 
     def test_get_scores(self):
-        """MOCFG()._get_scores() is not stateless """
+        """MOP()._get_scores() is not stateless """
 
         features = ["A", "B", "C", "D"]
         features_dataset = pd.DataFrame.from_records(
@@ -139,7 +139,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             bonus_objectives=["O2", "O3"],
             datatypes=datatypes
         )
-        generator = MOCFG(data_package, lambda x: x, [])
+        generator = MOP(data_package, lambda x: x, [])
 
         scores = generator._get_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
                                                       columns=features),
@@ -160,7 +160,7 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
                                                 [3, 12], [3, 8],
                                                 [4, 20], [5, 21]]))
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
-        generator = self.build_generator(self.build_package())
+        generator = self.build_problem(self.build_package())
         targets = DesignTargets([ContinuousTarget(0, 2, 4), ContinuousTarget(1, 10, 20)])
         satisfaction = generator._get_mixed_constraint_satisfaction(x_full=x_full,
                                                                     y=y,

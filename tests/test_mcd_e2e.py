@@ -9,10 +9,11 @@ import pandas as pd
 from autogluon.tabular import TabularDataset
 from pymoo.core.variable import Real, Choice
 
-import decode_mcd.multi_objective_cfe_generator as MOCG
-from tests.alt_multi_label_predictor import MultilabelPredictor
+import decode_mcd.multi_objective_problem as MOP
+from decode_mcd import counterfactuals_generator
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget, ProbabilityTarget
+from tests.alt_multi_label_predictor import MultilabelPredictor
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -47,13 +48,13 @@ class McdEndToEndTest(unittest.TestCase):
                          query_x=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
                          design_targets=targets, datatypes=datatypes)
 
-        problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
-                                                              predictor=self.predict_dummy_multiple_objectives,
-                                                              constraint_functions=[])
-        cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
-        cf_set.optimize(5)
+        problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            prediction_function=self.predict_dummy_multiple_objectives,
+                                            constraint_functions=[])
+        generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        generator.generate(5)
         num_samples = 10
-        cfs = cf_set.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
+        cfs = generator.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
 
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
         self.assert_classification_target_met(cfs, "O_C1", [1])
@@ -69,14 +70,14 @@ class McdEndToEndTest(unittest.TestCase):
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
                          query_x=x.iloc[0:1], features_to_vary=x.columns,
                          design_targets=targets, datatypes=datatypes)
-        problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
-                                                              predictor=lambda any_x: self.predict_subset(["O_R1"],
-                                                                                                          any_x),
-                                                              constraint_functions=[])
-        cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
-        cf_set.optimize(5)
+        problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            prediction_function=lambda any_x: self.predict_subset(["O_R1"],
+                                                                                                  any_x),
+                                            constraint_functions=[])
+        generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        generator.generate(5)
         num_samples = 10
-        cfs = cf_set.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
+        cfs = generator.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
         self.assert_regression_target_met(cfs, "O_R1", -5, 5)
         self.assert_cfs_within_valid_range(cfs)
 
@@ -92,11 +93,11 @@ class McdEndToEndTest(unittest.TestCase):
                          query_x=x.iloc[0:1], features_to_vary=x.columns,
                          design_targets=targets, datatypes=datatypes)
 
-        problem = MOCG.MultiObjectiveCounterfactualsGenerator(data_package=dp,
-                                                              predictor=self.predict_dummy_multiple_objectives,
-                                                              constraint_functions=[])
-        cf_set = MOCG.CFSet(problem, 500, initialize_from_dataset=False)
-        cf_set.optimize(5)
+        problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            prediction_function=self.predict_dummy_multiple_objectives,
+                                            constraint_functions=[])
+        cf_set = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        cf_set.generate(5)
         num_samples = 10
         cfs = cf_set.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
 

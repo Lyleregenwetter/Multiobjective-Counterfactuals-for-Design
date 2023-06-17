@@ -5,7 +5,8 @@ from pymoo.core.variable import Real
 
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import *
-from decode_mcd.multi_objective_cfe_generator import MultiObjectiveCounterfactualsGenerator, CFSet
+from decode_mcd.multi_objective_problem import MultiObjectiveProblem
+from decode_mcd.counterfactuals_generator import CounterfactualsGenerator
 
 
 class QuickStartTest(unittest.TestCase):
@@ -22,8 +23,8 @@ class QuickStartTest(unittest.TestCase):
                                                                                   lower_bound=25,
                                                                                   upper_bound=75)]),
                                    datatypes=[Real(bounds=(0, 1))])
-        gen = MultiObjectiveCounterfactualsGenerator(data_package, lambda design: predict(design), [])
-        cf_set = CFSet(gen, 10, False)
-        cf_set.optimize(10)
-        counterfactuals = cf_set.sample(10, 1, 1, 1, 1, 50)
+        problem = MultiObjectiveProblem(data_package, lambda design: predict(design), [])
+        generator = CounterfactualsGenerator(problem, 10, False)
+        generator.generate(10)
+        counterfactuals = generator.sample(10, 1, 1, 1, 1, 50)
         print(counterfactuals)
