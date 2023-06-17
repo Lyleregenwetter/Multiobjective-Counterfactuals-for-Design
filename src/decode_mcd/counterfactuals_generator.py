@@ -56,7 +56,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                  pop_size: int,
                  initialize_from_dataset: bool = True,
                  verbose: bool = True):
-        self.all_cf_y, self.all_cf_x, self.agg_scores, self.dtai_scores, \
+        self.all_cf_y, self.all_cf_x, self.agg_scores, self.label_scores, \
             self.seed, self.res, self.algorithm, self.dataset_pop = (None for _ in range(8))
         self.problem = problem
         self.pop_size = pop_size
@@ -136,14 +136,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self.problem = self.algorithm.problem
 
     def sample_with_weights(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
-                            diversity_weight, dtai_target, dtai_alpha=None, dtai_beta=None,
-                            include_dataset=True, num_dpp=1000):
-        assert self.res, "You must call generate before calling sample!"
-        assert num_samples > 0, "You must sample at least 1 counterfactual!"
-        all_cfs = self._initialize_all_cfs(include_dataset)
-        all_cf_x, all_cf_y = self._filter_by_validity(all_cfs)
-        self.all_cf_x = all_cf_x
-        self.all_cf_y = all_cf_y
+                            diversity_weight, y_weights, include_dataset=True, num_dpp=1000):
         assert self.res, "You must call generate before calling sample!"
         assert num_samples > 0, "You must sample at least 1 counterfactual!"
 
@@ -158,6 +151,12 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             return self.build_res_df(all_cf_x)
 
         self._verbose_log("Scoring all counterfactual candidates!")
+
+        agg_scores = self._calculate_scores_with_weights(all_cf_y, avg_gower_weight, cfc_weight,
+                                                         y_weights,
+                                                         gower_weight)
+
+        return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
 
     def sample_with_dtai(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
                          diversity_weight, dtai_target, dtai_alpha=None, dtai_beta=None,
@@ -177,8 +176,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
         self._verbose_log("Scoring all counterfactual candidates!")
 
-        agg_scores = self._calculate_scores(all_cf_y, avg_gower_weight, cfc_weight, dtai_alpha, dtai_beta, dtai_target,
-                                            gower_weight)
+        agg_scores = self._calculate_scores_with_dtai(all_cf_y, avg_gower_weight, cfc_weight,
+                                                      dtai_alpha, dtai_beta, dtai_target,
+                                                      gower_weight)
 
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
 
@@ -205,15 +205,22 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                 result = self.build_res_df(all_cf_x[samples_index, :])
                 return self._check_for_original_query(result)
 
-    def _calculate_scores(self, all_cf_y, avg_gower_weight, cfc_weight, dtai_alpha, dtai_beta, dtai_target,
-                          gower_weight):
+    def _calculate_scores_with_dtai(self, all_cf_y, avg_gower_weight, cfc_weight, dtai_alpha, dtai_beta, dtai_target,
+                                    gower_weight):
         dtai_scores = self._calculate_dtai(all_cf_y, dtai_alpha, dtai_beta, dtai_target)
+        return self._calculate_statistical_scores(all_cf_y, avg_gower_weight, cfc_weight, gower_weight, dtai_scores)
+
+    def _calculate_scores_with_weights(self, all_cf_y, avg_gower_weight, cfc_weight, y_weights, gower_weight):
+        weighted_scores = all_cf_y * y_weights
+        return self._calculate_statistical_scores(all_cf_y, avg_gower_weight, cfc_weight, gower_weight, weighted_scores)
+
+    def _calculate_statistical_scores(self, all_cf_y, avg_gower_weight, cfc_weight, gower_weight, label_scores):
         cf_quality = all_cf_y[:, _GOWER_INDEX] * gower_weight + \
                      all_cf_y[:, _CHANGED_FEATURE_INDEX] * cfc_weight + \
                      all_cf_y[:, _AVG_GOWER_INDEX] * avg_gower_weight
-        agg_scores = 1 - dtai_scores + cf_quality
+        agg_scores = 1 - label_scores + cf_quality
         # For quick debugging
-        self.dtai_scores = dtai_scores
+        self.label_scores = label_scores
         self.agg_scores = agg_scores
         return agg_scores
 

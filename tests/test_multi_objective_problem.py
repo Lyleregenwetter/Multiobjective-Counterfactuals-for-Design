@@ -82,11 +82,11 @@ class MultiObjectiveProblemTest(unittest.TestCase):
             [ClassificationTarget(1, (200, 300)), ClassificationTarget(3, (550,))],
             [ProbabilityTarget((4, 5), (5,))]
         )
-        satisfaction = problem._get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                  y=y,
-                                                                  x_constraint_functions=[],
-                                                                  design_targets=targets
-                                                                  )
+        satisfaction = problem._calculate_mixed_constraint_satisfaction(x_full=x_full,
+                                                                        y=y,
+                                                                        x_constraint_functions=[],
+                                                                        design_targets=targets
+                                                                        )
         np_test.assert_array_equal(satisfaction, np.array([
             [1, 0, 1, 1, 0, 0],
             [0, 1, 1, 0, 1, 1],
@@ -141,10 +141,10 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         )
         generator = MOP(data_package, lambda x: x, [])
 
-        scores = generator._get_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
-                                                      columns=features),
-                                       predictions=pd.DataFrame(np.array([[1, 2.35, 3.33], [1, 3.35, 4.45]]),
-                                                                columns=["O1", "O2", "O3"]))
+        scores = generator._calculate_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
+                                                            columns=features),
+                                             predictions=pd.DataFrame(np.array([[1, 2.35, 3.33], [1, 3.35, 4.45]]),
+                                                                      columns=["O1", "O2", "O3"]))
         np_test.assert_array_almost_equal(scores,
                                           np.array([[2.35, 3.33, 0.339, 0.75, 0.298],
                                                     [3.35, 4.45, 0.614, 1, 0.556]]), decimal=3)
@@ -162,10 +162,10 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
         generator = self.build_problem(self.build_package())
         targets = DesignTargets([ContinuousTarget(0, 2, 4), ContinuousTarget(1, 10, 20)])
-        satisfaction = generator._get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                    y=y,
-                                                                    x_constraint_functions=[],
-                                                                    design_targets=targets)
+        satisfaction = generator._calculate_mixed_constraint_satisfaction(x_full=x_full,
+                                                                          y=y,
+                                                                          x_constraint_functions=[],
+                                                                          design_targets=targets)
         np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
 
     def build_package(self,

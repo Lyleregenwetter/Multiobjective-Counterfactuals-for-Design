@@ -17,6 +17,8 @@ class DataPackage:
                  datatypes: Sequence[Variable],
                  features_to_vary: Union[Sequence[str], Sequence[int]] = None,
                  bonus_objectives: Union[Sequence[str], Sequence[int]] = None,
+                 datasets_scores=None,
+                 datasets_validity=None
                  ):
         """"""
         self.features_dataset = self._to_valid_dataframe(features_dataset, "features_dataset")
@@ -26,6 +28,8 @@ class DataPackage:
         self.datatypes = datatypes
         self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
         self.bonus_objectives = self._get_or_default(bonus_objectives, [])
+        self.datasets_scores = datasets_scores
+        self.datasets_validity = datasets_validity
         self._validate_fields()
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 

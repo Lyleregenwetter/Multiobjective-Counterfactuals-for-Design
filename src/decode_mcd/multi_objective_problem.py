@@ -91,12 +91,17 @@ class MultiObjectiveProblem(Problem):
         x_full = self._build_full_df(x)
         predictions = self._get_predictions(x_full, dataset_flag)
 
-        scores = self._get_scores(x_full, predictions)
+        scores = self._get_scores(x_full, predictions, dataset_flag)
         validity = self._get_mixed_constraint_satisfaction(x_full, predictions, self.constraint_functions,
-                                                           self.data_package.design_targets)
+                                                           self.data_package.design_targets, dataset_flag)
         return scores, validity
 
-    def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
+    def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame, dataset_flag):
+        if dataset_flag and (self.data_package.datasets_scores is not None):
+            return self.data_package.datasets_scores
+        return self._calculate_scores(x, predictions)
+
+    def _calculate_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
         all_scores = np.zeros((len(x), self.number_of_objectives))
         gower_types = self._build_gower_types()
         all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self.data_package.bonus_objectives]
@@ -192,7 +197,17 @@ class MultiObjectiveProblem(Problem):
                                            x_full: pd.DataFrame,
                                            y: pd.DataFrame,
                                            x_constraint_functions: list,
-                                           design_targets: DesignTargets):
+                                           design_targets: DesignTargets,
+                                           dataset_flag):
+        if dataset_flag and (self.data_package.datasets_validity is not None):
+            return self.data_package.datasets_validity
+        return self._calculate_mixed_constraint_satisfaction(x_full, y, x_constraint_functions, design_targets)
+
+    def _calculate_mixed_constraint_satisfaction(self,
+                                                 x_full: pd.DataFrame,
+                                                 y: pd.DataFrame,
+                                                 x_constraint_functions: list,
+                                                 design_targets: DesignTargets):
         n_total_constraints = design_targets.count_constrained_labels()
         n_rows = x_full.shape[0]
         result = np.zeros(shape=(n_rows, n_total_constraints))
