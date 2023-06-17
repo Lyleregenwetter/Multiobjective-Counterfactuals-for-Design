@@ -54,10 +54,11 @@ class MultiObjectiveProblem(Problem):
     def _get_revert_validity(self, all_candidates, q_x, var_dict):
         validity = {}
         for candidate in all_candidates:
+            value = q_x.iloc[0][candidate]
             if isinstance(var_dict[candidate], (Real, Integer)):
-                valid = var_dict[candidate].bounds[0] <= q_x.iloc[0][candidate] <= var_dict[candidate].bounds[1]
+                valid = var_dict[candidate].bounds[0] <= value <= var_dict[candidate].bounds[1]
             elif isinstance(var_dict[candidate], Choice):
-                valid = q_x.iloc[0][candidate] in var_dict[candidate].options
+                valid = value in var_dict[candidate].options
             else:  # binary
                 valid = True
             validity[candidate] = valid

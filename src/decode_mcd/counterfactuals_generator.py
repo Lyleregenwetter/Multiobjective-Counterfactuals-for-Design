@@ -133,7 +133,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def sample(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight, diversity_weight, dtai_target,
                dtai_alpha=None, dtai_beta=None, include_dataset=True, num_dpp=1000):  # Query from pareto front
-        assert self.res, "You must call optimize before calling generate!"
+        assert self.res, "You must call generate before calling sample!"
         assert num_samples > 0, "You must sample at least 1 counterfactual!"
 
         all_cfs = self._initialize_all_cfs(include_dataset)
