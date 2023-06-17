@@ -60,8 +60,12 @@ class DataPackageTest(unittest.TestCase):
             lambda: self.initialize(datatypes=[]),
             "datatypes has length 0, expected length 3 matching features_dataset columns ['x' 'y' 'z']")
         self.assert_raises_with_message(
-            lambda: self.initialize(datatypes=[Real(), None, Real()]),
+            lambda: self.initialize(datatypes=[Real(bounds=(5, 10)), None, Real(bounds=(11, 13))]),
             "datatypes must strictly be a sequence of objects belonging to the types [Real, Integer, Choice, Binary]")
+        self.assert_raises_with_message(
+            lambda: self.initialize(datatypes=[Real(), Real(), Real()]),
+            "datatypes are of the correct type, but are invalid. If you're not sure why, "
+            "please use keyword arguments and/or refer to the documentation.")
 
     def test_invalid_bonus_objectives(self):
         self.assert_raises_with_message(

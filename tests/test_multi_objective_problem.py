@@ -15,7 +15,7 @@ class DummyPredictor:
         return np.arange(x.shape[0] * 2).reshape(-1, 2)
 
 
-class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
+class MultiObjectiveProblemTest(unittest.TestCase):
     def setUp(self) -> None:
         features = pd.DataFrame(np.random.rand(100, 3), columns=["x", "y", "z"])
         features.loc[0] = pd.Series({
@@ -83,10 +83,10 @@ class MultiObjectiveCFEGeneratorTest(unittest.TestCase):
             [ProbabilityTarget((4, 5), (5,))]
         )
         satisfaction = problem._get_mixed_constraint_satisfaction(x_full=x_full,
-                                                                    y=y,
-                                                                    x_constraint_functions=[],
-                                                                    design_targets=targets
-                                                                    )
+                                                                  y=y,
+                                                                  x_constraint_functions=[],
+                                                                  design_targets=targets
+                                                                  )
         np_test.assert_array_equal(satisfaction, np.array([
             [1, 0, 1, 1, 0, 0],
             [0, 1, 1, 0, 1, 1],

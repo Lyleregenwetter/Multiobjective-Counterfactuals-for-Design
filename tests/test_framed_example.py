@@ -20,7 +20,7 @@ DEFAULT_MODEL_PATH = "/home/yazan/Repositories/Personal/BikeCAD-integration/serv
                      "/Trained Models/AutogluonModels/ag-20230311_154304"
 
 
-class McdEndToEndTest(unittest.TestCase):
+class FramedExampleTest(unittest.TestCase):
     def setUp(self) -> None:
         __main__.MultilabelPredictor = MultilabelPredictor
         self.MODEL_PATH = os.getenv("MODEL_FULL_PATH",

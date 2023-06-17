@@ -43,9 +43,6 @@ class MultiObjectiveProblem(Problem):
         self._avg_gower_sample_size = sample_size
         self._avg_gower_sample_seed = sample_seed
 
-    def get_revertible(self):
-        pass
-
     def _count_y_constraints(self):
         return self.data_package.design_targets.count_constrained_labels()
 
