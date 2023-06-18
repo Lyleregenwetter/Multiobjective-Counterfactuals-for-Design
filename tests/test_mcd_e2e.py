@@ -54,7 +54,8 @@ class McdEndToEndTest(unittest.TestCase):
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
-        cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
+        cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False,
+                                         num_dpp=10000)
 
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
         self.assert_classification_target_met(cfs, "O_C1", [1])
@@ -77,7 +78,8 @@ class McdEndToEndTest(unittest.TestCase):
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
-        cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
+        cfs = generator.sample_with_weights(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1, 2, 3]),
+                                            include_dataset=False)
         self.assert_regression_target_met(cfs, "O_R1", -5, 5)
         self.assert_cfs_within_valid_range(cfs)
 
@@ -99,7 +101,8 @@ class McdEndToEndTest(unittest.TestCase):
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
-        cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False, num_dpp=10000)
+        cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]), include_dataset=False,
+                                         num_dpp=10000)
 
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
         self.assert_classification_target_met(cfs, "O_C1", [1])

@@ -32,13 +32,17 @@ class RevertToQueryRepair(Repair):
         qxs = problem.data_package.query_x.values[:, revertible_indexes]
         full_Z_dataframe = pd.DataFrame.from_records(Z)
         full_Z_np = full_Z_dataframe.values
+        reverted_subset = self._revert_subset(full_Z_np, qxs, revertible_indexes)
+        full_Z_np[:, revertible_indexes] = reverted_subset
+        Z = pd.DataFrame(full_Z_np, columns=full_Z_dataframe.columns)
+        return Z.to_dict("records")
+
+    def _revert_subset(self, full_Z_np, qxs, revertible_indexes):
         revertible_subset = full_Z_np[:, revertible_indexes]
         mask = np.random.binomial(size=np.shape(revertible_subset), n=1, p=self.elementwise_prob)
         mask = mask * np.random.binomial(size=(np.shape(revertible_subset)[0], 1), n=1, p=self.rep_prob)
         revertible_subset = qxs * mask + revertible_subset * (1 - mask)
-        full_Z_np[:, revertible_indexes] = revertible_subset
-        Z = pd.DataFrame(full_Z_np, columns=full_Z_dataframe.columns)
-        return Z.to_dict("records")
+        return revertible_subset
 
 
 class AllOffspringCallback(Callback):
@@ -105,22 +109,24 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return value
 
     def generate(self, n_generations, seed=None):  # Run the GA
-
         self.seed = self._get_or_default(seed, np.random.randint(1_000_000))
-
         self.initialize()
-
         previous_train_steps = self._get_or_default(self.algorithm.n_iter, 0)
+        self._train_algorithm_if(n_generations, previous_train_steps)
 
+    def _train_algorithm_if(self, n_generations, previous_train_steps):
         if n_generations >= previous_train_steps:
-            self._verbose_log(f"Training GA from {previous_train_steps} to {n_generations} generations!")
-            self.algorithm.termination = MaximumGenerationTermination(n_generations)
-            self.res = minimize(self.problem, self.algorithm,
-                                seed=self.seed,
-                                copy_algorithm=False,
-                                verbose=self.verbose)
+            self._train_algorithm(n_generations, previous_train_steps)
         else:
             self._log(f"GA has already trained for {previous_train_steps} generations.")
+
+    def _train_algorithm(self, n_generations, previous_train_steps):
+        self._verbose_log(f"Training GA from {previous_train_steps} to {n_generations} generations!")
+        self.algorithm.termination = MaximumGenerationTermination(n_generations)
+        self.res = minimize(self.problem, self.algorithm,
+                            seed=self.seed,
+                            copy_algorithm=False,
+                            verbose=self.verbose)
 
     def save(self, filepath):
         self._verbose_log(f"Saving GA to {filepath}")
@@ -140,11 +146,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         assert self.res, "You must call generate before calling sample!"
         assert num_samples > 0, "You must sample at least 1 counterfactual!"
 
-        all_cfs = self._initialize_all_cfs(include_dataset)
-
-        all_cf_x, all_cf_y = self._filter_by_validity(all_cfs)
-        self.all_cf_x = all_cf_x
-        self.all_cf_y = all_cf_y
+        all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
 
         if len(all_cf_x) < num_samples:
             self._log_results_found(all_cf_x, all_cf_y)
@@ -158,17 +160,20 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
 
+    def _initialize_and_filter_all_cfs(self, include_dataset):
+        all_cfs = self._initialize_all_cfs(include_dataset)
+        all_cf_x, all_cf_y = self._filter_by_validity(all_cfs)
+        self.all_cf_x = all_cf_x
+        self.all_cf_y = all_cf_y
+        return all_cf_x, all_cf_y
+
     def sample_with_dtai(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
                          diversity_weight, dtai_target, dtai_alpha=None, dtai_beta=None,
                          include_dataset=True, num_dpp=1000):  # Query from pareto front
         assert self.res, "You must call generate before calling sample!"
         assert num_samples > 0, "You must sample at least 1 counterfactual!"
 
-        all_cfs = self._initialize_all_cfs(include_dataset)
-
-        all_cf_x, all_cf_y = self._filter_by_validity(all_cfs)
-        self.all_cf_x = all_cf_x
-        self.all_cf_y = all_cf_y
+        all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
 
         if len(all_cf_x) < num_samples:
             self._log_results_found(all_cf_x, all_cf_y)
@@ -211,7 +216,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return self._calculate_statistical_scores(all_cf_y, avg_gower_weight, cfc_weight, gower_weight, dtai_scores)
 
     def _calculate_scores_with_weights(self, all_cf_y, avg_gower_weight, cfc_weight, y_weights, gower_weight):
-        weighted_scores = all_cf_y * y_weights
+        weighted_scores = np.sum(all_cf_y * y_weights, axis=1)
         return self._calculate_statistical_scores(all_cf_y, avg_gower_weight, cfc_weight, gower_weight, weighted_scores)
 
     def _calculate_statistical_scores(self, all_cf_y, avg_gower_weight, cfc_weight, gower_weight, label_scores):
