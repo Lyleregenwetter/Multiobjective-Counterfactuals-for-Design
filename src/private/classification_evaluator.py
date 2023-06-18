@@ -12,7 +12,8 @@ class ClassificationEvaluator:
             return np.array([])
         # TODO: make this more efficient.
         actual_values = actual.values
-        assert actual_values.shape[1] == targets.shape[0], "Dimensional mismatch between actual performances and targets array"
+        assert actual_values.shape[1] == targets.shape[0], \
+            "Dimensional mismatch between actual performances and targets array"
         num_columns = actual_values.shape[1]
         # noinspection PyUnresolvedReferences
         result = np.isin(actual_values[:, 0], targets[0]).astype(int).reshape(actual_values.shape[0], 1)
