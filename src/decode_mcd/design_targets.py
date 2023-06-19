@@ -131,8 +131,8 @@ class DesignTargets:
                            f"{_sequence_name} must be composed of elements of class {element_type.__name__}")
 
     def _validate_no_crossover(self):
-        continuous = set([continuous_target.label for continuous_target in self.continuous_targets])
-        classification = set([classification_target.label for classification_target in self.classification_targets])
+        continuous = set(self.get_continuous_labels())
+        classification = set(self.get_classification_labels())
         probability = set(self._get_probability_labels())
         len_union = len((continuous | classification) | probability)
         self._validate(self.count_constrained_labels() == len_union,

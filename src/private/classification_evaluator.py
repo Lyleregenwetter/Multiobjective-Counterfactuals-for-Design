@@ -11,24 +11,24 @@ class ClassificationEvaluator:
         if actual.empty:
             return np.array([])
         # TODO: make this more efficient.
-        actual_values = actual.values
-        assert actual_values.shape[1] == targets.shape[0], \
+        values = actual.values
+        assert values.shape[1] == targets.shape[0], \
             "Dimensional mismatch between actual performances and targets array"
-        num_columns = actual_values.shape[1]
+        num_columns = values.shape[1]
         # noinspection PyUnresolvedReferences
-        result = np.isin(actual_values[:, 0], targets[0]).astype(int).reshape(actual_values.shape[0], 1)
+        result = np.isin(values[:, 0], targets[0]).astype(int).reshape(values.shape[0], 1)
         for i in range(1, num_columns):
             # noinspection PyUnresolvedReferences
-            result = np.concatenate([result, np.isin(actual_values[:, i],
+            result = np.concatenate([result, np.isin(values[:, i],
                                                      targets[i])
-                                    .astype(int).reshape(actual_values.shape[0], 1)],
+                                    .astype(int).reshape(values.shape[0], 1)],
                                     axis=1)
         return result
 
     def evaluate_proba(self, actual: pd.DataFrame, target_classes_indices: tuple):
         if actual.empty:
             return np.array([])
-        unwanted_classes = tuple(set([_ for _ in actual.columns]) - set(target_classes_indices))
+        unwanted_classes = tuple(set(actual.columns.to_list()) - set(target_classes_indices))
         max_desired = np.max(actual.loc[:, target_classes_indices], axis=1)
         max_undesired = np.max(actual.loc[:, unwanted_classes], axis=1)
         return (max_desired - max_undesired).values.reshape(actual.shape[0], 1)
