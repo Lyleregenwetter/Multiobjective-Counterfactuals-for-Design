@@ -6,6 +6,7 @@ import pandas as pd
 from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 
 from decode_mcd.design_targets import DesignTargets
+from decode_mcd_private.validation_utils import UserInputException, validate
 
 
 class DataPackage:
@@ -129,8 +130,7 @@ class DataPackage:
                        "the types [Real, Integer, Choice, Binary]")
 
     def _validate(self, mandatory_condition: bool, exception_message: str):
-        if not mandatory_condition:
-            raise ValueError(exception_message)
+        validate(mandatory_condition, exception_message)
 
     def _validate_design_targets(self):
         self._validate(isinstance(self.design_targets, DesignTargets),

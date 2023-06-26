@@ -14,8 +14,9 @@ from pymoo.termination.max_gen import MaximumGenerationTermination
 
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem, _MCD_BASE_OBJECTIVES, _GOWER_INDEX, \
     _CHANGED_FEATURE_INDEX, _AVG_GOWER_INDEX
-from private import calculate_dtai as calculate_dtai, DPPsampling as DPPsampling
-from private.stats_methods import mixed_gower
+from decode_mcd_private import calculate_dtai as calculate_dtai, DPPsampling as DPPsampling
+from decode_mcd_private.stats_methods import mixed_gower
+from decode_mcd_private.validation_utils import validate
 
 _DEFAULT_BETA = 4
 
@@ -56,7 +57,8 @@ class AllOffspringCallback(Callback):
 
 
 class CounterfactualsGenerator:  # For calling the optimization and sampling counterfactuals
-    def __init__(self, problem: MultiObjectiveProblem,
+    def __init__(self,
+                 problem: MultiObjectiveProblem,
                  pop_size: int,
                  initialize_from_dataset: bool = True,
                  verbose: bool = True):
@@ -66,6 +68,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self.pop_size = pop_size
         self.initialize_from_dataset = initialize_from_dataset
         self.verbose = verbose
+        self._validate_fields()
 
     def generate(self, n_generations, seed=None):  # Run the GA
         self.seed = self._get_or_default(seed, np.random.randint(1_000_000))
@@ -296,3 +299,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.kDPPGreedySample(weighted_matrix, num_samples)
         return samples_index
+
+    def _validate_fields(self):
+        validate(isinstance(self.problem, MultiObjectiveProblem), "problem must be an instance "
+                                                                  "of decode_mcd.MultiObjectiveProblem")
+        validate(isinstance(self.pop_size, int), "pop_size must be an integer")
+        validate(self.pop_size > 0, "pop_size must be a positive integer")

@@ -3,6 +3,7 @@ import unittest
 import numpy.testing as np_test
 
 from decode_mcd.design_targets import *
+from decode_mcd_private.validation_utils import UserInputException
 
 
 class DesignTargetsTest(unittest.TestCase):
@@ -87,6 +88,6 @@ class DesignTargetsTest(unittest.TestCase):
                 self.assert_raises_with_message(factory, exception_message)
 
     def assert_raises_with_message(self, faulty_call: callable, expected_message: str):
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(UserInputException) as context:
             faulty_call()
         self.assertEqual(expected_message, context.exception.args[0])

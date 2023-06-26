@@ -5,11 +5,13 @@ from typing import Union, Sequence, Tuple, List
 
 import numpy as np
 
+from decode_mcd_private.validation_utils import UserInputException
+
 
 class McdTarget(metaclass=ABCMeta):
     def _validate(self, mandatory_condition: bool, exception_message: str):
         if not mandatory_condition:
-            raise ValueError(exception_message)
+            raise UserInputException(exception_message)
 
     @abstractmethod
     def _validate_fields(self):
@@ -122,7 +124,7 @@ class DesignTargets:
 
     def _validate(self, mandatory_condition: bool, exception_message: str):
         if not mandatory_condition:
-            raise ValueError(exception_message)
+            raise UserInputException(exception_message)
 
     def _validate_sequence(self, _sequence, _sequence_name, element_type):
         self._validate(isinstance(_sequence, Sequence), f"{_sequence_name} must be a sequence")

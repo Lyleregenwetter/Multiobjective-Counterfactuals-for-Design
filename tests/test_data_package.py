@@ -7,6 +7,7 @@ from pymoo.core.variable import Real
 
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget
+from decode_mcd_private.validation_utils import UserInputException
 
 
 # noinspection PyTypeChecker
@@ -125,7 +126,7 @@ class DataPackageTest(unittest.TestCase):
         self.assertEqual({0, 1}, set(data_package.predictions_dataset.columns))
 
     def assert_raises_with_message(self, faulty_call: callable, expected_message: str):
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(UserInputException) as context:
             faulty_call()
         self.assertEqual(expected_message, context.exception.args[0])
 
