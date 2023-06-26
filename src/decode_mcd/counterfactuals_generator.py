@@ -70,8 +70,12 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self.verbose = verbose
         self._validate_fields()
 
-    def generate(self, n_generations, seed=None):  # Run the GA
+    def generate(self, n_generations: int, seed: int = None):  # Run the GA
         self.seed = self._get_or_default(seed, np.random.randint(1_000_000))
+
+        self._validate_positive_int(n_generations, "n_generations")
+        self._validate_positive_int(self.seed, "seed")
+
         self._setup_algorithm()
         previous_train_steps = self._get_or_default(self.algorithm.n_iter, 0)
         self._train_algorithm_if(n_generations, previous_train_steps)
@@ -303,5 +307,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
     def _validate_fields(self):
         validate(isinstance(self.problem, MultiObjectiveProblem), "problem must be an instance "
                                                                   "of decode_mcd.MultiObjectiveProblem")
-        validate(isinstance(self.pop_size, int), "pop_size must be an integer")
-        validate(self.pop_size > 0, "pop_size must be a positive integer")
+        self._validate_positive_int(self.pop_size, "pop_size")
+
+    def _validate_positive_int(self, n_generations, field_name):
+        validate(isinstance(n_generations, int), f"{field_name} must be an integer")
+        validate(n_generations > 0, f"{field_name} must be a positive integer")

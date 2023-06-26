@@ -6,7 +6,7 @@ import pandas as pd
 from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 
 from decode_mcd.design_targets import DesignTargets
-from decode_mcd_private.validation_utils import UserInputException, validate
+from decode_mcd_private.validation_utils import validate
 
 
 class DataPackage:

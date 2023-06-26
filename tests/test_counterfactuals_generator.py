@@ -1,10 +1,9 @@
 import unittest
 
 import numpy as np
-import pandas as pd
-from pymoo.core.problem import Problem
-from pymoo.core.variable import Real
 import numpy.testing as np_test
+import pandas as pd
+from pymoo.core.variable import Real
 
 from decode_mcd.counterfactuals_generator import RevertToQueryRepair, CounterfactualsGenerator
 from decode_mcd.data_package import DataPackage
@@ -68,6 +67,7 @@ class RevertToQueryRepairTest(unittest.TestCase):
         return package
 
 
+# noinspection PyTypeChecker
 class CounterfactualsGeneratorTest(unittest.TestCase):
     def test_validates_constructor_parameters(self):
         self.assert_raises_with_message(lambda:
@@ -79,8 +79,16 @@ class CounterfactualsGeneratorTest(unittest.TestCase):
         self.assert_raises_with_message(lambda: CounterfactualsGenerator(problem, -100),
                                         "pop_size must be a positive integer")
 
-    def test_validate_generation_parameters(self):
-        pass
+    def test_validates_generation_parameters(self):
+        generator = CounterfactualsGenerator(self.build_valid_problem(), 500)
+        self.assert_raises_with_message(lambda: generator.generate(50.5),
+                                        "n_generations must be an integer")
+        self.assert_raises_with_message(lambda: generator.generate(-50),
+                                        "n_generations must be a positive integer")
+        self.assert_raises_with_message(lambda: generator.generate(5, 50.5),
+                                        "seed must be an integer")
+        self.assert_raises_with_message(lambda: generator.generate(5, -50),
+                                        "seed must be a positive integer")
 
     def build_valid_problem(self):
         return MultiObjectiveProblem(
