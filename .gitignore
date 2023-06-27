@@ -1,8 +1,8 @@
-/.ipynb_checkpoints
-/venv
-*/AutogluonModels/
+**/.ipynb_checkpoints
+**/venv
+**/AutogluonModels/
 *.coverage
-/htmlcov
-build/
-dist/
-__pycache__/
+**/htmlcov
+**/build/
+**/dist/
+**/__pycache__/
