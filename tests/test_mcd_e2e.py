@@ -36,7 +36,6 @@ class McdEndToEndTest(unittest.TestCase):
         predictions["O_C2"] = predictions["O_C1"]
         return predictions
 
-    @unittest.skip
     def test_multi_objectives_with_subset_of_features_to_vary(self):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
