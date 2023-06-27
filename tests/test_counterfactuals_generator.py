@@ -90,6 +90,10 @@ class CounterfactualsGeneratorTest(unittest.TestCase):
         self.assert_raises_with_message(lambda: generator.generate(5, -50),
                                         "seed must be a positive integer")
 
+    @unittest.skip
+    def test_invalid_sampling_parameters(self):
+        pass
+
     def build_valid_problem(self):
         return MultiObjectiveProblem(
             data_package=DataPackage(
