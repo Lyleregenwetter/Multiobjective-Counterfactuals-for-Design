@@ -6,8 +6,9 @@ def calculateDTAI(actual_performance,
                   targets,
                   alpha_values,
                   beta_values,
-                  smallest_allowed=1e-7) -> float:
-    # TODO: make this return an array in case of multiple inputs
+                  smallest_allowed=1e-7):
+    if actual_performance.shape[1] == 0:
+        return np.zeros(actual_performance.shape[0])
     alpha_values, beta_values, actual_performance = convert_to_float_arrays(alpha_values,
                                                                             beta_values,
                                                                             actual_performance)

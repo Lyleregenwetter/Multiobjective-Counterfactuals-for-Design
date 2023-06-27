@@ -95,10 +95,12 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self.algorithm = dill.load(f)
             self.problem = self.algorithm.problem
 
-    def sample_with_dtai(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
-                         diversity_weight, dtai_target, dtai_alpha=None, dtai_beta=None,
+    def sample_with_dtai(self, num_samples: int, avg_gower_weight: float, cfc_weight: float, gower_weight: float,
+                         diversity_weight: float, dtai_target: np.ndarray = None,
+                         dtai_alpha: np.ndarray = None, dtai_beta: np.ndarray = None,
                          include_dataset=True, num_dpp=1000):  # Query from pareto front
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
+        dtai_target, dtai_alpha, dtai_beta = self._get_or_default_dtai(dtai_target, dtai_alpha, dtai_beta)
         self._validate_dtai_parameters(dtai_target, dtai_alpha, dtai_beta)
 
         all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
@@ -115,9 +117,13 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
 
-    def sample_with_weights(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
-                            diversity_weight, bonus_objectives_weights, include_dataset=True, num_dpp=1000):
+    def sample_with_weights(self, num_samples: int, avg_gower_weight: float, cfc_weight: float, gower_weight: float,
+                            diversity_weight: float, bonus_objectives_weights: np.ndarray = None, include_dataset=True,
+                            num_dpp=1000):
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
+        bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
+                                                        np.ones(
+                                                            shape=(1, len(self.problem.data_package.bonus_objectives))))
         self._validate_y_weights(bonus_objectives_weights)
 
         all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
@@ -251,8 +257,6 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return result
 
     def _calculate_dtai(self, all_cf_y, dtai_alpha, dtai_beta, dtai_target):
-        dtai_alpha = self._get_or_default(dtai_alpha, np.ones_like(dtai_target))
-        dtai_beta = self._get_or_default(dtai_beta, np.ones_like(dtai_target) * _DEFAULT_BETA)
         return calculate_dtai.calculateDTAI(all_cf_y[:, :-_MCD_BASE_OBJECTIVES], "minimize", dtai_target, dtai_alpha,
                                             dtai_beta)
 
@@ -330,10 +334,30 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self._validate_non_negative_float(weight, "weight")
 
     def _validate_y_weights(self, y_weights: np.ndarray):
-        validate(isinstance(y_weights, np.ndarray), "y_weights must be a numpy array")
-        expected_shape = (1, len(self.problem.data_package.bonus_objectives))
-        validate(y_weights.shape == expected_shape,
-                 f"y_weights must have shape {expected_shape}")
+        self._validate_bonus_objective_scoring_parameter(y_weights, "y_weights")
+
+    def _validate_bonus_objective_scoring_parameter(self, parameter: np.ndarray, parameter_name):
+        validate(isinstance(parameter, np.ndarray), f"{parameter_name} must be a numpy array")
+        n_bonus = len(self.problem.data_package.bonus_objectives)
+        expected_shape = (1, n_bonus)
+        exception_message = self._get_exception_message(expected_shape, n_bonus, parameter_name)
+        validate(parameter.shape == expected_shape, exception_message)
+
+    def _get_exception_message(self, expected_shape, n_bonus, parameter_name):
+        if n_bonus == 0:
+            return f"No bonus objectives are set - {parameter_name} must be left empty!"
+        else:
+            return f"{parameter_name} must have shape {expected_shape} " \
+                   f"to match the number of bonus objectives"
 
     def _validate_dtai_parameters(self, dtai_target, dtai_alpha, dtai_beta):
-        pass
+        self._validate_bonus_objective_scoring_parameter(dtai_target, "dtai_target")
+        self._validate_bonus_objective_scoring_parameter(dtai_alpha, "dtai_alpha")
+        self._validate_bonus_objective_scoring_parameter(dtai_beta, "dtai_beta")
+
+    def _get_or_default_dtai(self, dtai_target, dtai_alpha, dtai_beta):
+        dtai_target = self._get_or_default(dtai_target,
+                                           np.ones(shape=(1, len(self.problem.data_package.bonus_objectives))))
+        dtai_alpha = self._get_or_default(dtai_alpha, np.ones_like(dtai_target))
+        dtai_beta = self._get_or_default(dtai_beta, np.ones_like(dtai_target) * _DEFAULT_BETA)
+        return dtai_target, dtai_alpha, dtai_beta
