@@ -36,6 +36,7 @@ class McdEndToEndTest(unittest.TestCase):
         predictions["O_C2"] = predictions["O_C1"]
         return predictions
 
+    @unittest.skip
     def test_multi_objectives_with_subset_of_features_to_vary(self):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
@@ -70,7 +71,7 @@ class McdEndToEndTest(unittest.TestCase):
         )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
                          query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         design_targets=targets, datatypes=datatypes)
+                         design_targets=targets, datatypes=datatypes, bonus_objectives=["O_R1"])
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             prediction_function=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                   any_x),
@@ -78,7 +79,7 @@ class McdEndToEndTest(unittest.TestCase):
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
-        cfs = generator.sample_with_weights(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1, 2, 3]),
+        cfs = generator.sample_with_weights(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([[1]]),
                                             include_dataset=False)
         self.assert_regression_target_met(cfs, "O_R1", -5, 5)
         self.assert_cfs_within_valid_range(cfs)

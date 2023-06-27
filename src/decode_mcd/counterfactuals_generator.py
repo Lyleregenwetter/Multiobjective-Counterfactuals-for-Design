@@ -1,4 +1,5 @@
 import os
+from numbers import Real
 
 import dill
 import numpy as np
@@ -11,6 +12,7 @@ from pymoo.core.population import Population
 from pymoo.core.repair import Repair
 from pymoo.optimize import minimize
 from pymoo.termination.max_gen import MaximumGenerationTermination
+from pymoo.util.display.multi import MultiObjectiveOutput
 
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem, _MCD_BASE_OBJECTIVES, _GOWER_INDEX, \
     _CHANGED_FEATURE_INDEX, _AVG_GOWER_INDEX
@@ -96,8 +98,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
     def sample_with_dtai(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
                          diversity_weight, dtai_target, dtai_alpha=None, dtai_beta=None,
                          include_dataset=True, num_dpp=1000):  # Query from pareto front
-        assert self.res, "You must call generate before calling sample!"
-        assert num_samples > 0, "You must sample at least 1 counterfactual!"
+        self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
+        self._validate_dtai_parameters(dtai_target, dtai_alpha, dtai_beta)
 
         all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
 
@@ -114,9 +116,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
 
     def sample_with_weights(self, num_samples: int, avg_gower_weight, cfc_weight, gower_weight,
-                            diversity_weight, y_weights, include_dataset=True, num_dpp=1000):
-        assert self.res, "You must call generate before calling sample!"
-        assert num_samples > 0, "You must sample at least 1 counterfactual!"
+                            diversity_weight, bonus_objectives_weights, include_dataset=True, num_dpp=1000):
+        self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
+        self._validate_y_weights(bonus_objectives_weights)
 
         all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
 
@@ -126,11 +128,15 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
         self._verbose_log("Scoring all counterfactual candidates!")
 
-        agg_scores = self._calculate_scores_with_weights(all_cf_y, avg_gower_weight, cfc_weight,
-                                                         y_weights,
-                                                         gower_weight)
+        agg_scores = self._calculate_scores_with_weights(all_cf_y, avg_gower_weight, cfc_weight, gower_weight,
+                                                         bonus_objectives_weights)
 
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
+
+    def _validate_sampling_parameters(self, num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight):
+        assert self.res, "You must call generate before calling sample!"
+        self._validate_positive_int(num_samples, "num_samples")
+        self._validate_statistical_weights(avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
 
     def _setup_algorithm(self):  # First time algorithm setup
         if self.algorithm is None:  # Runs if algorithm is not yet initialized
@@ -147,6 +153,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                                                 repair=RevertToQueryRepair()),
                      eliminate_duplicates=MixedVariableDuplicateElimination(),
                      callback=AllOffspringCallback(),
+                     output=MultiObjectiveOutput(),  # this is necessary because this object is mutable
                      save_history=False)
 
     def _initialize_population(self, query_pop):
@@ -222,8 +229,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         dtai_scores = self._calculate_dtai(all_cf_y, dtai_alpha, dtai_beta, dtai_target)
         return self._calculate_statistical_scores(all_cf_y, avg_gower_weight, cfc_weight, gower_weight, dtai_scores)
 
-    def _calculate_scores_with_weights(self, all_cf_y, avg_gower_weight, cfc_weight, y_weights, gower_weight):
-        weighted_scores = np.sum(all_cf_y * y_weights, axis=1)
+    def _calculate_scores_with_weights(self, all_cf_y, avg_gower_weight, cfc_weight, gower_weight,
+                                       bonus_objectives_weights):
+        weighted_scores = np.sum(all_cf_y[:, :-_MCD_BASE_OBJECTIVES] * bonus_objectives_weights, axis=1)
         return self._calculate_statistical_scores(all_cf_y, avg_gower_weight, cfc_weight, gower_weight, weighted_scores)
 
     def _calculate_statistical_scores(self, all_cf_y, avg_gower_weight, cfc_weight, gower_weight, label_scores):
@@ -309,6 +317,23 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                                                                   "of decode_mcd.MultiObjectiveProblem")
         self._validate_positive_int(self.pop_size, "pop_size")
 
-    def _validate_positive_int(self, n_generations, field_name):
-        validate(isinstance(n_generations, int), f"{field_name} must be an integer")
-        validate(n_generations > 0, f"{field_name} must be a positive integer")
+    def _validate_positive_int(self, value, param_name):
+        validate(isinstance(value, int), f"{param_name} must be an integer")
+        validate(value > 0, f"{param_name} must be a positive integer")
+
+    def _validate_non_negative_float(self, value, param_name):
+        validate(isinstance(value, Real), f"{param_name} must be a real number")
+        validate(value >= 0, f"{param_name} must be >= 0")
+
+    def _validate_statistical_weights(self, *weights):
+        for weight in weights:
+            self._validate_non_negative_float(weight, "weight")
+
+    def _validate_y_weights(self, y_weights: np.ndarray):
+        validate(isinstance(y_weights, np.ndarray), "y_weights must be a numpy array")
+        expected_shape = (1, len(self.problem.data_package.bonus_objectives))
+        validate(y_weights.shape == expected_shape,
+                 f"y_weights must have shape {expected_shape}")
+
+    def _validate_dtai_parameters(self, dtai_target, dtai_alpha, dtai_beta):
+        pass
