@@ -5,7 +5,7 @@ import numpy.testing as np_test
 import pandas as pd
 from pymoo.core.variable import Real
 
-from decode_mcd.counterfactuals_generator import RevertToQueryRepair, CounterfactualsGenerator
+from decode_mcd.counterfactuals_generator import _RevertToQueryRepair, CounterfactualsGenerator
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem
@@ -14,7 +14,7 @@ from decode_mcd_private.validation_utils import UserInputException
 
 class RevertToQueryRepairTest(unittest.TestCase):
     def test_revert_none_when_all_outside_valid_range(self):
-        repair = RevertToQueryRepair()
+        repair = _RevertToQueryRepair()
         package = self.build_package(np.array([[11, 12, 13]]),
                                      [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         problem = MultiObjectiveProblem(data_package=package, prediction_function=lambda x: x, constraint_functions=[])
@@ -27,7 +27,7 @@ class RevertToQueryRepairTest(unittest.TestCase):
         np_test.assert_equal(repaired_array, initial_array)
 
     def test_revert_some(self):
-        repair = RevertToQueryRepair()
+        repair = _RevertToQueryRepair()
         package = self.build_package(np.array([[11, 8, 13]]),
                                      [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         problem = MultiObjectiveProblem(data_package=package, prediction_function=lambda x: x, constraint_functions=[])
@@ -44,7 +44,7 @@ class RevertToQueryRepairTest(unittest.TestCase):
         np_test.assert_equal(repaired_array[:, (0, 2)], initial_array[:, (0, 2)])
 
     def test_revert_all(self):
-        repair = RevertToQueryRepair()
+        repair = _RevertToQueryRepair()
         package = self.build_package(np.array([[1, 2, 3]]),
                                      [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         problem = MultiObjectiveProblem(data_package=package, prediction_function=lambda x: x, constraint_functions=[])

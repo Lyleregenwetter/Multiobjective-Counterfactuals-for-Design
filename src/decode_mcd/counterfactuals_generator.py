@@ -23,7 +23,7 @@ from decode_mcd_private.validation_utils import validate
 _DEFAULT_BETA = 4
 
 
-class RevertToQueryRepair(Repair):
+class _RevertToQueryRepair(Repair):
     def __init__(self, rep_prob=0.2, elementwise_prob=0.3, *args, **kwargs):
         self.rep_prob = rep_prob
         self.elementwise_prob = elementwise_prob
@@ -48,7 +48,7 @@ class RevertToQueryRepair(Repair):
         return revertible_subset
 
 
-class AllOffspringCallback(Callback):
+class _AllOffspringCallback(Callback):
 
     def __init__(self) -> None:
         super().__init__()
@@ -156,9 +156,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
     def _build_algorithm(self, population):
         return NSGA2(pop_size=self.pop_size, sampling=population,
                      mating=MixedVariableMating(eliminate_duplicates=MixedVariableDuplicateElimination(),
-                                                repair=RevertToQueryRepair()),
+                                                repair=_RevertToQueryRepair()),
                      eliminate_duplicates=MixedVariableDuplicateElimination(),
-                     callback=AllOffspringCallback(),
+                     callback=_AllOffspringCallback(),
                      output=MultiObjectiveOutput(),  # this is necessary because this object is mutable
                      save_history=False)
 
