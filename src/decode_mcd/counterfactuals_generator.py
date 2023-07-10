@@ -125,7 +125,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
         bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
                                                         np.ones(
-                                                            shape=(1, len(self._problem._data_package.bonus_objectives))))
+                                                            shape=(1, len(
+                                                                self._problem._data_package.bonus_objectives))))
         self._validate_y_weights(bonus_objectives_weights)
 
         all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
@@ -148,7 +149,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _setup_algorithm(self):  # First time algorithm setup
         if self._algorithm is None:  # Runs if algorithm is not yet initialized
-            x = self._problem._data_package.query_x.loc[:, self._problem._data_package.features_to_vary].to_dict("records")
+            x = self._problem._data_package.query_x.loc[:, self._problem._data_package.features_to_vary].to_dict(
+                "records")
             query_pop = Population.new("X", x)
             Evaluator().eval(self._problem,
                              query_pop)  # TODO: Concatenate before evaluating the query to save one call to evaluate?
@@ -295,7 +297,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
     def _build_res_df(self, x):
         self._verbose_log("Done! Returning CFs")
         # noinspection PyProtectedMember
-        return pd.DataFrame(self._problem._build_full_df(x), columns=self._problem._data_package.features_dataset.columns)
+        return pd.DataFrame(self._problem._build_full_df(x),
+                            columns=self._problem._data_package.features_dataset.columns)
 
     def _generate_dataset_pop(self):
         # TODO remove any that are out of range or that change features that are supposed to be fixed
@@ -320,7 +323,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _validate_fields(self):
         validate(isinstance(self._problem, MultiObjectiveProblem), "problem must be an instance "
-                                                                  "of decode_mcd.MultiObjectiveProblem")
+                                                                   "of decode_mcd.MultiObjectiveProblem")
         self._validate_positive_int(self._pop_size, "pop_size")
 
     def _validate_positive_int(self, value, param_name):
