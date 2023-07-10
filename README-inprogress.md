@@ -1,18 +1,24 @@
 # Multiobjective-Counterfactuals-for-Design
 
-Official Repository for Multi-Objective Counterfactuals for Design (MCD)
+[//]: # (Official Repository for Multi-Objective Counterfactuals for Design &#40;MCD&#41;)
 
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+[//]: # ([![Contributors][contributors-shield]][contributors-url])
+
+[//]: # ([![Forks][forks-shield]][forks-url])
+
+[//]: # ([![Stargazers][stars-shield]][stars-url])
+
+[//]: # ([![Issues][issues-shield]][issues-url])
+
+[//]: # ([![MIT License][license-shield]][license-url])
+
+[//]: # ([![LinkedIn][linkedin-shield]][linkedin-url])
 
 
 
 <!-- PROJECT LOGO -->
-<br />
+
+[//]: # (<br />)
 <div align="center">
 
 [//]: # (  <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design">)
@@ -21,19 +27,27 @@ Official Repository for Multi-Objective Counterfactuals for Design (MCD)
 
 [//]: # (  </a>)
 
-<h3 align="center">Multiobjective Counterfactuals for Design (MCD)</h3>
+[//]: # (<h3 align="center">Multiobjective Counterfactuals for Design &#40;MCD&#41;</h3>)
 
   <p align="center">
     MCD generates counterfactuals that meet multiple, customizable objectives in both the feature and performance spaces.  
     <br />
-    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design">View Demo</a>
-    ·
-    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues">Request Feature</a>
+
+[//]: # (    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design"><strong>Explore the docs »</strong></a>)
+
+[//]: # (    <br />)
+
+[//]: # (    <br />)
+
+[//]: # (    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design">View Demo</a>)
+
+[//]: # (    ·)
+
+[//]: # (    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues">Report Bug</a>)
+
+[//]: # (    ·)
+
+[//]: # (    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues">Request Feature</a>)
   </p>
 </div>
 
@@ -76,7 +90,7 @@ alternatives that meet user-specified
 performance criteria while remaining within a certain region of the design space. To use MCD, you need a dataset of
 designs that are reasonably representative of the desired region of the design space, including performance metrics,
 as well as a model capable of predicting the performance metrics of a given design. MCD is model agnostic - this means
-that the model need not be gradient based or,
+that the model need not be a differentiable machine learning model or,
 in fact, a machine learning model in the first place. MCD also offers high flexibility in terms of the number and 'type'
 of performance targets that can be specified.
 Performance targets can be any combination of:
@@ -123,8 +137,8 @@ Performance targets can be any combination of:
 ```python
 import random
 from pymoo.core.variable import Real
-from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import *
+from decode_mcd.mcd_data import DataPackage
+from decode_mcd.mcd_targets import *
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem
 from decode_mcd.counterfactuals_generator import CounterfactualsGenerator
 
@@ -170,8 +184,8 @@ print(counterfactuals)
 
 ```python
 from pymoo.core.variable import Real
-from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import *
+from decode_mcd.mcd_data import DataPackage
+from decode_mcd.mcd_targets import *
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem
 from decode_mcd.counterfactuals_generator import CounterfactualsGenerator
 
@@ -237,32 +251,6 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
-<!-- CONTACT -->
-
-## Contact
-
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
-
-Project
-Link: [https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design](https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-
-## Acknowledgments
-
-* []()
-* []()
-* []()
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
@@ -286,27 +274,6 @@ Link: [https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Des
 
 [license-url]: https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/blob/master/LICENSE
 
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-
-[linkedin-url]: https://linkedin.com/in/linkedin_username
-
-[product-screenshot]: images/screenshot.png
-
-[Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
-
-[Next-url]: https://nextjs.org/
-
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-
-[React-url]: https://reactjs.org/
-
-[Vue.js]: https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D
-
-[Vue-url]: https://vuejs.org/
-
-[Angular.io]: https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white
-
-[Angular-url]: https://angular.io/
 
 [python-badge-url]: https://img.shields.io/badge/language-python-purple
 
