@@ -3,7 +3,7 @@ import unittest
 import numpy.testing as np_test
 
 from decode_mcd.design_targets import *
-from decode_mcd_private.validation_utils import UserInputException
+from decode_mcd.mcd_exceptions import UserInputException
 
 
 class DesignTargetsTest(unittest.TestCase):

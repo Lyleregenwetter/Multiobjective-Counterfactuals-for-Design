@@ -7,7 +7,7 @@ from pymoo.core.variable import Real
 
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget
-from decode_mcd_private.validation_utils import UserInputException
+from decode_mcd.mcd_exceptions import UserInputException
 
 
 # noinspection PyTypeChecker

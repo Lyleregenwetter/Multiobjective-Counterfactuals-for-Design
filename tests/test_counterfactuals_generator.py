@@ -9,7 +9,7 @@ from decode_mcd.counterfactuals_generator import _RevertToQueryRepair, Counterfa
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem
-from decode_mcd_private.validation_utils import UserInputException
+from decode_mcd.mcd_exceptions import UserInputException
 
 
 class RevertToQueryRepairTest(unittest.TestCase):

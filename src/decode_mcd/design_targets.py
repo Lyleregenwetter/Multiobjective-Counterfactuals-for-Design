@@ -5,7 +5,7 @@ from typing import Union, Sequence, Tuple, List
 
 import numpy as np
 
-from decode_mcd_private.validation_utils import UserInputException
+from decode_mcd.mcd_exceptions import UserInputException
 
 
 class McdTarget(metaclass=ABCMeta):
