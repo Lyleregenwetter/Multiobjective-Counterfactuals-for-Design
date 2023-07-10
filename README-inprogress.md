@@ -137,8 +137,8 @@ Performance targets can be any combination of:
 ```python
 import random
 from pymoo.core.variable import Real
-from decode_mcd.mcd_data import DataPackage
-from decode_mcd.mcd_targets import *
+from decode_mcd.data_package import DataPackage
+from decode_mcd.design_targets import *
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem
 from decode_mcd.counterfactuals_generator import CounterfactualsGenerator
 
@@ -184,8 +184,8 @@ print(counterfactuals)
 
 ```python
 from pymoo.core.variable import Real
-from decode_mcd.mcd_data import DataPackage
-from decode_mcd.mcd_targets import *
+from decode_mcd.data_package import DataPackage
+from decode_mcd.design_targets import *
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem
 from decode_mcd.counterfactuals_generator import CounterfactualsGenerator
 
