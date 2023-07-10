@@ -64,22 +64,22 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                  pop_size: int,
                  initialize_from_dataset: bool = True,
                  verbose: bool = True):
-        self.all_cf_y, self.all_cf_x, self.agg_scores, self.label_scores, \
-            self.seed, self.res, self.algorithm, self.dataset_pop = (None for _ in range(8))
-        self.problem = problem
-        self.pop_size = pop_size
-        self.initialize_from_dataset = initialize_from_dataset
-        self.verbose = verbose
+        self._all_cf_y, self._all_cf_x, self._agg_scores, self._label_scores, \
+            self._seed, self._res, self._algorithm, self._dataset_pop = (None for _ in range(8))
+        self._problem = problem
+        self._pop_size = pop_size
+        self._initialize_from_dataset = initialize_from_dataset
+        self._verbose = verbose
         self._validate_fields()
 
     def generate(self, n_generations: int, seed: int = None):  # Run the GA
-        self.seed = self._get_or_default(seed, np.random.randint(1_000_000))
+        self._seed = self._get_or_default(seed, np.random.randint(1_000_000))
 
         self._validate_positive_int(n_generations, "n_generations")
-        self._validate_positive_int(self.seed, "seed")
+        self._validate_positive_int(self._seed, "seed")
 
         self._setup_algorithm()
-        previous_train_steps = self._get_or_default(self.algorithm.n_iter, 0)
+        previous_train_steps = self._get_or_default(self._algorithm.n_iter, 0)
         self._train_algorithm_if(n_generations, previous_train_steps)
 
     def save(self, filepath):
@@ -87,13 +87,13 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         if not os.path.exists(filepath):
             os.mkdir(filepath)
         with open(f"{filepath}/checkpoint", "wb") as f:
-            dill.dump(self.algorithm, f)
+            dill.dump(self._algorithm, f)
 
     def load(self, filepath):
         self._verbose_log(f"Loading GA from {filepath}")
         with open(f"{filepath}/checkpoint", "rb") as f:
-            self.algorithm = dill.load(f)
-            self.problem = self.algorithm.problem
+            self._algorithm = dill.load(f)
+            self._problem = self._algorithm.problem
 
     def sample_with_dtai(self, num_samples: int, avg_gower_weight: float, cfc_weight: float, gower_weight: float,
                          diversity_weight: float, dtai_target: np.ndarray = None,
@@ -123,7 +123,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
         bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
                                                         np.ones(
-                                                            shape=(1, len(self.problem.data_package.bonus_objectives))))
+                                                            shape=(1, len(self._problem.data_package.bonus_objectives))))
         self._validate_y_weights(bonus_objectives_weights)
 
         all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
@@ -140,21 +140,21 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
 
     def _validate_sampling_parameters(self, num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight):
-        assert self.res, "You must call generate before calling sample!"
+        assert self._res, "You must call generate before calling sample!"
         self._validate_positive_int(num_samples, "num_samples")
         self._validate_statistical_weights(avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
 
     def _setup_algorithm(self):  # First time algorithm setup
-        if self.algorithm is None:  # Runs if algorithm is not yet initialized
-            x = self.problem.data_package.query_x.loc[:, self.problem.data_package.features_to_vary].to_dict("records")
+        if self._algorithm is None:  # Runs if algorithm is not yet initialized
+            x = self._problem.data_package.query_x.loc[:, self._problem.data_package.features_to_vary].to_dict("records")
             query_pop = Population.new("X", x)
-            Evaluator().eval(self.problem,
+            Evaluator().eval(self._problem,
                              query_pop)  # TODO: Concatenate before evaluating the query to save one call to evaluate?
             pop = self._initialize_population(query_pop)
-            self.algorithm = self._build_algorithm(pop)
+            self._algorithm = self._build_algorithm(pop)
 
     def _build_algorithm(self, population):
-        return NSGA2(pop_size=self.pop_size, sampling=population,
+        return NSGA2(pop_size=self._pop_size, sampling=population,
                      mating=MixedVariableMating(eliminate_duplicates=MixedVariableDuplicateElimination(),
                                                 repair=_RevertToQueryRepair()),
                      eliminate_duplicates=MixedVariableDuplicateElimination(),
@@ -163,19 +163,19 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                      save_history=False)
 
     def _initialize_population(self, query_pop):
-        if self.initialize_from_dataset:
+        if self._initialize_from_dataset:
             self._generate_dataset_pop()
-            self._verbose_log(f"Initial population initialized from dataset of {len(self.dataset_pop)} samples!")
-            pop = Population.merge(self.dataset_pop, query_pop)
+            self._verbose_log(f"Initial population initialized from dataset of {len(self._dataset_pop)} samples!")
+            pop = Population.merge(self._dataset_pop, query_pop)
         else:
             mvs = MixedVariableSampling()
-            pop = mvs(self.problem, self.pop_size - 1)
+            pop = mvs(self._problem, self._pop_size - 1)
             self._verbose_log("Initial population randomly initialized!")
             pop = Population.merge(pop, query_pop)
         return pop
 
     def _verbose_log(self, log_message):
-        if self.verbose:
+        if self._verbose:
             print(log_message)
 
     def _log(self, log_message):
@@ -194,17 +194,17 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _train_algorithm(self, n_generations, previous_train_steps):
         self._verbose_log(f"Training GA from {previous_train_steps} to {n_generations} generations!")
-        self.algorithm.termination = MaximumGenerationTermination(n_generations)
-        self.res = minimize(self.problem, self.algorithm,
-                            seed=self.seed,
-                            copy_algorithm=False,
-                            verbose=self.verbose)
+        self._algorithm.termination = MaximumGenerationTermination(n_generations)
+        self._res = minimize(self._problem, self._algorithm,
+                             seed=self._seed,
+                             copy_algorithm=False,
+                             verbose=self._verbose)
 
     def _initialize_and_filter_all_cfs(self, include_dataset):
         all_cfs = self._initialize_all_cfs(include_dataset)
         all_cf_x, all_cf_y = self._filter_by_validity(all_cfs)
-        self.all_cf_x = all_cf_x
-        self.all_cf_y = all_cf_y
+        self._all_cf_x = all_cf_x
+        self._all_cf_y = all_cf_y
         return all_cf_x, all_cf_y
 
     def _sample_based_on_scores(self, all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores):
@@ -246,13 +246,13 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                      all_cf_y[:, _AVG_GOWER_INDEX] * avg_gower_weight
         agg_scores = 1 - label_scores + cf_quality
         # For quick debugging
-        self.label_scores = label_scores
-        self.agg_scores = agg_scores
+        self._label_scores = label_scores
+        self._agg_scores = agg_scores
         return agg_scores
 
     def _check_for_original_query(self, result):
         # Check if the initial query is in the final returned set
-        if (result == self.problem.data_package.query_x.values).all(1).any():
+        if (result == self._problem.data_package.query_x.values).all(1).any():
             self._log("Initial Query is valid and included in the top counterfactuals identified")
         return result
 
@@ -264,10 +264,10 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._verbose_log("Collecting all counterfactual candidates!")
         if include_dataset:
             self._generate_dataset_pop()
-            all_cfs = self.dataset_pop
+            all_cfs = self._dataset_pop
         else:
             all_cfs = Population()
-        for offspring in self.res.algorithm.callback.data["offspring"]:
+        for offspring in self._res.algorithm.callback.data["offspring"]:
             all_cfs = Population.merge(all_cfs, offspring)
         return all_cfs
 
@@ -293,33 +293,33 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
     def _build_res_df(self, x):
         self._verbose_log("Done! Returning CFs")
         # noinspection PyProtectedMember
-        return pd.DataFrame(self.problem._build_full_df(x), columns=self.problem.data_package.features_dataset.columns)
+        return pd.DataFrame(self._problem._build_full_df(x), columns=self._problem.data_package.features_dataset.columns)
 
     def _generate_dataset_pop(self):
         # TODO remove any that are out of range or that change features that are supposed to be fixed
-        if self.dataset_pop is None:  # Evaluate Pop if not done already
-            x = self.problem.data_package.features_dataset
-            x = x.loc[:, self.problem.data_package.features_to_vary].to_dict("records")
+        if self._dataset_pop is None:  # Evaluate Pop if not done already
+            x = self._problem.data_package.features_dataset
+            x = x.loc[:, self._problem.data_package.features_to_vary].to_dict("records")
             pop = Population.new("X", x)
-            Evaluator().eval(self.problem, pop, datasetflag=True)
-            self.dataset_pop = pop
+            Evaluator().eval(self._problem, pop, datasetflag=True)
+            self._dataset_pop = pop
             self._verbose_log(f"{len(pop)} dataset entries found matching problem parameters")
 
     # noinspection PyProtectedMember
     def _diverse_sample(self, x, y, num_samples, diversity_weight, eps=1e-7):
         self._verbose_log("Calculating diversity matrix!")
         y = np.power(self._min2max(y), 1 / diversity_weight)
-        x_df = self.problem._build_full_df(x)
-        matrix = mixed_gower(x_df, x_df, self.problem.ranges.values, self.problem._build_gower_types())
+        x_df = self._problem._build_full_df(x)
+        matrix = mixed_gower(x_df, x_df, self._problem.ranges.values, self._problem._build_gower_types())
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self._verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.kDPPGreedySample(weighted_matrix, num_samples)
         return samples_index
 
     def _validate_fields(self):
-        validate(isinstance(self.problem, MultiObjectiveProblem), "problem must be an instance "
+        validate(isinstance(self._problem, MultiObjectiveProblem), "problem must be an instance "
                                                                   "of decode_mcd.MultiObjectiveProblem")
-        self._validate_positive_int(self.pop_size, "pop_size")
+        self._validate_positive_int(self._pop_size, "pop_size")
 
     def _validate_positive_int(self, value, param_name):
         validate(isinstance(value, int), f"{param_name} must be an integer")
@@ -338,7 +338,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _validate_bonus_objective_scoring_parameter(self, parameter: np.ndarray, parameter_name):
         validate(isinstance(parameter, np.ndarray), f"{parameter_name} must be a numpy array")
-        n_bonus = len(self.problem.data_package.bonus_objectives)
+        n_bonus = len(self._problem.data_package.bonus_objectives)
         expected_shape = (1, n_bonus)
         exception_message = self._get_exception_message(expected_shape, n_bonus, parameter_name)
         validate(parameter.shape == expected_shape, exception_message)
@@ -357,7 +357,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _get_or_default_dtai(self, dtai_target, dtai_alpha, dtai_beta):
         dtai_target = self._get_or_default(dtai_target,
-                                           np.ones(shape=(1, len(self.problem.data_package.bonus_objectives))))
+                                           np.ones(shape=(1, len(self._problem.data_package.bonus_objectives))))
         dtai_alpha = self._get_or_default(dtai_alpha, np.ones_like(dtai_target))
         dtai_beta = self._get_or_default(dtai_beta, np.ones_like(dtai_target) * _DEFAULT_BETA)
         return dtai_target, dtai_alpha, dtai_beta
