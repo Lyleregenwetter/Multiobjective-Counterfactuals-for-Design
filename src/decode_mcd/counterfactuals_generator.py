@@ -23,6 +23,7 @@ from decode_mcd_private.validation_utils import validate
 _DEFAULT_BETA = 4
 
 
+# noinspection PyProtectedMember
 class _RevertToQueryRepair(Repair):
     def __init__(self, rep_prob=0.2, elementwise_prob=0.3, *args, **kwargs):
         self.rep_prob = rep_prob
@@ -32,7 +33,7 @@ class _RevertToQueryRepair(Repair):
     def _do(self, problem: MultiObjectiveProblem, Z, **kwargs):
         # noinspection PyProtectedMember
         revertible_indexes = problem._revertible_indexes
-        qxs = problem.data_package.query_x.values[:, revertible_indexes]
+        qxs = problem._data_package.query_x.values[:, revertible_indexes]
         full_Z_dataframe = pd.DataFrame.from_records(Z)
         full_Z_np = full_Z_dataframe.values
         reverted_subset = self._revert_subset(full_Z_np, qxs, revertible_indexes)
@@ -58,6 +59,7 @@ class _AllOffspringCallback(Callback):
         self.data["offspring"].append(algorithm.off)
 
 
+# noinspection PyProtectedMember
 class CounterfactualsGenerator:  # For calling the optimization and sampling counterfactuals
     def __init__(self,
                  problem: MultiObjectiveProblem,
@@ -123,7 +125,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
         bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
                                                         np.ones(
-                                                            shape=(1, len(self._problem.data_package.bonus_objectives))))
+                                                            shape=(1, len(self._problem._data_package.bonus_objectives))))
         self._validate_y_weights(bonus_objectives_weights)
 
         all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
@@ -146,7 +148,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _setup_algorithm(self):  # First time algorithm setup
         if self._algorithm is None:  # Runs if algorithm is not yet initialized
-            x = self._problem.data_package.query_x.loc[:, self._problem.data_package.features_to_vary].to_dict("records")
+            x = self._problem._data_package.query_x.loc[:, self._problem._data_package.features_to_vary].to_dict("records")
             query_pop = Population.new("X", x)
             Evaluator().eval(self._problem,
                              query_pop)  # TODO: Concatenate before evaluating the query to save one call to evaluate?
@@ -252,7 +254,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _check_for_original_query(self, result):
         # Check if the initial query is in the final returned set
-        if (result == self._problem.data_package.query_x.values).all(1).any():
+        if (result == self._problem._data_package.query_x.values).all(1).any():
             self._log("Initial Query is valid and included in the top counterfactuals identified")
         return result
 
@@ -293,13 +295,13 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
     def _build_res_df(self, x):
         self._verbose_log("Done! Returning CFs")
         # noinspection PyProtectedMember
-        return pd.DataFrame(self._problem._build_full_df(x), columns=self._problem.data_package.features_dataset.columns)
+        return pd.DataFrame(self._problem._build_full_df(x), columns=self._problem._data_package.features_dataset.columns)
 
     def _generate_dataset_pop(self):
         # TODO remove any that are out of range or that change features that are supposed to be fixed
         if self._dataset_pop is None:  # Evaluate Pop if not done already
-            x = self._problem.data_package.features_dataset
-            x = x.loc[:, self._problem.data_package.features_to_vary].to_dict("records")
+            x = self._problem._data_package.features_dataset
+            x = x.loc[:, self._problem._data_package.features_to_vary].to_dict("records")
             pop = Population.new("X", x)
             Evaluator().eval(self._problem, pop, datasetflag=True)
             self._dataset_pop = pop
@@ -310,7 +312,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._verbose_log("Calculating diversity matrix!")
         y = np.power(self._min2max(y), 1 / diversity_weight)
         x_df = self._problem._build_full_df(x)
-        matrix = mixed_gower(x_df, x_df, self._problem.ranges.values, self._problem._build_gower_types())
+        matrix = mixed_gower(x_df, x_df, self._problem._ranges.values, self._problem._build_gower_types())
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self._verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.kDPPGreedySample(weighted_matrix, num_samples)
@@ -338,7 +340,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _validate_bonus_objective_scoring_parameter(self, parameter: np.ndarray, parameter_name):
         validate(isinstance(parameter, np.ndarray), f"{parameter_name} must be a numpy array")
-        n_bonus = len(self._problem.data_package.bonus_objectives)
+        n_bonus = len(self._problem._data_package.bonus_objectives)
         expected_shape = (1, n_bonus)
         exception_message = self._get_exception_message(expected_shape, n_bonus, parameter_name)
         validate(parameter.shape == expected_shape, exception_message)
@@ -357,7 +359,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _get_or_default_dtai(self, dtai_target, dtai_alpha, dtai_beta):
         dtai_target = self._get_or_default(dtai_target,
-                                           np.ones(shape=(1, len(self._problem.data_package.bonus_objectives))))
+                                           np.ones(shape=(1, len(self._problem._data_package.bonus_objectives))))
         dtai_alpha = self._get_or_default(dtai_alpha, np.ones_like(dtai_target))
         dtai_beta = self._get_or_default(dtai_beta, np.ones_like(dtai_target) * _DEFAULT_BETA)
         return dtai_target, dtai_alpha, dtai_beta

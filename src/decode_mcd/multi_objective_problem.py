@@ -30,14 +30,14 @@ class MultiObjectiveProblem(Problem):
                  prediction_function: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
                  constraint_functions: list):
         self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
-        self.data_package = data_package
-        self.predictor = prediction_function
-        self.constraint_functions = constraint_functions
-        self.number_of_objectives = _MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
+        self._data_package = data_package
+        self._predictor = prediction_function
+        self._constraint_functions = constraint_functions
+        self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
         super().__init__(vars=self._build_problem_var_dict(),
-                         n_obj=self.number_of_objectives,
+                         n_obj=self._number_of_objectives,
                          n_constr=len(constraint_functions) + self._count_y_constraints())
-        self.ranges = self._build_ranges(self.data_package.features_dataset)
+        self._ranges = self._build_ranges(self._data_package.features_dataset)
         self._avg_gower_sample_size = 1000
         self._avg_gower_sample_seed = MEANING_OF_LIFE
         self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
@@ -51,11 +51,11 @@ class MultiObjectiveProblem(Problem):
         self._avg_gower_sample_seed = sample_seed
 
     def _get_revertible_indexes(self):
-        all_candidates = self.data_package.features_to_vary
+        all_candidates = self._data_package.features_to_vary
         var_dict = self._build_problem_var_dict()
-        q_x = self.data_package.query_x
+        q_x = self._data_package.query_x
         validity = self._get_revert_validity(all_candidates, q_x, var_dict)
-        return tuple(list(self.data_package.features_to_vary).index(c) for c in all_candidates if validity[c])
+        return tuple(list(self._data_package.features_to_vary).index(c) for c in all_candidates if validity[c])
 
     def _get_revert_validity(self, all_candidates, q_x, var_dict):
         validity = {}
@@ -71,13 +71,13 @@ class MultiObjectiveProblem(Problem):
         return validity
 
     def _count_y_constraints(self):
-        return self.data_package.design_targets.count_constrained_labels()
+        return self._data_package.design_targets.count_constrained_labels()
 
     def _build_problem_var_dict(self):
         variables = {}
-        for feature in self.data_package.features_to_vary:
-            absolute_feature_index = self.data_package.features_dataset.columns.to_list().index(feature)
-            variables[feature] = self.data_package.datatypes[absolute_feature_index]
+        for feature in self._data_package.features_to_vary:
+            absolute_feature_index = self._data_package.features_dataset.columns.to_list().index(feature)
+            variables[feature] = self._data_package.datatypes[absolute_feature_index]
         return variables
 
     def _evaluate(self, x: np.ndarray, out: dict, *args, **kwargs):
@@ -92,36 +92,36 @@ class MultiObjectiveProblem(Problem):
         predictions = self._get_predictions(x_full, dataset_flag)
 
         scores = self._get_scores(x_full, predictions, dataset_flag)
-        validity = self._get_mixed_constraint_satisfaction(x_full, predictions, self.constraint_functions,
-                                                           self.data_package.design_targets, dataset_flag)
+        validity = self._get_mixed_constraint_satisfaction(x_full, predictions, self._constraint_functions,
+                                                           self._data_package.design_targets, dataset_flag)
         return scores, validity
 
     def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame, dataset_flag):
-        if dataset_flag and (self.data_package.datasets_scores is not None):
-            return self.data_package.datasets_scores
+        if dataset_flag and (self._data_package.datasets_scores is not None):
+            return self._data_package.datasets_scores
         return self._calculate_scores(x, predictions)
 
     def _calculate_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
-        all_scores = np.zeros((len(x), self.number_of_objectives))
+        all_scores = np.zeros((len(x), self._number_of_objectives))
         gower_types = self._build_gower_types()
-        all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self.data_package.bonus_objectives]
-        all_scores[:, _GOWER_INDEX] = mixed_gower(x, self.data_package.query_x, self.ranges.values, gower_types).T
-        all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self.data_package.query_x,
-                                                                       len(self.data_package.features_dataset.columns))
+        all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._data_package.bonus_objectives]
+        all_scores[:, _GOWER_INDEX] = mixed_gower(x, self._data_package.query_x, self._ranges.values, gower_types).T
+        all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self._data_package.query_x,
+                                                                       len(self._data_package.features_dataset.columns))
         subset = self._get_features_sample()
-        all_scores[:, _AVG_GOWER_INDEX] = avg_gower_distance(x, subset, self.ranges.values, gower_types)
+        all_scores[:, _AVG_GOWER_INDEX] = avg_gower_distance(x, subset, self._ranges.values, gower_types)
         return all_scores
 
     def _get_features_sample(self):
-        subset_size = min(self._avg_gower_sample_size, len(self.data_package.features_dataset))
-        subset = self.data_package.features_dataset.sample(n=subset_size, axis=0,
-                                                           random_state=self._avg_gower_sample_seed)
+        subset_size = min(self._avg_gower_sample_size, len(self._data_package.features_dataset))
+        subset = self._data_package.features_dataset.sample(n=subset_size, axis=0,
+                                                            random_state=self._avg_gower_sample_seed)
         return subset
 
     def _get_predictions(self, x_full: pd.DataFrame, dataset_flag: bool):
         if dataset_flag:
-            return self.data_package.predictions_dataset.copy()
-        return pd.DataFrame(self.predictor(x_full), columns=self.data_package.predictions_dataset.columns)
+            return self._data_package.predictions_dataset.copy()
+        return pd.DataFrame(self._predictor(x_full), columns=self._data_package.predictions_dataset.columns)
 
     def _build_gower_types(self):
         return {
@@ -132,19 +132,19 @@ class MultiObjectiveProblem(Problem):
     def _set_valid_datasets_subset(self):
         # Scans the features_dataset and returns the subset violating the variable categories and ranges,
         # as well as the changed feature specifications
-        f_d = self.data_package.features_dataset
-        p_d = self.data_package.predictions_dataset
+        f_d = self._data_package.features_dataset
+        p_d = self._data_package.predictions_dataset
         f_d, p_d = self._get_valid_numeric_entries(f_d, p_d)
         f_d, p_d = self._get_valid_categorical_entries(f_d, p_d)
 
-        f2f = self.data_package.features_to_freeze
+        f2f = self._data_package.features_to_freeze
         if len(f2f) > 0:
             f_d_view = f_d[f2f]
-            query_view = self.data_package.query_x[f2f]
+            query_view = self._data_package.query_x[f2f]
             p_d = p_d[np.equal(f_d_view.values, query_view.values)]
             f_d = f_d[np.equal(f_d_view.values, query_view.values)]
-        self.data_package.features_dataset = f_d
-        self.data_package.predictions_dataset = p_d
+        self._data_package.features_dataset = f_d
+        self._data_package.predictions_dataset = p_d
 
     def _get_valid_categorical_entries(self, f_d, p_d):
         categorical_idx = self._get_features_by_type([Choice])  # pass in the pymoo built in variable types
@@ -155,7 +155,7 @@ class MultiObjectiveProblem(Problem):
     def _filter_valid_categorical_entries(self, f_d, p_d, parameter):
         # noinspection PyUnresolvedReferences
         features_with_valid_categories = (
-            f_d.iloc[:, parameter].isin(self.data_package.datatypes[parameter].options))
+            f_d.iloc[:, parameter].isin(self._data_package.datatypes[parameter].options))
         p_d = p_d[features_with_valid_categories]
         f_d = f_d[features_with_valid_categories]
         return f_d, p_d
@@ -168,18 +168,18 @@ class MultiObjectiveProblem(Problem):
 
     def _filter_entries_outside_range(self, f_d, p_d, index):
         # noinspection PyUnresolvedReferences
-        features_gt_lower_bound = (f_d.iloc[:, index] >= self.data_package.datatypes[index].bounds[0])
+        features_gt_lower_bound = (f_d.iloc[:, index] >= self._data_package.datatypes[index].bounds[0])
         p_d = p_d[features_gt_lower_bound]
         f_d = f_d[features_gt_lower_bound]
         # noinspection PyUnresolvedReferences
-        features_lt_upper_bound = (f_d.iloc[:, index] <= self.data_package.datatypes[index].bounds[1])
+        features_lt_upper_bound = (f_d.iloc[:, index] <= self._data_package.datatypes[index].bounds[1])
         p_d = p_d[features_lt_upper_bound]
         f_d = f_d[features_lt_upper_bound]
         return f_d, p_d
 
     def _get_features_by_type(self, types: list) -> list:
         """Helper function to get a list of parameter indices of a particular datatype"""
-        dts = self.data_package.datatypes
+        dts = self._data_package.datatypes
         matching_idxs = []
         for i in range(len(dts)):
             if type(dts[i]) in types:
@@ -199,8 +199,8 @@ class MultiObjectiveProblem(Problem):
                                            x_constraint_functions: list,
                                            design_targets: DesignTargets,
                                            dataset_flag):
-        if dataset_flag and (self.data_package.datasets_validity is not None):
-            return self.data_package.datasets_validity
+        if dataset_flag and (self._data_package.datasets_validity is not None):
+            return self._data_package.datasets_validity
         return self._calculate_mixed_constraint_satisfaction(x_full, y, x_constraint_functions, design_targets)
 
     def _calculate_mixed_constraint_satisfaction(self,
@@ -258,14 +258,14 @@ class MultiObjectiveProblem(Problem):
         return satisfaction
 
     def _build_full_df(self, x: np.ndarray):
-        x = pd.DataFrame.from_records(x, columns=self.data_package.features_to_vary)
+        x = pd.DataFrame.from_records(x, columns=self._data_package.features_to_vary)
         if x.empty:
             return x
         n = np.shape(x)[0]
-        df = pd.concat([self.data_package.query_x] * n, axis=0, )
+        df = pd.concat([self._data_package.query_x] * n, axis=0, )
         df.index = list(range(n))
-        df = pd.concat([df.loc[:, self.data_package.features_to_freeze], x], axis=1)
-        df = df[self.data_package.features_dataset.columns]
+        df = pd.concat([df.loc[:, self._data_package.features_to_freeze], x], axis=1)
+        df = df[self._data_package.features_dataset.columns]
         return df
 
     def _validate(self, mandatory_condition, error_message):
