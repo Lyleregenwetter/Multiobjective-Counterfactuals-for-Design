@@ -309,7 +309,7 @@ print(counterfactuals)
 
 ## Roadmap
 
-- [ ] We are currently working on support gradient-based optimization
+- [ ] We are currently working on support for gradient-based optimization
 
 See the [open issues](https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues) for a full
 list of proposed features (and
