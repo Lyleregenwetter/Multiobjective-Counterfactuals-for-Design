@@ -29,6 +29,7 @@ class MultiObjectiveProblem(Problem):
                  data_package: DataPackage,
                  prediction_function: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
                  constraint_functions: list):
+        """A class representing a multiobjective minimization problem"""
         self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
         self._data_package = data_package
         self._predictor = prediction_function

@@ -232,7 +232,7 @@ data_package = DataPackage(features_dataset=x,
                            datatypes=[Real(bounds=(0, 10)),
                                       Real(bounds=(-50, 50)),
                                       Choice(options=[0, 1, 2])],
-                           # optional parameters
+                           # # optional parameters
                            # features_to_vary=..., 
                            # bonus_objectives=...,
                            # datasets_validity=...,
@@ -259,10 +259,9 @@ print(counterfactuals)
 
 ## Roadmap
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
+- [ ] We are currently working on support gradient-based optimization
+
+
 
 See the [open issues](https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues) for a full
 list of proposed features (and
@@ -297,7 +296,7 @@ Don't forget to give the project a star! Thanks again!
 
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+Distributed under the MIT License. See `LICENSE` for more information.
 
 [//]: # (<p align="right">&#40;<a href="#readme-top">back to top</a>&#41;</p>)
 

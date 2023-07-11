@@ -66,6 +66,10 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                  pop_size: int,
                  initialize_from_dataset: bool = True,
                  verbose: bool = True):
+        """An evolutionary-algorithm based counterfactuals generator.
+
+
+        The generation and sampling steps are decoupled to allow users to vary sampling parameters without having to regenerate counterfactuals."""
         self._all_cf_y, self._all_cf_x, self._agg_scores, self._label_scores, \
             self._seed, self._res, self._algorithm, self._dataset_pop = (None for _ in range(8))
         self._problem = problem
