@@ -381,7 +381,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 [pandas-url]: https://pandas.pydata.org/
 
-[numpy-badge-url]: https://img.shields.io/badge/frameowrk-numpy-green
+[numpy-badge-url]: https://img.shields.io/badge/framework-numpy-green
 
 [numpy-url]: https://numpy.org/
 
