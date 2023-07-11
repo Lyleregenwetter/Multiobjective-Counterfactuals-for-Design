@@ -1,6 +1,5 @@
 source venv/bin/activate
-rm -r build
-rm -r dist
+rm -r build dist
 pip uninstall decode-mcd -y
 pip install .
 python3 -m unittest -v
