@@ -203,57 +203,100 @@ print(counterfactuals)
 
 <!-- USAGE EXAMPLES -->
 
-## I-Got-Time Guide
+[//]: # (## I-Got-Time Guide)
 
-1. Either install MCD with pip as shown in the Quick-Start Guide, or fork the repo with
-   ```git clone git@github.com:Lyleregenwetter/Multiobjective-Counterfactuals-for-Design.git```
-2. Now, customize the code below to fit your datasets and model. The template below assumes the following:
-    * The features_dataset _X_ has 4 columns: R1, R2, C1, in order. R1 and R2 are real variables
-      with the following respective ranges (0, 10) and (-50, 50). C1 is a choice variable (0, 1, 2).
-    * The predictions_dataset _Y_ has 5 columns. O_R1 and O_R2 are real variables.
-      O_C1 is a categorical/choice variable. O_P1 and O_P2 represent the probabilities of belonging to classes A and B,
-      respectively, where a design can belong to either class A or B and nothing else.
-    *
+[//]: # ()
+[//]: # (1. Either install MCD with pip as shown in the Quick-Start Guide, or fork the repo with)
 
-```python
-from pymoo.core.variable import Real, Choice
-from decode_mcd import DesignTargets, DataPackage, MultiObjectiveProblem, CounterfactualsGenerator, ContinuousTarget
+[//]: # (   ```git clone git@github.com:Lyleregenwetter/Multiobjective-Counterfactuals-for-Design.git```)
 
-x, y = ...  # load your data
-model = ...  # load your model
-query_x = ...  # define the initial design or starting point
+[//]: # (2. Now, customize the code below to fit your datasets and model. The template below assumes the following:)
 
-data_package = DataPackage(features_dataset=x,
-                           predictions_dataset=y,
-                           query_x=query_x,
-                           design_targets=DesignTargets([ContinuousTarget(label=0,
-                                                                          lower_bound=25,
-                                                                          upper_bound=75)]),
-                           datatypes=[Real(bounds=(0, 10)),
-                                      Real(bounds=(-50, 50)),
-                                      Choice(options=[0, 1, 2])],
-                           # # optional parameters
-                           # features_to_vary=..., 
-                           # bonus_objectives=...,
-                           # datasets_validity=...,
-                           # datasets_scores=...,
-                           )
+[//]: # (    * The features_dataset _X_ has 4 columns: R1, R2, C1, in order. R1 and R2 are real variables)
 
-problem = MultiObjectiveProblem(data_package=data_package,
-                                prediction_function=lambda design: model.predict(design),
-                                constraint_functions=[])
+[//]: # (      with the following respective ranges &#40;0, 10&#41; and &#40;-50, 50&#41;. C1 is a choice variable &#40;0, 1, 2&#41;.)
 
-generator = CounterfactualsGenerator(problem=problem,
-                                     pop_size=10,
-                                     initialize_from_dataset=False,
-                                     verbose=True)
+[//]: # (    * The predictions_dataset _Y_ has 5 columns. O_R1 and O_R2 are real variables.)
 
-generator.generate(n_generations=10)
-counterfactuals = generator.sample_with_dtai(num_samples=10, gower_weight=1,
-                                             avg_gower_weight=1, cfc_weight=1,
-                                             diversity_weight=50)
-print(counterfactuals)
-```
+[//]: # (      O_C1 is a categorical/choice variable. O_P1 and O_P2 represent the probabilities of belonging to classes A and B,)
+
+[//]: # (      respectively, where a design can belong to either class A or B and nothing else.)
+
+[//]: # (    *)
+
+[//]: # ()
+[//]: # (```python)
+
+[//]: # (from pymoo.core.variable import Real, Choice)
+
+[//]: # (from decode_mcd import DesignTargets, DataPackage, MultiObjectiveProblem, CounterfactualsGenerator, ContinuousTarget)
+
+[//]: # ()
+[//]: # (x, y = ...  # load your data)
+
+[//]: # (model = ...  # load your model)
+
+[//]: # (query_x = ...  # define the initial design or starting point)
+
+[//]: # ()
+[//]: # (data_package = DataPackage&#40;features_dataset=x,)
+
+[//]: # (                           predictions_dataset=y,)
+
+[//]: # (                           query_x=query_x,)
+
+[//]: # (                           design_targets=DesignTargets&#40;[ContinuousTarget&#40;label=0,)
+
+[//]: # (                                                                          lower_bound=25,)
+
+[//]: # (                                                                          upper_bound=75&#41;]&#41;,)
+
+[//]: # (                           datatypes=[Real&#40;bounds=&#40;0, 10&#41;&#41;,)
+
+[//]: # (                                      Real&#40;bounds=&#40;-50, 50&#41;&#41;,)
+
+[//]: # (                                      Choice&#40;options=[0, 1, 2]&#41;],)
+
+[//]: # (                           # # optional parameters)
+
+[//]: # (                           # features_to_vary=..., )
+
+[//]: # (                           # bonus_objectives=...,)
+
+[//]: # (                           # datasets_validity=...,)
+
+[//]: # (                           # datasets_scores=...,)
+
+[//]: # (                           &#41;)
+
+[//]: # ()
+[//]: # (problem = MultiObjectiveProblem&#40;data_package=data_package,)
+
+[//]: # (                                prediction_function=lambda design: model.predict&#40;design&#41;,)
+
+[//]: # (                                constraint_functions=[]&#41;)
+
+[//]: # ()
+[//]: # (generator = CounterfactualsGenerator&#40;problem=problem,)
+
+[//]: # (                                     pop_size=10,)
+
+[//]: # (                                     initialize_from_dataset=False,)
+
+[//]: # (                                     verbose=True&#41;)
+
+[//]: # ()
+[//]: # (generator.generate&#40;n_generations=10&#41;)
+
+[//]: # (counterfactuals = generator.sample_with_dtai&#40;num_samples=10, gower_weight=1,)
+
+[//]: # (                                             avg_gower_weight=1, cfc_weight=1,)
+
+[//]: # (                                             diversity_weight=50&#41;)
+
+[//]: # (print&#40;counterfactuals&#41;)
+
+[//]: # (```)
 
 <!-- ROADMAP -->
 
