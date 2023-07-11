@@ -167,11 +167,11 @@ from decode_mcd import DesignTargets, DataPackage, MultiObjectiveProblem, Counte
 
 x = np.random.random(100)
 x = x.reshape(100, 1)
-y = x * 100 + random.random()
+y = x * 100
 
 
 def predict(_x):
-    return _x * 100
+    return _x * 100 + random.random()
 
 
 data_package = DataPackage(features_dataset=x,
@@ -206,6 +206,7 @@ print(counterfactuals)
 [//]: # (## I-Got-Time Guide)
 
 [//]: # ()
+
 [//]: # (1. Either install MCD with pip as shown in the Quick-Start Guide, or fork the repo with)
 
 [//]: # (   ```git clone git@github.com:Lyleregenwetter/Multiobjective-Counterfactuals-for-Design.git```)
@@ -225,6 +226,7 @@ print(counterfactuals)
 [//]: # (    *)
 
 [//]: # ()
+
 [//]: # (```python)
 
 [//]: # (from pymoo.core.variable import Real, Choice)
@@ -232,6 +234,7 @@ print(counterfactuals)
 [//]: # (from decode_mcd import DesignTargets, DataPackage, MultiObjectiveProblem, CounterfactualsGenerator, ContinuousTarget)
 
 [//]: # ()
+
 [//]: # (x, y = ...  # load your data)
 
 [//]: # (model = ...  # load your model)
@@ -239,6 +242,7 @@ print(counterfactuals)
 [//]: # (query_x = ...  # define the initial design or starting point)
 
 [//]: # ()
+
 [//]: # (data_package = DataPackage&#40;features_dataset=x,)
 
 [//]: # (                           predictions_dataset=y,)
@@ -270,6 +274,7 @@ print(counterfactuals)
 [//]: # (                           &#41;)
 
 [//]: # ()
+
 [//]: # (problem = MultiObjectiveProblem&#40;data_package=data_package,)
 
 [//]: # (                                prediction_function=lambda design: model.predict&#40;design&#41;,)
@@ -277,6 +282,7 @@ print(counterfactuals)
 [//]: # (                                constraint_functions=[]&#41;)
 
 [//]: # ()
+
 [//]: # (generator = CounterfactualsGenerator&#40;problem=problem,)
 
 [//]: # (                                     pop_size=10,)
@@ -286,6 +292,7 @@ print(counterfactuals)
 [//]: # (                                     verbose=True&#41;)
 
 [//]: # ()
+
 [//]: # (generator.generate&#40;n_generations=10&#41;)
 
 [//]: # (counterfactuals = generator.sample_with_dtai&#40;num_samples=10, gower_weight=1,)
@@ -303,8 +310,6 @@ print(counterfactuals)
 ## Roadmap
 
 - [ ] We are currently working on support gradient-based optimization
-
-
 
 See the [open issues](https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design/issues) for a full
 list of proposed features (and
