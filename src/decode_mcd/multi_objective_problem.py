@@ -209,7 +209,7 @@ class MultiObjectiveProblem(Problem):
                                                  y: pd.DataFrame,
                                                  x_constraint_functions: list,
                                                  design_targets: DesignTargets):
-        n_total_constraints = design_targets.count_constrained_labels()
+        n_total_constraints = design_targets.count_constrained_labels()+len(x_constraint_functions)
         n_rows = x_full.shape[0]
         result = np.zeros(shape=(n_rows, n_total_constraints))
 
@@ -244,7 +244,7 @@ class MultiObjectiveProblem(Problem):
                                           n_total_constraints: int):
         for i in range(len(x_constraint_functions)):
             # TODO: discuss this change with Lyle
-            result[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).flatten()
+            result[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).values.flatten()
 
     def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: DesignTargets):
         actual = y.loc[:, y_category_constraints.get_classification_labels()]
