@@ -209,7 +209,7 @@ class MultiObjectiveProblem(Problem):
                                                  y: pd.DataFrame,
                                                  x_constraint_functions: list,
                                                  design_targets: DesignTargets):
-        n_total_constraints = design_targets.count_constrained_labels()+len(x_constraint_functions)
+        n_total_constraints = design_targets.count_constrained_labels() + len(x_constraint_functions)
         n_rows = x_full.shape[0]
         result = np.zeros(shape=(n_rows, n_total_constraints))
 
