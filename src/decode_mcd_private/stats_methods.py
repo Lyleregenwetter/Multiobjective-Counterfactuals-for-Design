@@ -56,7 +56,7 @@ def changed_features_ratio(designs_dataframe: pd.DataFrame,
                            n_features: int):
     designs = designs_dataframe.values
     reference = reference_dataframe.iloc[0].values
-    changes = np.count_nonzero(np.equal(designs, reference), axis=1)
+    changes = np.count_nonzero(np.not_equal(designs, reference), axis=1)
     return changes / n_features
 
 
