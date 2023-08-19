@@ -292,7 +292,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         all_cf_x = all_cfs.get("X")
         all_cf_x = pd.DataFrame.from_records(all_cf_x).values
 
-        valid = np.all(1 - all_cf_v, axis=1)
+        valid = np.all(1-np.sign(all_cf_v), axis=1)
         return all_cf_x[valid], all_cf_y[valid]
 
     def _min2max(self, x, eps=1e-7):  # Converts minimization objective to maximization, assumes rough scale~ 1

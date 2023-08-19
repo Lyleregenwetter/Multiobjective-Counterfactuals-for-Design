@@ -219,14 +219,13 @@ class MultiObjectiveProblem(Problem):
                                   design_targets.get_continuous_labels())
         self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, design_targets,
                                   design_targets.get_classification_labels())
-
         return result
 
     def _append_satisfaction(self, result: np.ndarray, evaluation_function: callable,
                              y: pd.DataFrame, y_constraints: DesignTargets, labels) -> None:
         satisfaction = evaluation_function(y, y_constraints)
         indices = [list(y.columns).index(key) for key in labels]
-        result[:, indices] = 1 - satisfaction
+        result[:, indices] = satisfaction
 
     def _append_proba_satisfaction(self, result: np.ndarray, y: pd.DataFrame,
                                    design_targets: DesignTargets) -> None:
@@ -250,12 +249,12 @@ class MultiObjectiveProblem(Problem):
         actual = y.loc[:, y_category_constraints.get_classification_labels()]
         # dtype=object is needed, otherwise the operation is deprecated
         targets = np.array([[i for i in j] for j in y_category_constraints.get_desired_classes()], dtype=object)
-        return ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
+        return 1 - ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
 
     def _evaluate_regression_satisfaction(self, y: pd.DataFrame, design_targets: DesignTargets):
         query_lb, query_ub = design_targets.get_continuous_boundaries()
         actual = y.loc[:, design_targets.get_continuous_labels()].values
-        satisfaction = np.logical_and(np.less(actual, query_ub), np.greater(actual, query_lb))
+        satisfaction = np.maximum(actual-query_ub, query_lb-actual)
         return satisfaction
 
     def _build_full_df(self, x: np.ndarray):
