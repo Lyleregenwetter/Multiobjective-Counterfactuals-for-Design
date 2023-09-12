@@ -19,7 +19,7 @@ def mixed_gower(x1: pd.DataFrame, x2: pd.DataFrame, ranges: np.ndarray, datatype
     total_number_of_features = x1.shape[1]
     GD = np.divide(np.abs(all_dists), total_number_of_features)
     GD = np.sum(GD, axis=2)
-    return GD
+    return GD.astype(float)
 
 
 def categorical_gower(first: pd.DataFrame, second: pd.DataFrame):
