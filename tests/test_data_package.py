@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 import numpy.testing as np_test
-from pymoo.core.variable import Real
+from pymoo.core.variable import Real, Choice, Integer
 
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget
@@ -64,12 +64,23 @@ class DataPackageTest(unittest.TestCase):
             lambda: self.initialize(datatypes=[Real(bounds=(5, 10)), None, Real(bounds=(11, 13))]),
             "datatypes must strictly be a sequence of objects belonging to the types [Real, Integer, Choice, Binary]")
 
-    @unittest.skip
     def test_subtle_invalid_datatypes(self):
-        self.assert_raises_with_message(
-            lambda: self.initialize(datatypes=[Real(), Real(), Real()]),
-            "datatypes are of the correct type, but are invalid. If you're not sure why, "
-            "please use keyword arguments and/or refer to the documentation.")
+        self._test_invalid(
+            {
+                lambda: self.initialize(datatypes=[Real(), Real(), Real()]):
+                    "Parameter [datatypes] is invalid: bounds cannot be None for object of type "
+                    "pymoo.core.variable.Real",
+                lambda: self.initialize(datatypes=[Real(bounds=(1, 3)), Choice(), Real(bounds=(1, 3))]):
+                    "Parameter [datatypes] is invalid: options cannot be None for object of type "
+                    "pymoo.core.variable.Choice",
+                lambda: self.initialize(datatypes=[Real(bounds=(1, 3)), Integer(), Real(bounds=(1, 3))]):
+                    "Parameter [datatypes] is invalid: bounds cannot be None for object of type "
+                    "pymoo.core.variable.Integer",
+                lambda: self.initialize(datatypes=[Real(bounds=(1, 3)), Choice(), Real(bounds=(1, 3))]):
+                    "Parameter [datatypes] is invalid: options cannot be None for object of type "
+                    "pymoo.core.variable.Choice",
+            }
+        )
 
     def test_invalid_bonus_objectives(self):
         self.assert_raises_with_message(

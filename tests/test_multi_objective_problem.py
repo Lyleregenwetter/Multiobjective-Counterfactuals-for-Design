@@ -66,7 +66,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         assert False, "We need to implement a check that samples grabbed from the dataset, " \
                       "when passed through the predictor, meet the query targets"
 
-    @unittest.skip
     def test_get_mixed_constraint_full(self):
         """
         SKIPPED because constraint handling has been updated...
@@ -90,18 +89,16 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                                                                         design_targets=targets
                                                                         )
         np_test.assert_array_equal(satisfaction, np.array([
-            [1, 0, 1, 1, 0, 0],
-            [0, 1, 1, 0, 1, 1],
-            [0, 0, 0, 1, 0, 0],
+            [1, 0, 7, 1, 0, 0],
+            [-1, 1, 0, 0, 1, 1],
+            [-1, 0, -1, 1, 0, 0],
         ]))
 
     def build_problem(self, package):
         return MOP(data_package=package, prediction_function=DummyPredictor().predict, constraint_functions=[])
 
-    @unittest.skip
-    def test_strict_inequality_of_regression_constraints(self):
+    def test_values_equal_to_constraints_lead_to_zero_in_satisfaction(self):
         """
-        SKIPPED because constraint handling has been updated...
         this is the current behavior, but is it desired?"""
         self.test_get_mixed_constraint_satisfaction()
 
@@ -158,10 +155,8 @@ class MultiObjectiveProblemTest(unittest.TestCase):
     def test_get_mixed_constraint_satisfaction_with_x_constraints(self):
         pass
 
-    @unittest.skip
     def test_get_mixed_constraint_satisfaction(self):
         """
-        SKIPPED because constraint handling has been updated...
         get_mixed_constraint_satisfaction() is stateless
         - the generator built and the data package don't matter"""
         y = pd.DataFrame.from_records(np.array([[1, 9], [2, 10],
@@ -169,12 +164,18 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                                                 [4, 20], [5, 21]]))
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(6)]))
         generator = self.build_problem(self.build_package())
-        targets = DesignTargets([ContinuousTarget(0, 2, 4), ContinuousTarget(1, 10, 20)])
+        targets = DesignTargets([ContinuousTarget(0, 2, 4),
+                                 ContinuousTarget(1, 10, 20)])
         satisfaction = generator._calculate_mixed_constraint_satisfaction(x_full=x_full,
                                                                           y=y,
                                                                           x_constraint_functions=[],
                                                                           design_targets=targets)
-        np_test.assert_equal(satisfaction, np.array([[1, 1], [1, 1], [0, 0], [0, 1], [1, 1], [1, 1]]))
+        np_test.assert_equal(satisfaction, np.array([[1, 1],
+                                                     [0, 0],
+                                                     [-1, -2],
+                                                     [-1, 2],
+                                                     [0, 0],
+                                                     [1, 1]]))
 
     def build_package(self,
                       features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [12, 13, 15]]),

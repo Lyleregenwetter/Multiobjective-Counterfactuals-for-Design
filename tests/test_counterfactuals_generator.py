@@ -90,9 +90,17 @@ class CounterfactualsGeneratorTest(unittest.TestCase):
         self.assert_raises_with_message(lambda: generator.generate(5, -50),
                                         "seed must be a positive integer")
 
-    @unittest.skip
     def test_invalid_sampling_parameters(self):
-        pass
+        generator = CounterfactualsGenerator(self.build_valid_problem(), 500)
+        generator.generate(1)
+        self.assert_raises_with_message(
+            lambda: generator.sample_with_weights(num_samples=5.5, avg_gower_weight=1, cfc_weight=1, gower_weight=1,
+                                                  diversity_weight=1),
+            "num_samples must be an integer")
+        self.assert_raises_with_message(
+            lambda: generator.sample_with_weights(num_samples=-5, avg_gower_weight=1, cfc_weight=1, gower_weight=1,
+                                                  diversity_weight=1),
+            "num_samples must be a positive integer")
 
     def build_valid_problem(self):
         return MultiObjectiveProblem(

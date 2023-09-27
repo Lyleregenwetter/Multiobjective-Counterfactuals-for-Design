@@ -3,6 +3,7 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
+import pymoo.core.variable
 from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 
 from decode_mcd.design_targets import DesignTargets
@@ -152,6 +153,10 @@ class DataPackage:
         condition = n_dt == n_f
         validate(condition,
                  f"datatypes has length {n_dt}, expected length {n_f} matching features_dataset columns {f_columns}")
+        self._validate_class_of_dt_objects()
+        self._validate_internals()
+
+    def _validate_class_of_dt_objects(self):
         invalid_types = [datatype for datatype in self.datatypes if
                          type(datatype) not in [Real, Choice, Binary, Integer]]
         mandatory_condition = len(invalid_types) == 0
@@ -165,3 +170,18 @@ class DataPackage:
                                                     self.predictions_dataset.columns)
         self._raise_if_invalid_columns("predictions_dataset", "design_targets",
                                        invalid_columns, self.predictions_dataset.columns.values)
+
+    def _validate_internals(self):
+        for dt in self.datatypes:
+            if type(dt) == pymoo.core.variable.Real:
+                self._validate_has_field(dt.bounds != (None, None), "bounds", "Real")
+            elif type(dt) == pymoo.core.variable.Integer:
+                self._validate_has_field(dt.bounds != (None, None), "bounds", "Integer")
+            elif type(dt) == pymoo.core.variable.Choice:
+                self._validate_has_field(dt.options is not None, "options", "Choice")
+
+    def _validate_has_field(self, condition: bool, field_name: str, class_name:  str):
+        validate(condition,
+                 f"Parameter [datatypes] is invalid: {field_name} cannot be None for object of type "
+                 f"pymoo.core.variable.{class_name}")
+
