@@ -222,7 +222,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             return self._check_for_original_query(result)
         else:
             if diversity_weight == 0:
-                idx = np.argpartition(agg_scores, num_samples)
+                print(num_samples)
+                idx = np.argpartition(agg_scores, num_samples)[:num_samples]
                 result = self._build_res_df(all_cf_x[idx, :])
                 return self._check_for_original_query(result)
             else:
