@@ -1,0 +1,72 @@
+,type
+CS textfield,float64
+BB textfield,float64
+Stack,float64
+Head angle,float64
+Head tube length textfield,float64
+Seat stay junction0,float64
+Seat tube length,float64
+Seat angle,float64
+DT Length,float64
+BB diameter,float64
+ttd,float64
+dtd,float64
+csd,float64
+ssd,float64
+Chain stay position on BB,float64
+SSTopZOFFSET,float64
+MATERIAL,object
+Head tube upper extension2,float64
+Seat tube extension2,float64
+Head tube lower extension2,float64
+SEATSTAYbrdgshift,float64
+CHAINSTAYbrdgshift,float64
+SEATSTAYbrdgdia1,float64
+CHAINSTAYbrdgdia1,float64
+SEATSTAYbrdgCheck,bool
+CHAINSTAYbrdgCheck,bool
+Dropout spacing,float64
+Wall thickness Bottom Bracket,int64
+Wall thickness Top tube,float64
+Wall thickness Head tube,float64
+Wall thickness Down tube,float64
+Wall thickness Chain stay,float64
+Wall thickness Seat stay,float64
+Wall thickness Seat tube,float64
+ERD rear,float64
+Wheel width rear,float64
+Dropout spacing style,str
+BSD front,float64
+Wheel width front,float64
+ERD front,float64
+BSD rear,float64
+Fork type,str
+Stem kind,str
+Display AEROBARS,bool
+Handlebar style,str
+Head tube type,str
+BB length,float64
+Head tube diameter,float64
+Wheel cut,float64
+Seat tube diameter,float64
+Top tube type,str
+bottle SEATTUBE0 show,object
+bottle DOWNTUBE0 show,object
+Front Fender include,bool
+Rear Fender include,bool
+BELTorCHAIN,str
+Number of cogs,int64
+Number of chainrings,int64
+Display RACK,bool
+FIRST color R_RGB,int64
+FIRST color G_RGB,int64
+FIRST color B_RGB,int64
+RIM_STYLE front,object
+RIM_STYLE rear,object
+SPOKES composite front,int64
+SBLADEW front,float64
+SBLADEW rear,float64
+Saddle length,float64
+Saddle height,float64
+Down tube diameter,float64
+Seatpost LENGTH,int64

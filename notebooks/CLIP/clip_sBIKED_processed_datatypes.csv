@@ -1,0 +1,71 @@
+,type
+CS textfield,float64
+BB textfield,float64
+Stack,float64
+Head angle,float64
+Head tube length textfield,float64
+Seat stay junction0,float64
+Seat tube length,float64
+Seat angle,float64
+DT Length,float64
+BB diameter,float64
+ttd,float64
+dtd,float64
+csd,float64
+ssd,float64
+Chain stay position on BB,float64
+SSTopZOFFSET,float64
+Head tube upper extension2,float64
+Seat tube extension2,float64
+Head tube lower extension2,float64
+SEATSTAYbrdgshift,float64
+CHAINSTAYbrdgshift,float64
+SEATSTAYbrdgdia1,float64
+CHAINSTAYbrdgdia1,float64
+SEATSTAYbrdgCheck,bool
+CHAINSTAYbrdgCheck,bool
+Dropout spacing,float64
+Wall thickness Chain stay,float64
+Wall thickness Seat stay,float64
+Wall thickness Seat tube,float64
+ERD rear,float64
+Wheel width rear,float64
+BSD front,float64
+Wheel width front,float64
+ERD front,float64
+BSD rear,float64
+Display AEROBARS,bool
+BB length,float64
+Head tube diameter,float64
+Wheel cut,float64
+Seat tube diameter,float64
+Front Fender include,bool
+Rear Fender include,bool
+Number of cogs,int64
+Number of chainrings,int64
+Display RACK,bool
+FIRST color R_RGB,int64
+FIRST color G_RGB,int64
+FIRST color B_RGB,int64
+SPOKES composite front,int64
+SBLADEW front,float64
+SBLADEW rear,float64
+Saddle length,float64
+Saddle height,float64
+Down tube diameter,float64
+Seatpost LENGTH,int64
+MATERIAL OHCLASS: BAMBOO,bool
+MATERIAL OHCLASS: STEEL,bool
+Dropout spacing style OHCLASS: 2,bool
+Fork type OHCLASS: 0,bool
+Fork type OHCLASS: 1,bool
+Stem kind OHCLASS: 0,bool
+Handlebar style OHCLASS: 0,bool
+Head tube type OHCLASS: 1,bool
+Top tube type OHCLASS: 1,bool
+bottle SEATTUBE0 show OHCLASS: False,bool
+bottle DOWNTUBE0 show OHCLASS: False,bool
+BELTorCHAIN OHCLASS: 1,bool
+RIM_STYLE front OHCLASS: SPOKED,bool
+RIM_STYLE rear OHCLASS: DISC,bool
+RIM_STYLE rear OHCLASS: SPOKED,bool
