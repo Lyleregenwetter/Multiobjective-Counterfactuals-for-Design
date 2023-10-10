@@ -22,7 +22,6 @@ def get_path(filename):
     return os.path.join(os.path.dirname(__file__), filename)
 
 
-@unittest.skip
 class McdEndToEndTest(unittest.TestCase):
     def setUp(self) -> None:
         __main__.alt_multi_label_predictor = MultilabelPredictor
