@@ -24,7 +24,7 @@ import textwrap
 import imageio
 import sys
 sys.path.append("../../")
-import calculate_dtai
+import decode_mcd_private.calculate_dtai
 import load_data
 import multi_objective_cfe_generator as MOCG
 
