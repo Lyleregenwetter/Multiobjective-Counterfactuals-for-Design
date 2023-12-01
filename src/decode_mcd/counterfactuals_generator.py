@@ -20,6 +20,8 @@ from decode_mcd_private import calculate_dtai as calculate_dtai, DPPsampling as 
 from decode_mcd_private.stats_methods import mixed_gower
 from decode_mcd_private.validation_utils import validate
 
+from dppy.finite_dpps import FiniteDPP
+
 _DEFAULT_BETA = 4
 
 
@@ -324,7 +326,15 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self._verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.kDPPGreedySample(weighted_matrix, num_samples)
+        # samples_index = DPPsampling.kDPPExactSample(weighted_matrix, num_samples)
         return samples_index
+
+    def _get_near_psd(self, A):
+        C = (A + A.T)/2
+        eigval, eigvec = np.linalg.eig(C)
+        eigval[eigval < 0] = 0
+
+        return eigvec.dot(np.diag(eigval)).dot(eigvec.T)
 
     def _validate_fields(self):
         validate(isinstance(self._problem, MultiObjectiveProblem), "problem must be an instance "
