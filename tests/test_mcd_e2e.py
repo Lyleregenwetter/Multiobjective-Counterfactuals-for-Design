@@ -27,6 +27,8 @@ class McdEndToEndTest(unittest.TestCase):
         __main__.alt_multi_label_predictor = MultilabelPredictor
         if not self.grab_trained_model_path():
             self.train_model()
+        print(os.getcwd())
+        print()
         self.model = MultilabelPredictor.load(self.grab_trained_model_path())
         self.x, self.y = self.load_toy_x_y()
 
@@ -148,6 +150,9 @@ class McdEndToEndTest(unittest.TestCase):
         np_test.assert_equal(satisfaction, 1)
 
     def grab_trained_model_path(self):
+        dirname = os.path.dirname(__file__)
+        print(f"{dirname=}")
+        print(f"{os.listdir(dirname)=}")
         models_path_exists = "AutogluonModels" in os.listdir(os.path.dirname(__file__))
         if models_path_exists:
             return self.find_valid_model()
