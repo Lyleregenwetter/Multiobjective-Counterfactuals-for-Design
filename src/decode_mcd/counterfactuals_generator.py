@@ -20,7 +20,6 @@ from decode_mcd_private import calculate_dtai as calculate_dtai, DPPsampling as 
 from decode_mcd_private.stats_methods import mixed_gower
 from decode_mcd_private.validation_utils import validate
 
-from dppy.finite_dpps import FiniteDPP
 
 _DEFAULT_BETA = 4
 
