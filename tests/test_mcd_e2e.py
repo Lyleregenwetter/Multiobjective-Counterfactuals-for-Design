@@ -161,7 +161,7 @@ class McdEndToEndTest(unittest.TestCase):
                 return model_path
 
     def train_model(self):
-        training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"])
+        training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"], path=get_path("AutogluonModels/ag-3000"))
         x, y = self.load_toy_x_y()
         training_predictor.fit(TabularDataset(pd.concat([x, y], axis=1)))
 
