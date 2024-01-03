@@ -27,7 +27,8 @@ class McdEndToEndTest(unittest.TestCase):
         __main__.alt_multi_label_predictor = MultilabelPredictor
         if not self.grab_trained_model_path():
             self.train_model()
-        print(f"{os.getcwd()=}")
+        print(os.getcwd())
+        print()
         self.model = MultilabelPredictor.load(self.grab_trained_model_path())
         self.x, self.y = self.load_toy_x_y()
 
@@ -165,7 +166,7 @@ class McdEndToEndTest(unittest.TestCase):
                 return model_path
 
     def train_model(self):
-        training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"], path=os.path.dirname(__file__))
+        training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"])
         x, y = self.load_toy_x_y()
         training_predictor.fit(TabularDataset(pd.concat([x, y], axis=1)))
 
