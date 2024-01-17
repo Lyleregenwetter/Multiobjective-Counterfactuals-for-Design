@@ -224,7 +224,7 @@ class MultiObjectiveProblem(Problem):
     def _append_satisfaction(self, result: np.ndarray, evaluation_function: callable,
                              y: pd.DataFrame, y_constraints: DesignTargets, labels) -> None:
         satisfaction = evaluation_function(y, y_constraints)
-        indices = [list(y.columns).index(key) for key in labels]
+        indices = [list(y_constraints.get_all_constrained_labels()).index(key) for key in labels]
         result[:, indices] = satisfaction
 
     def _append_proba_satisfaction(self, result: np.ndarray, y: pd.DataFrame,
@@ -234,7 +234,7 @@ class MultiObjectiveProblem(Problem):
                                             design_targets.get_preferred_probability_targets()):
             proba_consts = y.loc[:, proba_key]
             proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
-            indices = [list(y.columns).index(key) for key in proba_key]
+            indices = [list(design_targets.get_all_constrained_labels()).index(key) for key in proba_key]
             result[:, indices] = 1 - np.greater(proba_satisfaction, 0)
 
     def _append_x_constraint_satisfaction(self, result: np.ndarray,
