@@ -67,10 +67,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                       "when passed through the predictor, meet the query targets"
 
     def test_get_mixed_constraint_full(self):
-        """
-        SKIPPED because constraint handling has been updated...
-        get_mixed_constraint_satisfaction(...) is stateless
-        """
         x_full = pd.DataFrame.from_records(np.array([[1] for _ in range(3)]))
         y = pd.DataFrame.from_records(np.array([
             [1, 200, 3, 500, 0.4, 0.6],
