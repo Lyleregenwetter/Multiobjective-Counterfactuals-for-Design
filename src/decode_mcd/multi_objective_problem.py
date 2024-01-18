@@ -209,16 +209,24 @@ class MultiObjectiveProblem(Problem):
                                                  y: pd.DataFrame,
                                                  x_constraint_functions: list,
                                                  design_targets: DesignTargets):
-        n_total_constraints = design_targets.count_constrained_labels() + len(x_constraint_functions)
+        all_labels = y.columns.tolist()
+        initial_num_columns = len(all_labels) + len(x_constraint_functions)
         n_rows = x_full.shape[0]
-        result = np.zeros(shape=(n_rows, n_total_constraints))
+        result = np.zeros(shape=(n_rows, initial_num_columns))
 
-        self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, n_total_constraints)
+        self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, initial_num_columns)
         self._append_proba_satisfaction(result, y, design_targets)
         self._append_satisfaction(result, self._evaluate_regression_satisfaction, y, design_targets,
                                   design_targets.get_continuous_labels())
         self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, design_targets,
                                   design_targets.get_classification_labels())
+        result = self.drop_non_constrained_columns(design_targets, result, y)
+        return result
+
+    def drop_non_constrained_columns(self, design_targets, result, y):
+        constrained_indices = [list(y.columns).index(key) for key in design_targets.get_all_constrained_labels()]
+        constrained_indices.sort()
+        result = result[:, constrained_indices]
         return result
 
     def _append_satisfaction(self, result: np.ndarray, evaluation_function: callable,
@@ -240,10 +248,10 @@ class MultiObjectiveProblem(Problem):
     def _append_x_constraint_satisfaction(self, result: np.ndarray,
                                           x_full: pd.DataFrame,
                                           x_constraint_functions: List[callable],
-                                          n_total_constraints: int):
+                                          initial_num_columns: int):
         for i in range(len(x_constraint_functions)):
             # TODO: discuss this change with Lyle
-            result[:, n_total_constraints - 1 - i] = x_constraint_functions[i](x_full).values.flatten()
+            result[:, initial_num_columns - 1 - i] = x_constraint_functions[i](x_full).values.flatten()
 
     def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: DesignTargets):
         actual = y.loc[:, y_category_constraints.get_classification_labels()]
