@@ -36,6 +36,29 @@ class McdEndToEndTest(unittest.TestCase):
         predictions["O_C2"] = predictions["O_C1"]
         return predictions
 
+    def test_non_contiguous_objectives(self):
+        x, y = self._build_dummy_multiple_objectives()
+        datatypes = self.build_toy_x_datatypes()
+        targets = DesignTargets(
+            [ContinuousTarget("O_R1", 0, 12),
+             ContinuousTarget("O_R2", 0, 6)],
+        )
+        dp = DataPackage(features_dataset=x, predictions_dataset=y,
+                         query_x=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
+                         design_targets=targets, datatypes=datatypes)
+
+        problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            prediction_function=self.predict_dummy_multiple_objectives,
+                                            constraint_functions=[])
+        generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        generator.generate(5)
+        num_samples = 10
+        cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, include_dataset=False,
+                                         num_dpp=10000)
+
+        self.assert_regression_target_met(cfs, "O_R1", 0, 6)
+        self.assert_cfs_within_valid_range(cfs)
+
     def test_multi_objectives_with_subset_of_features_to_vary(self):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
