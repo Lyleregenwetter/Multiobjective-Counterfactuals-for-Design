@@ -23,9 +23,5 @@ jobs:
         run: pip install .;
       - name: run tests
         run: python3 -m unittest discover -v;
-      - name: Build wheel
-        run: python3 -m build;
-      - name: Twine check
-        run: twine check dist/*
-      - name: Twine upload
-        run: twine upload dist/*
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
