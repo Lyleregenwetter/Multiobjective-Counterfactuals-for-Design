@@ -25,5 +25,7 @@ jobs:
         run: pip install .;
       - name: run tests
         run: python3 -m unittest discover -v;
+      - name: Build MCD wheel
+        run: python3 -m build
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
