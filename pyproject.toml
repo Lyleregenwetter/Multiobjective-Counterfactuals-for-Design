@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "decode-mcd"
-version = "TEST"
+version = "0.0.0.1b0"
 description = "MCD generates counterfactuals that meet multiple, customizable objectives in both the feature and performance spaces."
 readme = "README.md"
 authors = [{ name = "Lyle Regenwetter & Yazan Abu Obaideh" }]
