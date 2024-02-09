@@ -7,7 +7,7 @@ import pandas as pd
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.callback import Callback
 from pymoo.core.evaluator import Evaluator
-from pymoo.core.mixed import MixedVariableMating, MixedVariableDuplicateElimination, MixedVariableSampling
+from pymoo.core.mixed import MixedVariableMating, MixedVariableSampling
 from pymoo.core.population import Population
 from pymoo.core.repair import Repair
 from pymoo.optimize import minimize
@@ -17,9 +17,9 @@ from pymoo.util.display.multi import MultiObjectiveOutput
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem, _MCD_BASE_OBJECTIVES, _GOWER_INDEX, \
     _CHANGED_FEATURE_INDEX, _AVG_GOWER_INDEX
 from decode_mcd_private import calculate_dtai as calculate_dtai, DPPsampling as DPPsampling
+from decode_mcd_private.efficient_mixed_duplicate_elimination import EfficientMixedVariableDuplicateElimination
 from decode_mcd_private.stats_methods import mixed_gower
 from decode_mcd_private.validation_utils import validate
-
 
 _DEFAULT_BETA = 4
 
@@ -164,9 +164,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _build_algorithm(self, population):
         return NSGA2(pop_size=self._pop_size, sampling=population,
-                     mating=MixedVariableMating(eliminate_duplicates=MixedVariableDuplicateElimination(),
+                     mating=MixedVariableMating(eliminate_duplicates=EfficientMixedVariableDuplicateElimination(),
                                                 repair=_RevertToQueryRepair()),
-                     eliminate_duplicates=MixedVariableDuplicateElimination(),
+                     eliminate_duplicates=EfficientMixedVariableDuplicateElimination(),
                      callback=_AllOffspringCallback(),
                      output=MultiObjectiveOutput(),  # this is necessary because this object is mutable
                      save_history=False)
@@ -223,7 +223,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             return self._check_for_original_query(result)
         else:
             if diversity_weight == 0:
-                print(num_samples)
+                self._verbose_log(f"{num_samples=}")
                 idx = np.argpartition(agg_scores, num_samples)[:num_samples]
                 result = self._build_res_df(all_cf_x[idx, :])
                 return self._check_for_original_query(result)
@@ -325,7 +325,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self._verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.pure_greedy(weighted_matrix, num_samples)
-        print(samples_index)
+        self._verbose_log(f"{samples_index=}")
         return samples_index
 
     def _get_near_psd(self, A):
