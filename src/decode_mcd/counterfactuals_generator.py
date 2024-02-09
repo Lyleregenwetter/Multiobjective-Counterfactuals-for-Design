@@ -324,8 +324,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         matrix = mixed_gower(x_df, x_df, self._problem._ranges.values, self._problem._build_gower_types())
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self._verbose_log("Sampling diverse set of counterfactual candidates!")
-        samples_index = DPPsampling.kDPPGreedySample(weighted_matrix, num_samples)
-        # samples_index = DPPsampling.kDPPExactSample(weighted_matrix, num_samples)
+        samples_index = DPPsampling.pure_greedy(weighted_matrix, num_samples)
+        print(samples_index)
         return samples_index
 
     def _get_near_psd(self, A):

@@ -4,6 +4,7 @@ import numpy as np
 import numpy.linalg as la
 import numpy.random as nprand
 import random
+from dppy.finite_dpps import FiniteDPP
 
 
 # noinspection SpellCheckingInspection,PyTypeChecker
@@ -13,6 +14,14 @@ def uniform_sample(elems, k):
     random.shuffle(l)
     return [elems[i] for i in l[:k]]
 
+def pure_greedy(matrix, n):
+    indices = np.unravel_index(np.argmax(matrix), matrix.shape)
+    indices = list(indices)
+    while len(indices) < n:
+        subset = matrix[indices, :]
+        idx = np.argmax(np.min(subset, axis=0))
+        indices.append(idx)
+    return indices
 
 # noinspection SpellCheckingInspection,PyTypeChecker
 def kDPPGreedySample(Y, k):
@@ -57,9 +66,10 @@ def PartitionDPPGreedySample(Y, kvec, Pvec):
         if multinomSum < 1e-9:
             raise ValueError('PartitionDPP sampler failed -- dimension of data too low.')
         multinom = multinom / multinomSum
-        ind = nprand.multinomial(1, multinom)
-        ind = np.where(ind == 1)
-        ind = ind[0][0]
+        ind = np.argmin(multinom)
+        # ind = nprand.multinomial(1, multinom)
+        # ind = np.where(ind == 1)
+        # ind = ind[0][0]
         S.append(ind)
         cvec[Pvec[ind]] += 1
         Xind = X[ind, :].copy()
@@ -96,10 +106,12 @@ import numpy as np
 
 
 def kDPPExactSample(weighted_matrix, k):
-    weighted_matrix = nearestPD(weighted_matrix)
+    # weighted_matrix = nearestPD(weighted_matrix)
+    print(weighted_matrix)
+    print(min(np.linalg.eigvals(weighted_matrix)))
     DPP = FiniteDPP('likelihood', **{'L': weighted_matrix})
     DPP.sample_exact_k_dpp(size=k)
-    samples_index = DPP.list_of_samples
+    samples_index = DPP.list_of_samples[0]
     return samples_index
 
 def nearestPD(A):
