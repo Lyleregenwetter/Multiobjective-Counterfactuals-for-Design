@@ -29,6 +29,8 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     needs: test_build
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.9
