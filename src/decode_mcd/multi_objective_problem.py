@@ -220,14 +220,15 @@ class MultiObjectiveProblem(Problem):
                                   design_targets.get_continuous_labels())
         self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, design_targets,
                                   design_targets.get_classification_labels())
-        result = self.drop_non_constrained_columns(design_targets, result, y)
+        result = self.drop_non_constrained_columns(design_targets, len(x_constraint_functions), result, y)
         return result
 
-    def drop_non_constrained_columns(self, design_targets, result, y):
+    def drop_non_constrained_columns(self, design_targets, num_x_constraints: int, result, y):
+        x_constraints = result[:, result.shape[1] - num_x_constraints:]
         constrained_indices = [list(y.columns).index(key) for key in design_targets.get_all_constrained_labels()]
         constrained_indices.sort()
-        result = result[:, constrained_indices]
-        return result
+        y_constraints = result[:, constrained_indices]
+        return np.concatenate([y_constraints, x_constraints], axis=1)
 
     def _append_satisfaction(self, result: np.ndarray, evaluation_function: callable,
                              y: pd.DataFrame, y_constraints: DesignTargets, labels) -> None:
@@ -262,7 +263,7 @@ class MultiObjectiveProblem(Problem):
     def _evaluate_regression_satisfaction(self, y: pd.DataFrame, design_targets: DesignTargets):
         query_lb, query_ub = design_targets.get_continuous_boundaries()
         actual = y.loc[:, design_targets.get_continuous_labels()].values
-        satisfaction = np.maximum(actual-query_ub, query_lb-actual)
+        satisfaction = np.maximum(actual - query_ub, query_lb - actual)
         return satisfaction
 
     def _build_full_df(self, x: np.ndarray):

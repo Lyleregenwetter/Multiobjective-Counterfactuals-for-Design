@@ -81,13 +81,14 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         )
         satisfaction = problem._calculate_mixed_constraint_satisfaction(x_full=x_full,
                                                                         y=y,
-                                                                        x_constraint_functions=[],
+                                                                        x_constraint_functions=[
+                                                                            self._constraint_function],
                                                                         design_targets=targets
                                                                         )
         np_test.assert_array_equal(satisfaction, np.array([
-            [1, 0, 7, 1, 0, 0],
-            [-1, 1, 0, 0, 1, 1],
-            [-1, 0, -1, 1, 0, 0],
+            [1, 0, 7, 1, 0, 0, 1],
+            [-1, 1, 0, 0, 1, 1, 1],
+            [-1, 0, -1, 1, 0, 0, 1],
         ]))
 
     def build_problem(self, package):
@@ -199,3 +200,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         if value is None:
             return default_value
         return value
+
+    def _constraint_function(self, designs: pd.DataFrame):
+        return pd.DataFrame(np.ones(shape=(len(designs), 1)))
