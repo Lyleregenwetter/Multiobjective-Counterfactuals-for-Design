@@ -4,7 +4,7 @@ import numpy as np
 import numpy.linalg as la
 import numpy.random as nprand
 import random
-from dppy.finite_dpps import FiniteDPP
+# from dppy.finite_dpps import FiniteDPP
 
 
 # noinspection SpellCheckingInspection,PyTypeChecker
