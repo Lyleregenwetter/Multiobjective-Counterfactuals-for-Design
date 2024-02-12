@@ -15,7 +15,7 @@ def uniform_sample(elems, k):
     return [elems[i] for i in l[:k]]
 
 def pure_greedy(matrix, n):
-    indices = np.unravel_index(np.argmax(matrix), matrix.shape)
+    indices = np.unravel_index(np.argmax(matrix), matrix.shape) # picks two indices corresponding to max value in matrix
     indices = list(indices)
     while len(indices) < n:
         subset = matrix[indices, :]

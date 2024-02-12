@@ -26,9 +26,9 @@ _DEFAULT_BETA = 4
 
 # noinspection PyProtectedMember
 class _RevertToQueryRepair(Repair):
-    def __init__(self, rep_prob=0.2, elementwise_prob=0.3, *args, **kwargs):
-        self.rep_prob = rep_prob
-        self.elementwise_prob = elementwise_prob
+    def __init__(self, alpha=0.2, beta=0.5, *args, **kwargs):
+        self.alpha = alpha
+        self.beta = beta
         super().__init__(*args, **kwargs)
 
     def _do(self, problem: MultiObjectiveProblem, Z, **kwargs):
@@ -44,8 +44,9 @@ class _RevertToQueryRepair(Repair):
 
     def _revert_subset(self, full_Z_np, qxs, revertible_indexes):
         revertible_subset = full_Z_np[:, revertible_indexes]
-        mask = np.random.binomial(size=np.shape(revertible_subset), n=1, p=self.elementwise_prob)
-        mask = mask * np.random.binomial(size=(np.shape(revertible_subset)[0], 1), n=1, p=self.rep_prob)
+        elementwise_prob = np.random.beta(self.alpha, self.beta)
+        mask = np.random.binomial(size=np.shape(revertible_subset), n=1, p=elementwise_prob)
+        # mask = mask * np.random.binomial(size=(np.shape(revertible_subset)[0], 1), n=1, p=self.rep_prob)
         revertible_subset = qxs * mask + revertible_subset * (1 - mask)
         return revertible_subset
 
