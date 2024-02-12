@@ -36,7 +36,7 @@ class McdEndToEndTest(unittest.TestCase):
         predictions["O_C2"] = predictions["O_C1"]
         return predictions
 
-    def test_x_constraints(self):
+    def test_run_with_x_constraints(self):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
         targets = DesignTargets(
@@ -48,20 +48,16 @@ class McdEndToEndTest(unittest.TestCase):
                          query_x=x.iloc[0:1], features_to_vary=x.columns,
                          design_targets=targets, datatypes=datatypes)
 
-        def constraint_function(designs: pd.DataFrame):
-            # noinspection PyUnresolvedReferences
-            return (designs['R1'] > designs['R2']).astype('int32')
-
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             prediction_function=self.predict_dummy_multiple_objectives,
-                                            constraint_functions=[constraint_function])
+                                            constraint_functions=[self.x_constraint])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
         cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, include_dataset=False,
                                          num_dpp=10000)
 
-        self.assert_x_constraint_met()
+        self.assert_x_constraint_met(cfs)
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
         self.assert_classification_target_met(cfs, "O_C1", [1])
         self.assert_proba_target_met(cfs, "O_P1")
@@ -235,5 +231,12 @@ class McdEndToEndTest(unittest.TestCase):
     def predict(self, x):
         return self.model.predict(pd.DataFrame(x, columns=self.x.columns))
 
-    def assert_x_constraint_met(self):
-        pass
+    def assert_x_constraint_met(self, cfs: pd.DataFrame):
+        np_test.assert_array_equal(
+            (cfs['R1'] <= cfs['R2']).astype('int32'),
+            1
+        )
+
+    def x_constraint(self, x: pd.DataFrame):
+        # noinspection PyUnresolvedReferences
+        return (x['R1'] > x['R2']).astype('int32')
