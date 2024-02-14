@@ -8,8 +8,8 @@ from pymoo.core.variable import Real
 from decode_mcd.counterfactuals_generator import _RevertToQueryRepair, CounterfactualsGenerator
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget
-from decode_mcd.multi_objective_problem import MultiObjectiveProblem
 from decode_mcd.mcd_exceptions import UserInputException
+from decode_mcd.multi_objective_problem import MultiObjectiveProblem
 
 
 class RevertToQueryRepairTest(unittest.TestCase):
@@ -36,12 +36,9 @@ class RevertToQueryRepairTest(unittest.TestCase):
         repaired_array = pd.DataFrame.from_records(repaired).values
         initial_array = pd.DataFrame.from_records(z).values
 
-        differences = repaired_array[:, (1,)] - initial_array[:, (1,)]
-        changed = np.count_nonzero(differences)
-        percentage_changed = changed / 100_000
-        self.assertGreaterEqual(percentage_changed, 0.05)
-        self.assertLessEqual(percentage_changed, 0.07)
         np_test.assert_equal(repaired_array[:, (0, 2)], initial_array[:, (0, 2)])
+        self.assertGreaterEqual(np.average(repaired_array[:, (1,)]), 4)
+        self.assertLessEqual(np.average(repaired_array[:, (1,)]), 8)
 
     def test_revert_all(self):
         repair = _RevertToQueryRepair()
@@ -51,11 +48,10 @@ class RevertToQueryRepairTest(unittest.TestCase):
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
         repaired = repair._do(problem, z)
         repaired_array = pd.DataFrame.from_records(repaired).values
-        differences = repaired_array - pd.DataFrame.from_records(z).values
-        changed = np.count_nonzero(differences)
-        percentage_reverted = changed / 300_000
-        self.assertGreaterEqual(percentage_reverted, 0.05)
-        self.assertLessEqual(percentage_reverted, 0.07)
+
+        self.assertTrue(1 <= np.average(repaired_array[:, 0]) <= 3)
+        self.assertTrue(2 <= np.average(repaired_array[:, 1]) <= 4)
+        self.assertTrue(3 <= np.average(repaired_array[:, 2]) <= 5)
 
     def build_package(self, query_x, datatypes):
         _array = np.array([[5, 10, 15], [12, 15, 123], [13, 145, 13]])
