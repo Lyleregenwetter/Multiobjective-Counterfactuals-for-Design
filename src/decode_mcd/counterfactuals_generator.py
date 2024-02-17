@@ -72,6 +72,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
 
         The generation and sampling steps are decoupled to allow users to vary sampling parameters without having to regenerate counterfactuals."""
+        self._use_empty_repair = False
         self._all_cf_y, self._all_cf_x, self._agg_scores, self._label_scores, \
             self._seed, self._res, self._algorithm, self._dataset_pop = (None for _ in range(8))
         self._problem = problem
@@ -79,6 +80,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._initialize_from_dataset = initialize_from_dataset
         self._verbose = verbose
         self._validate_fields()
+
+    def use_empty_repair(self, use_empty_repair: bool):
+        self._use_empty_repair = use_empty_repair
 
     def generate(self, n_generations: int, seed: int = None):  # Run the GA
         self._seed = self._get_or_default(seed, np.random.randint(1_000_000))
@@ -164,9 +168,13 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self._algorithm = self._build_algorithm(pop)
 
     def _build_algorithm(self, population):
+        if self._use_empty_repair:
+            repair = Repair()
+        else:
+            repair = _RevertToQueryRepair()
         return NSGA2(pop_size=self._pop_size, sampling=population,
                      mating=MixedVariableMating(eliminate_duplicates=EfficientMixedVariableDuplicateElimination(),
-                                                repair=_RevertToQueryRepair()),
+                                                repair=repair),
                      eliminate_duplicates=EfficientMixedVariableDuplicateElimination(),
                      callback=_AllOffspringCallback(),
                      output=MultiObjectiveOutput(),  # this is necessary because this object is mutable
@@ -295,7 +303,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         all_cf_x = all_cfs.get("X")
         all_cf_x = pd.DataFrame.from_records(all_cf_x).values
 
-        valid = np.all(1-np.sign(all_cf_v), axis=1)
+        valid = np.all(1 - np.sign(all_cf_v), axis=1)
         return all_cf_x[valid], all_cf_y[valid]
 
     def _min2max(self, x, eps=1e-7):  # Converts minimization objective to maximization, assumes rough scale~ 1
@@ -330,7 +338,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return samples_index
 
     def _get_near_psd(self, A):
-        C = (A + A.T)/2
+        C = (A + A.T) / 2
         eigval, eigvec = np.linalg.eig(C)
         eigval[eigval < 0] = 0
 
