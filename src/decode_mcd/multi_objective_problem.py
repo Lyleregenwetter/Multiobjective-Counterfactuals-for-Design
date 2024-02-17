@@ -43,7 +43,37 @@ class MultiObjectiveProblem(Problem):
         self._avg_gower_sample_seed = MEANING_OF_LIFE
         self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
         self._revertible_indexes = self._get_revertible_indexes()
-        # dataset
+
+        # ablation study
+        self._gower_on = True
+        self._average_gower_on = True
+        self._changed_feature_on = True
+
+    def set_desired_scores(self, gower: bool, average_gower: bool, change_feature_ratio: bool):
+        self._gower_on = gower
+        self._average_gower_on = average_gower
+        self._changed_feature_on = change_feature_ratio
+
+    def get_average_gower(self, x: pd.DataFrame, gower_types: dict):
+        if self._average_gower_on:
+            subset = self._get_features_sample()
+            avg_gower = avg_gower_distance(x, subset, self._ranges.values, gower_types)
+            return avg_gower
+        return self._empty_score(x)
+
+    def _empty_score(self, x):
+        return np.zeros(shape=(len(x),))
+
+    def get_changed_feature_ratio(self, x: pd.DataFrame):
+        if self._changed_feature_on:
+            return changed_features_ratio(x, self._data_package.query_x,
+                                          len(self._data_package.features_dataset.columns))
+        return self._empty_score(x)
+
+    def get_gower(self, x: pd.DataFrame, gower_types: dict):
+        if self._gower_on:
+            return mixed_gower(x, self._data_package.query_x, self._ranges.values, gower_types).T
+        return self._empty_score(x)
 
     def set_average_gower_sampling_parameters(self, sample_size: int, sample_seed: int):
         self._validate(sample_size > 0, "Invalid sample size; must be greater than zero")
@@ -106,11 +136,9 @@ class MultiObjectiveProblem(Problem):
         all_scores = np.zeros((len(x), self._number_of_objectives))
         gower_types = self._build_gower_types()
         all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._data_package.bonus_objectives]
-        all_scores[:, _GOWER_INDEX] = mixed_gower(x, self._data_package.query_x, self._ranges.values, gower_types).T
-        all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self._data_package.query_x,
-                                                                       len(self._data_package.features_dataset.columns))
-        subset = self._get_features_sample()
-        all_scores[:, _AVG_GOWER_INDEX] = avg_gower_distance(x, subset, self._ranges.values, gower_types)
+        all_scores[:, _GOWER_INDEX] = self.get_gower(x, gower_types)
+        all_scores[:, _CHANGED_FEATURE_INDEX] = self.get_changed_feature_ratio(x)
+        all_scores[:, _AVG_GOWER_INDEX] = self.get_average_gower(x, gower_types)
         return all_scores
 
     def _get_features_sample(self):
@@ -124,7 +152,7 @@ class MultiObjectiveProblem(Problem):
             return self._data_package.predictions_dataset.copy()
         return pd.DataFrame(self._predictor(x_full), columns=self._data_package.predictions_dataset.columns)
 
-    def _build_gower_types(self):
+    def _build_gower_types(self) -> dict:
         return {
             "r": tuple(self._get_features_by_type([Real, Integer])),
             "c": tuple(self._get_features_by_type([Choice, Binary]))
