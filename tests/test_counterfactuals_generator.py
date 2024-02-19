@@ -13,6 +13,10 @@ from decode_mcd.multi_objective_problem import MultiObjectiveProblem
 
 
 class RevertToQueryRepairTest(unittest.TestCase):
+    @unittest.skip
+    def test_records_with_incorrect_column_order(self):
+        pass
+
     def test_revert_none_when_all_outside_valid_range(self):
         repair = _RevertToQueryRepair()
         package = self.build_package(np.array([[11, 12, 13]]),
