@@ -34,8 +34,11 @@ class _RevertToQueryRepair(Repair):
     def _do(self, problem: MultiObjectiveProblem, Z, **kwargs):
         # noinspection PyProtectedMember
         revertible_indexes = problem._revertible_indexes
-        qxs = problem._data_package.query_x.values[:, revertible_indexes]
-        full_Z_dataframe = pd.DataFrame.from_records(Z)
+        original_x = problem._data_package.query_x
+        qxs = original_x.values[:, revertible_indexes]
+        # TODO: confirm existence of column ordering bug and check if this fix is valid
+        full_Z_dataframe = pd.DataFrame.from_records(Z, columns=[c for c in original_x.columns
+                                                                 if c in problem._data_package.features_to_vary])
         full_Z_np = full_Z_dataframe.values
         reverted_subset = self._revert_subset(full_Z_np, qxs, revertible_indexes)
         full_Z_np[:, revertible_indexes] = reverted_subset
