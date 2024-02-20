@@ -44,6 +44,10 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         )
         self.static_problem = MOP
 
+    @unittest.skip
+    def test_valid_dataset_subset_when_many_features_to_freeze(self):
+        pass
+
     def test_evaluate_subset(self):
         problem = self.build_problem(self.build_package(features_to_vary=["x", "y"]))
         out = {}
