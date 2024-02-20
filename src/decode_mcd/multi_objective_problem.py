@@ -170,8 +170,9 @@ class MultiObjectiveProblem(Problem):
         if len(f2f) > 0:
             f_d_view = f_d[f2f]
             query_view = self._data_package.query_x[f2f]
-            p_d = p_d[np.equal(f_d_view.values, query_view.values)]
-            f_d = f_d[np.equal(f_d_view.values, query_view.values)]
+            # TODO: test this!
+            p_d = p_d[np.equal(f_d_view.values, query_view.values).all(axis=1)]
+            f_d = f_d[np.equal(f_d_view.values, query_view.values).all(axis=1)]
         self._data_package.features_dataset = f_d
         self._data_package.predictions_dataset = p_d
 
