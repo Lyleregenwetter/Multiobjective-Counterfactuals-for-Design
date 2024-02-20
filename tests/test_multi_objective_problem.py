@@ -44,6 +44,10 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         )
         self.static_problem = MOP
 
+    @unittest.skip
+    def test_valid_dataset_subset_when_many_features_to_freeze(self):
+        pass
+
     def test_evaluate_subset(self):
         problem = self.build_problem(self.build_package(features_to_vary=["x", "y"]))
         out = {}
@@ -147,10 +151,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         np_test.assert_array_almost_equal(scores,
                                           np.array([[2.35, 3.33, 0.339, 0.75, 0.298],
                                                     [3.35, 4.45, 0.614, 1, 0.556]]), decimal=3)
-
-    @unittest.skip
-    def test_get_mixed_constraint_satisfaction_with_x_constraints(self):
-        pass
 
     def test_get_mixed_constraint_satisfaction(self):
         """
