@@ -237,7 +237,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                         """Warning: Very small diversity can cause numerical instability. 
                         We recommend keeping diversity above 0.1 or setting diversity to 0""")
                 if len(agg_scores) > num_dpp:
-                    index = np.argpartition(agg_scores, -num_dpp)[-num_dpp:]
+                    index = np.argpartition(agg_scores, num_dpp)[:num_dpp]
                 else:
                     index = range(len(agg_scores))
                 samples_index = self._diverse_sample(all_cf_x[index], agg_scores[index], num_samples, diversity_weight)
@@ -258,7 +258,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         cf_quality = all_cf_y[:, _GOWER_INDEX] * gower_weight + \
                      all_cf_y[:, _CHANGED_FEATURE_INDEX] * cfc_weight + \
                      all_cf_y[:, _AVG_GOWER_INDEX] * avg_gower_weight
-        agg_scores = 1 - label_scores + cf_quality
+        agg_scores = label_scores + cf_quality
         # For quick debugging
         self._label_scores = label_scores
         self._agg_scores = agg_scores
