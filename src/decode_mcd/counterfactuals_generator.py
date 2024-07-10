@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.callback import Callback
+from pymoo.core.duplicate import NoDuplicateElimination
 from pymoo.core.evaluator import Evaluator
 from pymoo.core.mixed import MixedVariableMating, MixedVariableSampling
 from pymoo.core.population import Population
@@ -20,6 +21,7 @@ from decode_mcd_private import calculate_dtai as calculate_dtai, DPPsampling as 
 from decode_mcd_private.efficient_mixed_duplicate_elimination import EfficientMixedVariableDuplicateElimination
 from decode_mcd_private.stats_methods import mixed_gower
 from decode_mcd_private.validation_utils import validate
+
 
 _DEFAULT_BETA = 4
 
@@ -167,13 +169,15 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self._algorithm = self._build_algorithm(pop)
 
     def _build_algorithm(self, population):
-        return NSGA2(pop_size=self._pop_size, sampling=population,
-                     mating=MixedVariableMating(eliminate_duplicates=EfficientMixedVariableDuplicateElimination(),
+        algorithm =  NSGA2(pop_size=self._pop_size, sampling=population,
+                     mating=MixedVariableMating(eliminate_duplicates=EfficientMixedVariableDuplicateElimination(), 
                                                 repair=_RevertToQueryRepair()),
-                     eliminate_duplicates=EfficientMixedVariableDuplicateElimination(),
+                     eliminate_duplicates=NoDuplicateElimination(), #no duplicate elimination when initializing from dataset
                      callback=_AllOffspringCallback(),
                      output=MultiObjectiveOutput(),  # this is necessary because this object is mutable
                      save_history=False)
+        algorithm.eliminate_duplicates = EfficientMixedVariableDuplicateElimination() #set efficient duplicate elimination
+        return algorithm
 
     def _initialize_population(self, query_pop):
         if self._initialize_from_dataset:
