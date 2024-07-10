@@ -59,8 +59,10 @@ scikit-learn==1.2.2
 scipy==1.11.2
 SecretStorage==3.3.3
 six==1.16.0
+snakeviz==2.2.0
 threadpoolctl==3.2.0
 tomli==2.0.1
+tornado==6.4.1
 tqdm==4.66.1
 twine==4.0.2
 tzdata==2023.3
