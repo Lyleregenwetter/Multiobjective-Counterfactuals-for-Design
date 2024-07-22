@@ -23,7 +23,7 @@
 
 [//]: # (  <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design">)
 
-[//]: # (    <img src="images/logo.png" alt="Logo" width="80" height="80">)
+[//]: # (    <img src="MCD.png" alt="Logo" width="80" height="80">)
 
 [//]: # (  </a>)
 
@@ -32,6 +32,10 @@
   <p>
     MCD generates counterfactuals that meet multiple, customizable objectives in both the feature and performance spaces.  
     <br />
+  <p>
+    ![Overview](MCD.png)
+    <br />
+
 
 [//]: # (    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design"><strong>Explore the docs »</strong></a>)
 
