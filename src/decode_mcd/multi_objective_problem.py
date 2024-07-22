@@ -43,7 +43,7 @@ class MultiObjectiveProblem(Problem):
         self._avg_gower_sample_seed = MEANING_OF_LIFE
         self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
         self._revertible_indexes = self._get_revertible_indexes()
-        # dataset
+
 
     def set_average_gower_sampling_parameters(self, sample_size: int, sample_seed: int):
         self._validate(sample_size > 0, "Invalid sample size; must be greater than zero")

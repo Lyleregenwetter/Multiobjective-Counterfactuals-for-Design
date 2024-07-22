@@ -30,7 +30,7 @@
 [//]: # (<h3 align="center">Multiobjective Counterfactuals for Design &#40;MCD&#41;</h3>)
 
   <p>
-    MCD generates counterfactuals that meet multiple, customizable objectives in both the feature and performance spaces.  
+    MCD is a framework to identify tractable "counterfactual" modifications to a design that achieve a set of desired properties. MCD searches for these counterfactuals by iteratively querying a set of property predictors provided by the user. MCD is capable of recommending design modifications that meet multiple, customizable objectives in both the feature and performance spaces. 
     <br />
 
 
