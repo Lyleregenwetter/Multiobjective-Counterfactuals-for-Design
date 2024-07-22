@@ -348,6 +348,12 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 [//]: # (<p align="right">&#40;<a href="#readme-top">back to top</a>&#41;</p>)
 
+##Citation
+
+If you use MCD for research, please consider citing our [paper](https://arxiv.org/pdf/2305.11308):
+Regenwetter, L., Abu Obaideh, Y., and Ahmed, F. (July 16, 2024). "MCD: A Model-Agnostic Counterfactual Search
+Method For Multi-modal Design Modifications." ASME. J. Mech. Des. doi: https://doi.org/10.1115/1.4065998
+
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
