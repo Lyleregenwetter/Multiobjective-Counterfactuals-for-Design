@@ -348,7 +348,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 [//]: # (<p align="right">&#40;<a href="#readme-top">back to top</a>&#41;</p>)
 
-##Citation
+## Citation
 
 If you use MCD for research, please consider citing our [paper](https://arxiv.org/pdf/2305.11308):
 Regenwetter, L., Abu Obaideh, Y., and Ahmed, F. (July 16, 2024). "MCD: A Model-Agnostic Counterfactual Search
