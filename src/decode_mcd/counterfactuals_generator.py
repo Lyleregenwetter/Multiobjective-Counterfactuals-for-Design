@@ -312,12 +312,12 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._verbose_log("Done! Returning CFs")
         # noinspection PyProtectedMember
         return pd.DataFrame(self._problem._build_full_df(x),
-                            columns=self._problem._data_package.features_dataset.columns)
+                            columns=self._problem._data_package.valid_features_dataset.columns)
 
     def _generate_dataset_pop(self):
         # TODO remove any that are out of range or that change features that are supposed to be fixed
         if self._dataset_pop is None:  # Evaluate Pop if not done already
-            x = self._problem._data_package.features_dataset
+            x = self._problem._data_package.valid_features_dataset
             x = x.loc[:, self._problem._data_package.features_to_vary].to_dict("records")
             pop = Population.new("X", x)
             Evaluator().eval(self._problem, pop, datasetflag=True)
