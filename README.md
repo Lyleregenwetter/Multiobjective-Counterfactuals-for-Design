@@ -37,6 +37,10 @@
     <br />
 
 
+  <p>
+    ![image](MCD.png)
+    <br />
+
 [//]: # (    <a href="https://github.com/Lyleregenwetter/Multiobjective-Counterfactuals-for-Design"><strong>Explore the docs »</strong></a>)
 
 [//]: # (    <br />)
