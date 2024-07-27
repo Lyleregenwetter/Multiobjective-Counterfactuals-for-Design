@@ -9,6 +9,13 @@ from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 from decode_mcd.design_targets import DesignTargets
 from decode_mcd_private.validation_utils import validate
 
+QUERY_X_INVALID_BINARY_TYPE = "[query_x] has a variable specified as binary by datatypes " \
+                              "whose value is not True, False, 1, or 0"
+
+QUERY_X_INVALID_DATATYPES_CHOICE = "[query_x] has a choice variable that is not permitted by datatypes"
+
+QUERY_X_OUTSIDE_TYPES_RANGE = "[query_x] parameters fall outside of range specified by datatypes"
+
 
 class DataPackage:
     def __init__(self,
@@ -90,6 +97,7 @@ class DataPackage:
         self._validate_design_targets()
         self._validate_bonus_objs()
         self._validate_datatypes()
+        self._validate_query_x_against_datatypes()
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
     def _cross_validate_datasets(self):
@@ -183,8 +191,28 @@ class DataPackage:
             elif type(dt) == pymoo.core.variable.Choice:
                 self._validate_has_field(dt.options is not None, "options", "Choice")
 
-    def _validate_has_field(self, condition: bool, field_name: str, class_name:  str):
+    def _validate_has_field(self, condition: bool, field_name: str, class_name: str):
         validate(condition,
                  f"Parameter [datatypes] is invalid: {field_name} cannot be None for object of type "
                  f"pymoo.core.variable.{class_name}")
 
+    def _validate_query_x_against_datatypes(self):
+        for i in range(len(self.datatypes)):
+            dt = self.datatypes[i]
+            val = self.query_x.values[0][i]
+            if type(dt) in [Real, Integer]:
+                self._validate_range(dt, val)
+            if type(dt) is Choice:
+                validate(val in dt.options,
+                         QUERY_X_INVALID_DATATYPES_CHOICE)
+            if type(dt) is Binary:
+                validate(val in [True, False] or val == 1 or val == 0,
+                         QUERY_X_INVALID_BINARY_TYPE)
+
+    def _validate_range(self, dt: Union[Integer, Real], val: Union[float, int]):
+        lower_bound = dt.bounds[0]
+        upper_bound = dt.bounds[1]
+        validate(val >= lower_bound,
+                 QUERY_X_OUTSIDE_TYPES_RANGE)
+        validate(val <= upper_bound,
+                 QUERY_X_OUTSIDE_TYPES_RANGE)

@@ -1,9 +1,9 @@
 import unittest
 
 import numpy as np
-import pandas as pd
 import numpy.testing as np_test
-from pymoo.core.variable import Real, Choice, Integer
+import pandas as pd
+from pymoo.core.variable import Real, Choice, Integer, Binary
 
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget
@@ -119,6 +119,44 @@ class DataPackageTest(unittest.TestCase):
             }
         )
 
+    def test_query_x_outside_of_datatypes_range(self):
+        def build_problem_with_query_x_out_of_range():
+            self.initialize(query_x=pd.DataFrame(np.array([[-110, -110, -110]]),
+                                                 columns=["x", "y", "z"]
+                                                 ))
+
+        def build_problem_with_query_x_integer_out_of_range():
+            self.initialize(query_x=pd.DataFrame(np.array([[-110, -110, -110]]),
+                                                 columns=["x", "y", "z"]
+                                                 ), datatypes=[Integer(bounds=(0, 5)) for _ in range(3)])
+
+        self.assert_raises_with_message(build_problem_with_query_x_out_of_range,
+                                        "[query_x] parameters fall outside of range specified by datatypes")
+        self.assert_raises_with_message(build_problem_with_query_x_integer_out_of_range,
+                                        "[query_x] parameters fall outside of range specified by datatypes")
+
+    def test_query_x_with_invalid_choices(self):
+        def build_problem_with_invalid_choice_in_query_x():
+            self.initialize(query_x=pd.DataFrame(np.array([[-110, -120, -110]]),
+                                                 columns=["x", "y", "z"]
+                                                 ),
+                            datatypes=[Real(bounds=(-200, 0)), Choice(options=(-100, -110)), Real(bounds=(-200, 0))])
+
+        self.assert_raises_with_message(build_problem_with_invalid_choice_in_query_x,
+                                        "[query_x] has a choice variable that is not permitted by datatypes")
+
+        def build_problem_with_invalid_binary_in_query_x():
+            self.initialize(query_x=pd.DataFrame(np.array([[-110, 3, -110]]),
+                                                 columns=["x", "y", "z"]
+                                                 ),
+                            datatypes=[Real(bounds=(-200, 0)), Binary(), Real(bounds=(-200, 0))])
+
+        self.assert_raises_with_message(build_problem_with_invalid_choice_in_query_x,
+                                        "[query_x] has a choice variable that is not permitted by datatypes")
+        self.assert_raises_with_message(build_problem_with_invalid_binary_in_query_x,
+                                        "[query_x] has a variable specified as binary by datatypes"
+                                        " whose value is not True, False, 1, or 0")
+
     def test_initialize_with_numpy_arrays(self):
         features = np.array([[1, 2, 3], [4, 5, 6]])
         predictions = np.array([[1, 2], [3, 4]])
@@ -149,7 +187,7 @@ class DataPackageTest(unittest.TestCase):
                    features_to_vary=None,
                    bonus_objectives=None,
                    datatypes=None):
-        datatypes = self.get_or_default(datatypes, [Real(1, 4), Real(2, 5), Real(3, 6)])
+        datatypes = self.get_or_default(datatypes, [Real(bounds=(1, 4)), Real(bounds=(2, 5)), Real(bounds=(3, 6))])
         features_to_vary = self.get_or_default(features_to_vary, ["x", "y"])
         design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
         bonus_objectives = self.get_or_default(bonus_objectives, ["A"])
