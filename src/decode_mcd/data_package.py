@@ -90,6 +90,7 @@ class DataPackage:
         self._validate_design_targets()
         self._validate_bonus_objs()
         self._validate_datatypes()
+        self._validate_query_x_against_datatypes()
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
     def _cross_validate_datasets(self):
@@ -183,8 +184,27 @@ class DataPackage:
             elif type(dt) == pymoo.core.variable.Choice:
                 self._validate_has_field(dt.options is not None, "options", "Choice")
 
-    def _validate_has_field(self, condition: bool, field_name: str, class_name:  str):
+    def _validate_has_field(self, condition: bool, field_name: str, class_name: str):
         validate(condition,
                  f"Parameter [datatypes] is invalid: {field_name} cannot be None for object of type "
                  f"pymoo.core.variable.{class_name}")
 
+    def _validate_query_x_against_datatypes(self):
+        for i in range(len(self.datatypes)):
+            dt = self.datatypes[i]
+            val = self.query_x.values[0][i]
+            if type(dt) in [pymoo.core.variable.Real, pymoo.core.variable.Integer]:
+                lower_bound = dt.bounds[0]
+                upper_bound = dt.bounds[1]
+                validate(val >= lower_bound,
+                         "[query_x] parameters fall outside of range specified by datatypes")
+                validate(val <= upper_bound,
+                         "[query_x] parameters fall outside of range specified by datatypes")
+            if type(dt) in [pymoo.core.variable.Choice]:
+                validate(val in dt.options,
+                         "[query_x] has a choice variable that is not permitted by datatypes")
+
+            if type(dt) in [pymoo.core.variable.Binary]:
+                validate(val in [True, False] or val == 1 or val == 0,
+                         "[query_x] has a variable specified as binary by datatypes "
+                         "whose value is not True, False, 1, or 0")

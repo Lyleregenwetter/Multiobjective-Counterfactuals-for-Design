@@ -17,20 +17,12 @@ class RevertToQueryRepairTest(unittest.TestCase):
     def test_records_with_incorrect_column_order(self):
         pass
 
-    def test_revert_none_when_all_outside_valid_range(self):
-        repair = _RevertToQueryRepair()
-        package = self.build_package(np.array([[11, 12, 13]]),
-                                     [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
-        problem = MultiObjectiveProblem(data_package=package, prediction_function=lambda x: x, constraint_functions=[])
-        revertible = problem._get_revertible_indexes()
-        self.assertEqual((), revertible)
-        z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
-        repaired = repair._do(problem, z)
-        repaired_array = pd.DataFrame.from_records(repaired).values
-        initial_array = pd.DataFrame.from_records(z).values
-        np_test.assert_equal(repaired_array, initial_array)
-
+    @unittest.skip
     def test_revert_some(self):
+        """We no longer allow query_x to be outside valid ranges,
+        so this check is needless. I'm keeping the test so we know
+        to remove the redundant check in the code or otherwise replace it with
+        a more meaningful check."""
         repair = _RevertToQueryRepair()
         package = self.build_package(np.array([[11, 8, 13]]),
                                      [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
