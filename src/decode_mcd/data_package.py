@@ -9,6 +9,13 @@ from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 from decode_mcd.design_targets import DesignTargets
 from decode_mcd_private.validation_utils import validate
 
+QUERY_X_INVALID_BINARY_TYPE = "[query_x] has a variable specified as binary by datatypes " \
+                              "whose value is not True, False, 1, or 0"
+
+QUERY_X_INVALID_DATATYPES_CHOICE = "[query_x] has a choice variable that is not permitted by datatypes"
+
+QUERY_X_OUTSIDE_TYPES_RANGE = "[query_x] parameters fall outside of range specified by datatypes"
+
 
 class DataPackage:
     def __init__(self,
@@ -193,18 +200,19 @@ class DataPackage:
         for i in range(len(self.datatypes)):
             dt = self.datatypes[i]
             val = self.query_x.values[0][i]
-            if type(dt) in [pymoo.core.variable.Real, pymoo.core.variable.Integer]:
-                lower_bound = dt.bounds[0]
-                upper_bound = dt.bounds[1]
-                validate(val >= lower_bound,
-                         "[query_x] parameters fall outside of range specified by datatypes")
-                validate(val <= upper_bound,
-                         "[query_x] parameters fall outside of range specified by datatypes")
-            if type(dt) in [pymoo.core.variable.Choice]:
+            if type(dt) in [Real, Integer]:
+                self._validate_range(dt, val)
+            if type(dt) is Choice:
                 validate(val in dt.options,
-                         "[query_x] has a choice variable that is not permitted by datatypes")
-
-            if type(dt) in [pymoo.core.variable.Binary]:
+                         QUERY_X_INVALID_DATATYPES_CHOICE)
+            if type(dt) is Binary:
                 validate(val in [True, False] or val == 1 or val == 0,
-                         "[query_x] has a variable specified as binary by datatypes "
-                         "whose value is not True, False, 1, or 0")
+                         QUERY_X_INVALID_BINARY_TYPE)
+
+    def _validate_range(self, dt: Union[Integer, Real], val: Union[float, int]):
+        lower_bound = dt.bounds[0]
+        upper_bound = dt.bounds[1]
+        validate(val >= lower_bound,
+                 QUERY_X_OUTSIDE_TYPES_RANGE)
+        validate(val <= upper_bound,
+                 QUERY_X_OUTSIDE_TYPES_RANGE)
