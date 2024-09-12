@@ -39,7 +39,7 @@ class ContinuousTarget(McdTarget):
         validate(isinstance(bound, numbers.Real), f"{bound_name} must be a real number")
 
 
-class ClassificationTarget(McdTarget):
+class CategoricalTarget(McdTarget):
     def __init__(self, label: Union[str, int], desired_classes: Union[Sequence[str], Sequence[int]]):
         self.label = label
         self.desired_classes = desired_classes
@@ -91,10 +91,10 @@ class ProbabilityTarget(McdTarget):
 
 class DesignTargets:
     def __init__(self, continuous_targets: Sequence[ContinuousTarget] = None,
-                 classification_targets: Sequence[ClassificationTarget] = None,
+                 categorical_targets: Sequence[CategoricalTarget] = None,
                  probability_targets: Sequence[ProbabilityTarget] = None):
         self.continuous_targets = self._get_or_default(continuous_targets, ())
-        self.classification_targets = self._get_or_default(classification_targets, ())
+        self.categorical_targets = self._get_or_default(categorical_targets, ())
         self.probability_targets = self._get_or_default(probability_targets, ())
         self._validate_fields()
 
@@ -115,7 +115,7 @@ class DesignTargets:
 
     def _validate_fields(self):
         self._validate_sequence(self.continuous_targets, "Continuous targets", ContinuousTarget)
-        self._validate_sequence(self.classification_targets, "Classification targets", ClassificationTarget)
+        self._validate_sequence(self.categorical_targets, "Classification targets", CategoricalTarget)
         self._validate_sequence(self.probability_targets, "Probability targets", ProbabilityTarget)
         self._validate_no_crossover()
         validate(self.count_constrained_labels() > 0, "Design targets must be provided")
@@ -144,7 +144,7 @@ class DesignTargets:
         return np.array(lower_bounds), np.array(upper_bounds)
 
     def get_desired_classes(self) -> List[Union[Sequence[str], Sequence[int]]]:
-        return [target.desired_classes for target in self.classification_targets]
+        return [target.desired_classes for target in self.categorical_targets]
 
     def get_preferred_probability_targets(self) -> List[Union[Sequence[str], Sequence[int]]]:
         return [target.preferred_labels for target in self.probability_targets]
@@ -153,7 +153,7 @@ class DesignTargets:
         return tuple(target.label for target in self.continuous_targets)
 
     def get_classification_labels(self) -> Tuple[str, ...]:
-        return tuple(target.label for target in self.classification_targets)
+        return tuple(target.label for target in self.categorical_targets)
 
     def get_probability_labels(self) -> Tuple[Tuple[str, ...], ...]:
         return tuple(target.labels for target in self.probability_targets)
