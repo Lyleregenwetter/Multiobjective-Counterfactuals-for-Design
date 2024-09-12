@@ -6,7 +6,7 @@ import pandas as pd
 from pymoo.core.variable import Real, Choice
 
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import ContinuousTarget, DesignTargets, ClassificationTarget, ProbabilityTarget
+from decode_mcd.design_targets import ContinuousTarget, DesignTargets, CategoricalTarget, ProbabilityTarget
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem as MOP
 
 
@@ -80,7 +80,7 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         problem = self.build_problem(self.build_package())
         targets = DesignTargets(
             [ContinuousTarget(0, 2, 6), ContinuousTarget(2, 10, 16)],
-            [ClassificationTarget(1, (200, 300)), ClassificationTarget(3, (550,))],
+            [CategoricalTarget(1, (200, 300)), CategoricalTarget(3, (550,))],
             [ProbabilityTarget((4, 5), (5,))]
         )
         satisfaction = problem._calculate_mixed_constraint_satisfaction(x_full=x_full,

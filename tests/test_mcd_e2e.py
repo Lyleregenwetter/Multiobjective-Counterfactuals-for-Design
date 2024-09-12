@@ -12,7 +12,7 @@ from pymoo.core.variable import Real, Choice
 import decode_mcd.multi_objective_problem as MOP
 from decode_mcd import counterfactuals_generator
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget, ProbabilityTarget
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, ProbabilityTarget
 from tests.alt_multi_label_predictor import MultilabelPredictor
 
 sys.path.append(os.path.dirname(__file__))
@@ -41,7 +41,7 @@ class McdEndToEndTest(unittest.TestCase):
         datatypes = self.build_toy_x_datatypes()
         targets = DesignTargets(
             [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6)],
-            [ClassificationTarget("O_C1", (1, 2)), ClassificationTarget("O_C2", (1,))],
+            [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
             [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
@@ -59,7 +59,7 @@ class McdEndToEndTest(unittest.TestCase):
 
         self.assert_x_constraint_met(cfs)
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
-        self.assert_classification_target_met(cfs, "O_C1", [1])
+        self.assert_categorical_target_met(cfs, "O_C1", [1])
         self.assert_proba_target_met(cfs, "O_P1")
         self.assert_cfs_within_valid_range(cfs)
 
@@ -91,7 +91,7 @@ class McdEndToEndTest(unittest.TestCase):
         datatypes = self.build_toy_x_datatypes()
         targets = DesignTargets(
             [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6)],
-            [ClassificationTarget("O_C1", (1, 2)), ClassificationTarget("O_C2", (1,))],
+            [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
             [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
@@ -108,7 +108,7 @@ class McdEndToEndTest(unittest.TestCase):
                                          num_dpp=10000)
 
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
-        self.assert_classification_target_met(cfs, "O_C1", [1])
+        self.assert_categorical_target_met(cfs, "O_C1", [1])
         self.assert_proba_target_met(cfs, "O_P1")
         self.assert_cfs_within_valid_range(cfs)
 
@@ -138,7 +138,7 @@ class McdEndToEndTest(unittest.TestCase):
         datatypes = self.build_toy_x_datatypes()
         targets = DesignTargets(
             [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6)],
-            [ClassificationTarget("O_C1", (1, 2)), ClassificationTarget("O_C2", (1,))],
+            [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
             [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
         dp = DataPackage(features_dataset=x, predictions_dataset=y,
@@ -155,7 +155,7 @@ class McdEndToEndTest(unittest.TestCase):
                                          num_dpp=10000)
 
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
-        self.assert_classification_target_met(cfs, "O_C1", [1])
+        self.assert_categorical_target_met(cfs, "O_C1", [1])
         self.assert_proba_target_met(cfs, "O_P1")
         self.assert_cfs_within_valid_range(cfs)
 
@@ -185,7 +185,7 @@ class McdEndToEndTest(unittest.TestCase):
                                         proba_results[other_proba].values)
         np_test.assert_equal(proba_satisfaction, 1)
 
-    def assert_classification_target_met(self, cfs: pd.DataFrame, label: str, desired_classes: list):
+    def assert_categorical_target_met(self, cfs: pd.DataFrame, label: str, desired_classes: list):
         classification_results = self.predict_subset([label], cfs).values
         satisfaction = np.isin(classification_results, desired_classes)
         np_test.assert_equal(satisfaction, 1)
