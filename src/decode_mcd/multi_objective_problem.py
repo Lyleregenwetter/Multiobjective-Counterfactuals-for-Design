@@ -220,7 +220,7 @@ class MultiObjectiveProblem(Problem):
         self._append_satisfaction(result, self._evaluate_regression_satisfaction, y, design_targets,
                                   design_targets.get_continuous_labels())
         self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, design_targets,
-                                  design_targets.get_classification_labels())
+                                  design_targets.get_categorical_labels())
         result = self.drop_non_constrained_columns(design_targets, len(x_constraint_functions), result, y)
         return result
 
@@ -256,7 +256,7 @@ class MultiObjectiveProblem(Problem):
             result[:, initial_num_columns - 1 - i] = x_constraint_functions[i](x_full).values.flatten()
 
     def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: DesignTargets):
-        actual = y.loc[:, y_category_constraints.get_classification_labels()]
+        actual = y.loc[:, y_category_constraints.get_categorical_labels()]
         # dtype=object is needed, otherwise the operation is deprecated
         targets = np.array([[i for i in j] for j in y_category_constraints.get_desired_classes()], dtype=object)
         return 1 - ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
