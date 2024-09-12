@@ -115,7 +115,7 @@ class DesignTargets:
 
     def _validate_fields(self):
         self._validate_sequence(self.continuous_targets, "Continuous targets", ContinuousTarget)
-        self._validate_sequence(self.categorical_targets, "Classification targets", CategoricalTarget)
+        self._validate_sequence(self.categorical_targets, "Categorical targets", CategoricalTarget)
         self._validate_sequence(self.probability_targets, "Probability targets", ProbabilityTarget)
         self._validate_no_crossover()
         validate(self.count_constrained_labels() > 0, "Design targets must be provided")
@@ -132,9 +132,9 @@ class DesignTargets:
 
     def _validate_no_crossover(self):
         continuous = set(self.get_continuous_labels())
-        classification = set(self.get_categorical_labels())
+        categorical = set(self.get_categorical_labels())
         probability = set(self._get_probability_labels())
-        len_union = len((continuous | classification) | probability)
+        len_union = len((continuous | categorical) | probability)
         validate(self.count_constrained_labels() == len_union,
                  "Label was specified twice in targets")
 
