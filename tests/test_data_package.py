@@ -6,7 +6,7 @@ import pandas as pd
 from pymoo.core.variable import Real, Choice, Integer, Binary
 
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import DesignTargets, ContinuousTarget, ClassificationTarget
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget
 from decode_mcd.mcd_exceptions import UserInputException
 
 
@@ -51,7 +51,7 @@ class DataPackageTest(unittest.TestCase):
                 "Invalid value in design_targets: expected columns ['Z'] "
                 "to be in predictions_dataset columns ['A' 'B']",
             lambda: self.initialize(design_targets=DesignTargets([ContinuousTarget("A", 3, 10)],
-                                                                 [ClassificationTarget("Z", (1, 2))])):
+                                                                 [CategoricalTarget("Z", (1, 2))])):
                 "Invalid value in design_targets: expected columns ['Z'] "
                 "to be in predictions_dataset columns ['A' 'B']"
         })

@@ -99,7 +99,7 @@ class DesignTargets:
         self._validate_fields()
 
     def get_all_constrained_labels(self):
-        return self._get_probability_labels() + self.get_continuous_labels() + self.get_classification_labels()
+        return self._get_probability_labels() + self.get_continuous_labels() + self.get_categorical_labels()
 
     def count_constrained_labels(self):
         return len(self.get_all_constrained_labels())
@@ -132,7 +132,7 @@ class DesignTargets:
 
     def _validate_no_crossover(self):
         continuous = set(self.get_continuous_labels())
-        classification = set(self.get_classification_labels())
+        classification = set(self.get_categorical_labels())
         probability = set(self._get_probability_labels())
         len_union = len((continuous | classification) | probability)
         validate(self.count_constrained_labels() == len_union,
@@ -152,7 +152,7 @@ class DesignTargets:
     def get_continuous_labels(self) -> Tuple[str, ...]:
         return tuple(target.label for target in self.continuous_targets)
 
-    def get_classification_labels(self) -> Tuple[str, ...]:
+    def get_categorical_labels(self) -> Tuple[str, ...]:
         return tuple(target.label for target in self.categorical_targets)
 
     def get_probability_labels(self) -> Tuple[Tuple[str, ...], ...]:

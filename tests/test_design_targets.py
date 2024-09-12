@@ -9,12 +9,12 @@ from decode_mcd.mcd_exceptions import UserInputException
 class DesignTargetsTest(unittest.TestCase):
     def test_count_constrained_labels(self):
         targets = DesignTargets([ContinuousTarget("A", 12, 15), ContinuousTarget("B", 12, 15)],
-                                [ClassificationTarget("C", (1, 2)), ClassificationTarget("D", (1, 2))],
+                                [CategoricalTarget("C", (1, 2)), CategoricalTarget("D", (1, 2))],
                                 [ProbabilityTarget(("E", "F"), ("E",)),
                                  ProbabilityTarget(("G", "H", "L"), ("H", "L"))])
         self.assertEqual(9, targets.count_constrained_labels())
         self.assertEqual(("A", "B"), targets.get_continuous_labels())
-        self.assertEqual(("C", "D"), targets.get_classification_labels())
+        self.assertEqual(("C", "D"), targets.get_categorical_labels())
         self.assertEqual((("E", "F"), ("G", "H", "L")), targets.get_probability_labels())
         np_test.assert_equal(np.array([[12, 12], [15, 15]]), targets.get_continuous_boundaries())
 
@@ -22,25 +22,25 @@ class DesignTargetsTest(unittest.TestCase):
     def test_invalid_design_targets(self):
         self._test_invalid({
             lambda: DesignTargets({}): "Continuous targets must be a sequence",
-            lambda: DesignTargets(classification_targets=[None]):
-                "Classification targets must be composed of elements of class ClassificationTarget",
+            lambda: DesignTargets(categorical_targets=[None]):
+                "Categorical targets must be composed of elements of class CategoricalTarget",
             lambda: DesignTargets(): "Design targets must be provided",
             lambda: DesignTargets(
                 continuous_targets=[ContinuousTarget("A", 12, 15),
                                     ContinuousTarget("A", 12, 15)]): "Label was specified twice in targets",
             lambda: DesignTargets(
                 continuous_targets=[ContinuousTarget("A", 12, 15)],
-                classification_targets=[ClassificationTarget("A", (1,))]): "Label was specified twice in targets",
+                categorical_targets=[CategoricalTarget("A", (1,))]): "Label was specified twice in targets",
         },
         )
 
     # noinspection PyTypeChecker
-    def test_invalid_classification_target(self):
+    def test_invalid_categorical_target(self):
         self._test_invalid({
-            lambda: ClassificationTarget(None, (50,)): "Label must be of type string or an integer index",
-            lambda: ClassificationTarget("", (50,)): "Label cannot be an empty string",
-            lambda: ClassificationTarget("LABEL", ()): "Desired classes cannot be empty",
-            lambda: ClassificationTarget("LABEL", ("A",)): "Desired classes must be an all-integer sequence",
+            lambda: CategoricalTarget(None, (50,)): "Label must be of type string or an integer index",
+            lambda: CategoricalTarget("", (50,)): "Label cannot be an empty string",
+            lambda: CategoricalTarget("LABEL", ()): "Desired classes cannot be empty",
+            lambda: CategoricalTarget("LABEL", ("A",)): "Desired classes must be an all-integer sequence",
         })
 
     # noinspection PyTypeChecker
@@ -73,9 +73,9 @@ class DesignTargetsTest(unittest.TestCase):
         ProbabilityTarget(labels=("A", "B", "C"), preferred_labels=["A", "B"])
         ProbabilityTarget(labels=(5, 6, 7), preferred_labels=(5,))
 
-    def test_valid_classification_target(self):
-        ClassificationTarget("LABEL", (5,))
-        ClassificationTarget(15, (5,))
+    def test_valid_categorical_target(self):
+        CategoricalTarget("LABEL", (5,))
+        CategoricalTarget(15, (5,))
 
     def test_valid_continuous_target(self):
         ContinuousTarget("LABEL", 50, 500)
