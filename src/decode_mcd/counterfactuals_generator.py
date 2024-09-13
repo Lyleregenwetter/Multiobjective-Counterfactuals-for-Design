@@ -50,10 +50,11 @@ class _RevertToQueryRepair(Repair):
     def _revert_subset(self, full_Z_np, qxs, revertible_indexes):
         revertible_subset = full_Z_np[:, revertible_indexes]
         elementwise_prob = np.random.beta(self.alpha, self.beta)
-        mask = np.random.binomial(size=np.shape(revertible_subset), n=1, p=elementwise_prob)
+        mask = np.random.binomial(size=np.shape(revertible_subset), n=1, p=elementwise_prob).astype(bool)
         # mask = mask * np.random.binomial(size=(np.shape(revertible_subset)[0], 1), n=1, p=self.rep_prob)
-        revertible_subset = qxs * mask + revertible_subset * (1 - mask)
-        return revertible_subset
+        reverted_subset = revertible_subset
+        reverted_subset[mask] = np.repeat(qxs, reverted_subset.shape[0], axis=0)[mask]
+        return reverted_subset
 
 
 class _AllOffspringCallback(Callback):
