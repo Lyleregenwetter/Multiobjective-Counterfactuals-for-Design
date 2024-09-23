@@ -51,11 +51,11 @@ class RevertToQueryRepairTest(unittest.TestCase):
 
     def build_package(self, query_x, datatypes):
         _array = np.array([[5, 10, 15], [12, 15, 123], [13, 145, 13]])
-        package = DataPackage(features_dataset=_array,
-                              predictions_dataset=_array,
-                              query_x=query_x,
-                              design_targets=DesignTargets([ContinuousTarget(0, 10, 15)]),
-                              datatypes=datatypes)
+        package = DataPackage(x=_array,
+                              y=_array,
+                              x_query=query_x,
+                              y_targets=DesignTargets([ContinuousTarget(0, 10, 15)]),
+                              x_datatypes=datatypes)
         return package
 
 
@@ -97,11 +97,11 @@ class CounterfactualsGeneratorTest(unittest.TestCase):
     def build_valid_problem(self):
         return MultiObjectiveProblem(
             data_package=DataPackage(
-                features_dataset=np.array([[1, 2, 3], [4, 5, 6]]),
-                predictions_dataset=np.array([[1, 2, 3], [4, 5, 6]]),
-                query_x=np.array([[5, 3, 1]]),
-                design_targets=DesignTargets([ContinuousTarget(0, 0, 10)]),
-                datatypes=[Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))]
+                x=np.array([[1, 2, 3], [4, 5, 6]]),
+                y=np.array([[1, 2, 3], [4, 5, 6]]),
+                x_query=np.array([[5, 3, 1]]),
+                y_targets=DesignTargets([ContinuousTarget(0, 0, 10)]),
+                x_datatypes=[Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))]
             ),
             prediction_function=lambda x: x,
             constraint_functions=[]

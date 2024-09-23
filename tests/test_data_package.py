@@ -6,7 +6,7 @@ import pandas as pd
 from pymoo.core.variable import Real, Choice, Integer, Binary
 
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, MinimizationTarget
 from decode_mcd.mcd_exceptions import UserInputException
 
 
@@ -84,7 +84,7 @@ class DataPackageTest(unittest.TestCase):
 
     def test_invalid_bonus_objectives(self):
         self.assert_raises_with_message(
-            lambda: self.initialize(bonus_objectives=["NON_EXISTENT"]),
+            lambda: self.initialize(design_targets=DesignTargets(minimization_targets=MinimizationTarget("NON_EXISTENT"))),
             "Bonus objectives should be a subset of labels!"
         )
 
@@ -189,15 +189,15 @@ class DataPackageTest(unittest.TestCase):
                    datatypes=None):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(1, 4)), Real(bounds=(2, 5)), Real(bounds=(3, 6))])
         features_to_vary = self.get_or_default(features_to_vary, ["x", "y"])
-        design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
-        bonus_objectives = self.get_or_default(bonus_objectives, ["A"])
-        return DataPackage(features_dataset=features_dataset,
-                           predictions_dataset=predictions_dataset,
-                           query_x=query_x,
+        design_targets = self.get_or_default(design_targets,
+                                             DesignTargets([ContinuousTarget("A", 4, 10)],
+                                                           minimization_targets=[MinimizationTarget("A")]))
+        return DataPackage(x=features_dataset,
+                           y=predictions_dataset,
+                           x_query=query_x,
                            features_to_vary=features_to_vary,
-                           design_targets=design_targets,
-                           bonus_objectives=bonus_objectives,
-                           datatypes=datatypes)
+                           y_targets=design_targets,
+                           x_datatypes=datatypes)
 
     def _test_invalid(self, invalid_scenarios: dict):
         for factory, exception_message in invalid_scenarios.items():

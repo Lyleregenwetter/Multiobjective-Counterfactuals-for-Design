@@ -44,6 +44,13 @@ class DesignTargetsTest(unittest.TestCase):
         })
 
     # noinspection PyTypeChecker
+    def test_invalid_minimization_target(self):
+        self._test_invalid({
+            lambda: MinimizationTarget({}): "Label must be of type string or an integer index",
+            lambda: MinimizationTarget(""): "Label cannot be an empty string",
+        })
+
+    # noinspection PyTypeChecker
     def test_invalid_continuous_target(self):
         self._test_invalid({
             lambda: ContinuousTarget("LABEL", 50, None): "Upper bound must be a real number",

@@ -15,11 +15,20 @@ class McdTarget(metaclass=ABCMeta):
     def _validate_fields(self):
         pass
 
-    def _validate_label(self, label: str):
+    def _validate_label(self, label: Union[str, int]):
         validate(isinstance(label, (str, int)),
                  "Label must be of type string or an integer index")
         validate(len(str(label)) != 0,
                  "Label cannot be an empty string")
+
+
+class MinimizationTarget(McdTarget):
+    def __init__(self, label: Union[str, int]):
+        self.label = label
+        self._validate_fields()
+
+    def _validate_fields(self):
+        self._validate_label(self.label)
 
 
 class ContinuousTarget(McdTarget):
@@ -92,10 +101,12 @@ class ProbabilityTarget(McdTarget):
 class DesignTargets:
     def __init__(self, continuous_targets: Sequence[ContinuousTarget] = None,
                  categorical_targets: Sequence[CategoricalTarget] = None,
-                 probability_targets: Sequence[ProbabilityTarget] = None):
+                 probability_targets: Sequence[ProbabilityTarget] = None,
+                 minimization_targets: Sequence[MinimizationTarget] = None):
         self.continuous_targets = self._get_or_default(continuous_targets, ())
         self.categorical_targets = self._get_or_default(categorical_targets, ())
         self.probability_targets = self._get_or_default(probability_targets, ())
+        self.minimization_targets = self._get_or_default(minimization_targets, ())
         self._validate_fields()
 
     def get_all_constrained_labels(self):

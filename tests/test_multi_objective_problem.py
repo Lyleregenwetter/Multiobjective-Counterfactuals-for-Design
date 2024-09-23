@@ -6,7 +6,8 @@ import pandas as pd
 from pymoo.core.variable import Real, Choice
 
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import ContinuousTarget, DesignTargets, CategoricalTarget, ProbabilityTarget
+from decode_mcd.design_targets import ContinuousTarget, DesignTargets, CategoricalTarget, ProbabilityTarget, \
+    MinimizationTarget
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem as MOP
 
 
@@ -29,13 +30,12 @@ class MultiObjectiveProblemTest(unittest.TestCase):
             "z": 0
         })
         self.data_package = DataPackage(
-            features_dataset=features,
-            predictions_dataset=pd.DataFrame(np.random.rand(features.shape[0], 1), columns=["performance"]),
-            query_x=features[0:1],
+            x=features,
+            y=pd.DataFrame(np.random.rand(features.shape[0], 1), columns=["performance"]),
+            x_query=features[0:1],
             features_to_vary=["x", "y", "z"],
-            design_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
-            bonus_objectives=[],
-            datatypes=[Real(bounds=(-100, 100)), Real(bounds=(-100, 100)), Real(bounds=(-100, 100))]
+            y_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
+            x_datatypes=[Real(bounds=(-100, 100)), Real(bounds=(-100, 100)), Real(bounds=(-100, 100))]
         )
         self.problem = MOP(
             data_package=self.data_package,
@@ -130,17 +130,17 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                      Real(bounds=(-5, 50)),
                      Choice(options=(1000, 2000, 3000))]
         targets = DesignTargets(
-            [ContinuousTarget("O1", 100, 500)]
+            [ContinuousTarget("O1", 100, 500)],
+            minimization_targets=[MinimizationTarget("O2"), MinimizationTarget("O3")]
         )
 
         data_package = DataPackage(
-            features_dataset=features_dataset,
-            predictions_dataset=predictions_dataset,
-            query_x=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
-            design_targets=targets,
+            x=features_dataset,
+            y=predictions_dataset,
+            x_query=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
+            y_targets=targets,
             features_to_vary=features,
-            bonus_objectives=["O2", "O3"],
-            datatypes=datatypes
+            x_datatypes=datatypes
         )
         generator = MOP(data_package, lambda x: x, [])
 
@@ -186,15 +186,14 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(-100, 100)), Real(bounds=(-100, 100)),
                                                     Real(bounds=(-100, 100))])
         features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
-        design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
-        bonus_objectives = self.get_or_default(bonus_objectives, [])
-        return DataPackage(features_dataset=features_dataset,
-                           predictions_dataset=predictions_dataset,
-                           query_x=query_x,
+        design_targets = self.get_or_default(design_targets, DesignTargets(
+            [ContinuousTarget("A", 4, 10)]))
+        return DataPackage(x=features_dataset,
+                           y=predictions_dataset,
+                           x_query=query_x,
                            features_to_vary=features_to_vary,
-                           design_targets=design_targets,
-                           bonus_objectives=bonus_objectives,
-                           datatypes=datatypes)
+                           y_targets=design_targets,
+                           x_datatypes=datatypes)
 
     def get_or_default(self, value, default_value):
         if value is None:

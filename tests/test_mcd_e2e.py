@@ -12,7 +12,8 @@ from pymoo.core.variable import Real, Choice
 import decode_mcd.multi_objective_problem as MOP
 from decode_mcd import counterfactuals_generator
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, ProbabilityTarget
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, ProbabilityTarget, \
+    MinimizationTarget
 from tests.alt_multi_label_predictor import MultilabelPredictor
 
 sys.path.append(os.path.dirname(__file__))
@@ -44,9 +45,9 @@ class McdEndToEndTest(unittest.TestCase):
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
             [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         design_targets=targets, datatypes=datatypes)
+        dp = DataPackage(x=x, y=y,
+                         x_query=x.iloc[0:1], features_to_vary=x.columns,
+                         y_targets=targets, x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             prediction_function=self.predict_dummy_multiple_objectives,
@@ -70,9 +71,9 @@ class McdEndToEndTest(unittest.TestCase):
             [ContinuousTarget("O_R1", 0, 12),
              ContinuousTarget("O_R2", 0, 6)],
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                         design_targets=targets, datatypes=datatypes)
+        dp = DataPackage(x=x, y=y,
+                         x_query=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
+                         y_targets=targets, x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             prediction_function=self.predict_dummy_multiple_objectives,
@@ -94,9 +95,9 @@ class McdEndToEndTest(unittest.TestCase):
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
             [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                         design_targets=targets, datatypes=datatypes)
+        dp = DataPackage(x=x, y=y,
+                         x_query=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
+                         y_targets=targets, x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             prediction_function=self.predict_dummy_multiple_objectives,
@@ -116,11 +117,12 @@ class McdEndToEndTest(unittest.TestCase):
         x, y = self.x, self.y.drop(columns=self.y.columns.difference(["O_R1"]))
         datatypes = self.build_toy_x_datatypes()
         targets = DesignTargets(
-            [ContinuousTarget("O_R1", -5, 5)]
+            [ContinuousTarget("O_R1", -5, 5)],
+            minimization_targets=[MinimizationTarget("O_R1")]
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         design_targets=targets, datatypes=datatypes, bonus_objectives=["O_R1"])
+        dp = DataPackage(x=x, y=y,
+                         x_query=x.iloc[0:1], features_to_vary=x.columns,
+                         y_targets=targets, x_datatypes=datatypes)
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             prediction_function=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                   any_x),
@@ -141,9 +143,9 @@ class McdEndToEndTest(unittest.TestCase):
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
             [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         design_targets=targets, datatypes=datatypes)
+        dp = DataPackage(x=x, y=y,
+                         x_query=x.iloc[0:1], features_to_vary=x.columns,
+                         y_targets=targets, x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             prediction_function=self.predict_dummy_multiple_objectives,

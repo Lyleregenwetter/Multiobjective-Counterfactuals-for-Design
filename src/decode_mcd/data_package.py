@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, List
 from typing import Union
 
 import numpy as np
@@ -19,29 +19,28 @@ QUERY_X_OUTSIDE_TYPES_RANGE = "[query_x] parameters fall outside of range specif
 
 class DataPackage:
     def __init__(self,
-                 features_dataset: Union[pd.DataFrame, np.ndarray],
-                 predictions_dataset: Union[pd.DataFrame, np.ndarray],
-                 query_x: Union[pd.DataFrame, np.ndarray],
-                 design_targets: DesignTargets,
-                 datatypes: Sequence[Variable],
+                 x: Union[pd.DataFrame, np.ndarray],
+                 y: Union[pd.DataFrame, np.ndarray],
+                 x_query: Union[pd.DataFrame, np.ndarray],
+                 y_targets: DesignTargets,
+                 x_datatypes: Sequence[Variable],
                  features_to_vary: Union[Sequence[str], Sequence[int]] = None,
-                 bonus_objectives: Union[Sequence[str], Sequence[int]] = None,
-                 datasets_scores=None,
-                 datasets_validity=None
+                 datasets_scores=None,  # TODO: x_counterfactual_scores
+                 datasets_validity=None  # TODO: y_validity
                  ):
         """
         A data class that encapsulates all design and performance space data.
 
-        @param features_dataset: should be 2D and should contain designs that are
+        @param x: should be 2D and should contain designs that are
         somewhat representative of the desired region of the design space.
 
-        @param predictions_dataset: dataset of the performance metrics of the designs in the features dataset.
+        @param y: dataset of the performance metrics of the designs in the features dataset.
 
-        @param query_x: the starting design. Generated designs will generally try to remain similar to this.
+        @param x_query: the starting design. Generated designs will generally try to remain similar to this.
 
-        @param design_targets:  describes the desired region of the performance space.
+        @param y_targets:  describes the desired region of the performance space.
 
-        @param datatypes: describes the datatypes of the design features in @features_dataset,
+        @param x_datatypes: describes the datatypes of the design features in @features_dataset,
         and must also be supplied with bounds that describe the desired region of the design space.
         Valid: [Real(bounds=(0, 10), Choice(options=(0, 1, 2), ...]
         Invalid: [Real(0, 10), Choice((0, 1, 2))] | [Real(), Choice()]
@@ -55,13 +54,13 @@ class DataPackage:
         @param datasets_validity:
 
         """
-        self.features_dataset = self._to_valid_dataframe(features_dataset, "features_dataset")
-        self.predictions_dataset = self._to_valid_dataframe(predictions_dataset, "predictions_dataset")
-        self.query_x = self._to_valid_dataframe(query_x, "query_x")
-        self.design_targets = design_targets
-        self.datatypes = datatypes
+        self.features_dataset = self._to_valid_dataframe(x, "features_dataset")
+        self.predictions_dataset = self._to_valid_dataframe(y, "predictions_dataset")
+        self.query_x = self._to_valid_dataframe(x_query, "query_x")
+        self.design_targets = y_targets
+        self.datatypes = x_datatypes
         self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
-        self.bonus_objectives = self._get_or_default(bonus_objectives, [])
+        self.bonus_objectives = self._get_or_default(self._grab_minimization_targets(), [])
         self.datasets_scores = datasets_scores
         self.datasets_validity = datasets_validity
         self._validate_fields()
@@ -216,3 +215,6 @@ class DataPackage:
                  QUERY_X_OUTSIDE_TYPES_RANGE)
         validate(val <= upper_bound,
                  QUERY_X_OUTSIDE_TYPES_RANGE)
+
+    def _grab_minimization_targets(self) -> List[str]:
+        return [_target.label for _target in self.design_targets.minimization_targets]

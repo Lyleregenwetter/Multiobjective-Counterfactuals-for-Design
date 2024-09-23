@@ -17,13 +17,13 @@ class QuickStartTest(unittest.TestCase):
         def predict(_x):
             return _x * 100 + random.random()
 
-        data_package = DataPackage(features_dataset=x,
-                                   predictions_dataset=y,
-                                   query_x=x[0].reshape(1, 1),
-                                   design_targets=DesignTargets([ContinuousTarget(label=0,
-                                                                                  lower_bound=25,
-                                                                                  upper_bound=75)]),
-                                   datatypes=[Real(bounds=(0, 1))])
+        data_package = DataPackage(x=x,
+                                   y=y,
+                                   x_query=x[0].reshape(1, 1),
+                                   y_targets=DesignTargets([ContinuousTarget(label=0,
+                                                                             lower_bound=25,
+                                                                             upper_bound=75)]),
+                                   x_datatypes=[Real(bounds=(0, 1))])
 
         problem = MultiObjectiveProblem(data_package=data_package,
                                         prediction_function=lambda design: predict(design),
