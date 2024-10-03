@@ -94,11 +94,11 @@ class DataPackage:
     def _validate_fields(self):
         self._cross_validate_datasets()
         self._cross_validate_features_to_vary()
-        self._cross_validate_query_x()
+        self._cross_validate_query_x(self.query_x)
         self._validate_design_targets()
         self._validate_bonus_objs()
         self._validate_datatypes()
-        self._validate_query_x_against_datatypes()
+        self._validate_query_x_against_datatypes(self.query_x)
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
     def _cross_validate_datasets(self):
@@ -149,13 +149,13 @@ class DataPackage:
         condition = set(self.bonus_objectives).issubset(set(self.predictions_dataset.columns))
         validate(condition, "Bonus objectives should be a subset of labels!")
 
-    def _cross_validate_query_x(self):
-        condition = not self.query_x.empty
+    def _cross_validate_query_x(self, query_x: pd.DataFrame):
+        condition = not query_x.empty
         validate(condition, "query_x cannot be empty!")
         expected_n_columns = len(self.features_dataset.columns)
-        mandatory_condition = self.query_x.values.shape == (1, expected_n_columns)
+        mandatory_condition = query_x.values.shape == (1, expected_n_columns)
         validate(mandatory_condition, f"query_x must have 1 row and {expected_n_columns} columns")
-        condition1 = set(self.query_x.columns) == set(self.features_dataset.columns)
+        condition1 = set(query_x.columns) == set(self.features_dataset.columns)
         validate(condition1, "query_x columns do not match dataset columns!")
 
     def _validate_datatypes(self):
@@ -197,10 +197,10 @@ class DataPackage:
                  f"Parameter [datatypes] is invalid: {field_name} cannot be None for object of type "
                  f"pymoo.core.variable.{class_name}")
 
-    def _validate_query_x_against_datatypes(self):
+    def _validate_query_x_against_datatypes(self, query_x: pd.DataFrame):
         for i in range(len(self.datatypes)):
             dt = self.datatypes[i]
-            val = self.query_x.values[0][i]
+            val = query_x.values[0][i]
             if type(dt) in [Real, Integer]:
                 self._validate_range(dt, val)
             if type(dt) is Choice:

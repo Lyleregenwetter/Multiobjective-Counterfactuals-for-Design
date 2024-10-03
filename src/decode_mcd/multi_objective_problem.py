@@ -34,6 +34,10 @@ class MultiObjectiveProblem(Problem):
         self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
         self._data_package = data_package
         self._x_query = x_query
+        self._y_targets = self._data_package.design_targets
+        self._features_to_vary = self._data_package.features_to_vary
+        self._datasets_scores = self._data_package.datasets_scores
+        self._datasets_validity = self._data_package.datasets_validity
         self._predictor = prediction_function
         self._constraint_functions = constraint_functions
         self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
@@ -54,11 +58,11 @@ class MultiObjectiveProblem(Problem):
         self._avg_gower_sample_seed = sample_seed
 
     def _get_revertible_indexes(self):
-        all_candidates = self._data_package.features_to_vary
+        all_candidates = self._features_to_vary
         var_dict = self._build_problem_var_dict()
         q_x = self._x_query
         validity = self._get_revert_validity(all_candidates, q_x, var_dict)
-        return tuple(list(self._data_package.features_to_vary).index(c) for c in all_candidates if validity[c])
+        return tuple(list(self._features_to_vary).index(c) for c in all_candidates if validity[c])
 
     def _get_revert_validity(self, all_candidates, q_x, var_dict):
         validity = {}
@@ -74,11 +78,11 @@ class MultiObjectiveProblem(Problem):
         return validity
 
     def _count_y_constraints(self):
-        return self._data_package.design_targets.count_constrained_labels()
+        return self._y_targets.count_constrained_labels()
 
     def _build_problem_var_dict(self):
         variables = {}
-        for feature in self._data_package.features_to_vary:
+        for feature in self._features_to_vary:
             absolute_feature_index = self._data_package.features_dataset.columns.to_list().index(feature)
             variables[feature] = self._data_package.datatypes[absolute_feature_index]
         return variables
@@ -96,12 +100,12 @@ class MultiObjectiveProblem(Problem):
 
         scores = self._get_scores(x_full, predictions, dataset_flag)
         validity = self._get_mixed_constraint_satisfaction(x_full, predictions, self._constraint_functions,
-                                                           self._data_package.design_targets, dataset_flag)
+                                                           self._y_targets, dataset_flag)
         return scores, validity
 
     def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame, dataset_flag):
-        if dataset_flag and (self._data_package.datasets_scores is not None):
-            return self._data_package.datasets_scores
+        if dataset_flag and (self._datasets_scores is not None):
+            return self._datasets_scores
         return self._calculate_scores(x, predictions)
 
     def _calculate_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
@@ -203,8 +207,8 @@ class MultiObjectiveProblem(Problem):
                                            x_constraint_functions: list,
                                            design_targets: DesignTargets,
                                            dataset_flag):
-        if dataset_flag and (self._data_package.datasets_validity is not None):
-            return self._data_package.datasets_validity
+        if dataset_flag and (self._datasets_validity is not None):
+            return self._datasets_validity
         return self._calculate_mixed_constraint_satisfaction(x_full, y, x_constraint_functions, design_targets)
 
     def _calculate_mixed_constraint_satisfaction(self,
@@ -259,7 +263,7 @@ class MultiObjectiveProblem(Problem):
         return satisfaction
 
     def _build_full_df(self, x: np.ndarray):
-        x = pd.DataFrame.from_records(x, columns=self._data_package.features_to_vary)
+        x = pd.DataFrame.from_records(x, columns=self._features_to_vary)
         if x.empty:
             return x
         n = np.shape(x)[0]
