@@ -29,7 +29,7 @@ class MultiObjectiveProblem(Problem):
                  data_package: DataPackage,
                  x_query: Union[pd.DataFrame, np.ndarray],
                  prediction_function: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
-                 constraint_functions: list = []):
+                 constraint_functions: list = None):
         """A class representing a multiobjective minimization problem"""
         self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
         self._data_package = data_package
@@ -39,7 +39,7 @@ class MultiObjectiveProblem(Problem):
         self._datasets_scores = self._data_package.datasets_scores
         self._datasets_validity = self._data_package.datasets_validity
         self._predictor = prediction_function
-        self._constraint_functions = constraint_functions
+        self._constraint_functions = self._get_or_default(constraint_functions, [])
         self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self._number_of_objectives,
@@ -276,3 +276,8 @@ class MultiObjectiveProblem(Problem):
     def _validate(self, mandatory_condition, error_message):
         if not mandatory_condition:
             raise ValueError(error_message)
+
+    def _get_or_default(self, _supplied_value, _default_value):
+        if _supplied_value is None:
+            return _default_value
+        return _supplied_value
