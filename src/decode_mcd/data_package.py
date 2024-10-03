@@ -18,6 +18,7 @@ QUERY_X_OUTSIDE_TYPES_RANGE = "[query_x] parameters fall outside of range specif
 
 
 class DataPackage:
+    # TODO: move fields from data package to problem
     def __init__(self,
                  x: Union[pd.DataFrame, np.ndarray],
                  y: Union[pd.DataFrame, np.ndarray],
@@ -60,6 +61,7 @@ class DataPackage:
         self.design_targets = y_targets
         self.datatypes = x_datatypes
         self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
+        self._validate_design_targets() # called here to avoid weird errors in assigning bonus objectives
         self.bonus_objectives = self._get_or_default(self._grab_minimization_targets(), [])
         self.datasets_scores = datasets_scores
         self.datasets_validity = datasets_validity

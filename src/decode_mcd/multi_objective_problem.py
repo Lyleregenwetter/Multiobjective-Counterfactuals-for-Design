@@ -27,11 +27,13 @@ MEANING_OF_LIFE = 42
 class MultiObjectiveProblem(Problem):
     def __init__(self,
                  data_package: DataPackage,
+                 x_query: Union[pd.DataFrame, np.ndarray],
                  prediction_function: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
                  constraint_functions: list = []):
         """A class representing a multiobjective minimization problem"""
         self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
         self._data_package = data_package
+        self._x_query = x_query
         self._predictor = prediction_function
         self._constraint_functions = constraint_functions
         self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
@@ -54,7 +56,7 @@ class MultiObjectiveProblem(Problem):
     def _get_revertible_indexes(self):
         all_candidates = self._data_package.features_to_vary
         var_dict = self._build_problem_var_dict()
-        q_x = self._data_package.query_x
+        q_x = self._x_query
         validity = self._get_revert_validity(all_candidates, q_x, var_dict)
         return tuple(list(self._data_package.features_to_vary).index(c) for c in all_candidates if validity[c])
 
@@ -106,8 +108,8 @@ class MultiObjectiveProblem(Problem):
         all_scores = np.zeros((len(x), self._number_of_objectives))
         gower_types = self._build_gower_types()
         all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._data_package.bonus_objectives]
-        all_scores[:, _GOWER_INDEX] = mixed_gower(x, self._data_package.query_x, self._ranges.values, gower_types).T
-        all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self._data_package.query_x,
+        all_scores[:, _GOWER_INDEX] = mixed_gower(x, self._x_query, self._ranges.values, gower_types).T
+        all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self._x_query,
                                                                        len(self._data_package.valid_features_dataset.columns))
         subset = self._get_features_sample()
         all_scores[:, _AVG_GOWER_INDEX] = avg_gower_distance(x, subset, self._ranges.values, gower_types)
@@ -141,7 +143,7 @@ class MultiObjectiveProblem(Problem):
         f2f = self._data_package.features_to_freeze
         if len(f2f) > 0:
             f_d_view = f_d[f2f]
-            query_view = self._data_package.query_x[f2f]
+            query_view = self._x_query[f2f]
             # TODO: test this!
             p_d = p_d[np.equal(f_d_view.values, query_view.values).all(axis=1)]
             f_d = f_d[np.equal(f_d_view.values, query_view.values).all(axis=1)]
@@ -216,7 +218,6 @@ class MultiObjectiveProblem(Problem):
         result = np.zeros(shape=(n_rows, initial_num_columns))
 
         self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, initial_num_columns)
-        self._append_proba_satisfaction(result, y, design_targets)
         self._append_satisfaction(result, self._evaluate_regression_satisfaction, y, design_targets,
                                   design_targets.get_continuous_labels())
         self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, design_targets,
@@ -236,16 +237,6 @@ class MultiObjectiveProblem(Problem):
         satisfaction = evaluation_function(y, y_constraints)
         indices = [list(y.columns).index(key) for key in labels]
         result[:, indices] = satisfaction
-
-    def _append_proba_satisfaction(self, result: np.ndarray, y: pd.DataFrame,
-                                   design_targets: DesignTargets) -> None:
-        c_evaluator = ClassificationEvaluator()
-        for proba_key, proba_targets in zip(design_targets.get_probability_labels(),
-                                            design_targets.get_preferred_probability_targets()):
-            proba_consts = y.loc[:, proba_key]
-            proba_satisfaction = c_evaluator.evaluate_proba(proba_consts, proba_targets)
-            indices = [list(y.columns).index(key) for key in proba_key]
-            result[:, indices] = 1 - np.greater(proba_satisfaction, 0)
 
     def _append_x_constraint_satisfaction(self, result: np.ndarray,
                                           x_full: pd.DataFrame,
@@ -272,7 +263,7 @@ class MultiObjectiveProblem(Problem):
         if x.empty:
             return x
         n = np.shape(x)[0]
-        df = pd.concat([self._data_package.query_x] * n, axis=0, )
+        df = pd.concat([self._x_query] * n, axis=0, )
         df.index = list(range(n))
         df = pd.concat([df.loc[:, self._data_package.features_to_freeze], x], axis=1)
         df = df[self._data_package.valid_features_dataset.columns]

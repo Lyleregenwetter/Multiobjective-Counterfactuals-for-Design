@@ -22,7 +22,6 @@ from decode_mcd_private.efficient_mixed_duplicate_elimination import EfficientMi
 from decode_mcd_private.stats_methods import mixed_gower
 from decode_mcd_private.validation_utils import validate
 
-
 _DEFAULT_BETA = 4
 
 
@@ -131,9 +130,9 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
 
-    def sample_with_weights(self, num_samples: int, avg_gower_weight: float, cfc_weight: float, gower_weight: float,
-                            diversity_weight: float, bonus_objectives_weights: np.ndarray = None, include_dataset=True,
-                            num_dpp=1000):
+    def sample(self, num_samples: int, avg_gower_weight: float = 0.5, cfc_weight: float = 0.5, gower_weight: float = 1,
+               diversity_weight: float = 0.2, bonus_objectives_weights: np.ndarray = None, include_dataset=True,
+               num_dpp=1000):
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
         bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
                                                         np.ones(
@@ -170,14 +169,15 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self._algorithm = self._build_algorithm(pop)
 
     def _build_algorithm(self, population):
-        algorithm =  NSGA2(pop_size=self._pop_size, sampling=population,
-                     mating=MixedVariableMating(eliminate_duplicates=EfficientMixedVariableDuplicateElimination(), 
-                                                repair=_RevertToQueryRepair()),
-                     eliminate_duplicates=NoDuplicateElimination(), #no duplicate elimination when initializing from dataset
-                     callback=_AllOffspringCallback(),
-                     output=MultiObjectiveOutput(),  # this is necessary because this object is mutable
-                     save_history=False)
-        algorithm.eliminate_duplicates = EfficientMixedVariableDuplicateElimination() #set efficient duplicate elimination
+        algorithm = NSGA2(pop_size=self._pop_size, sampling=population,
+                          mating=MixedVariableMating(eliminate_duplicates=EfficientMixedVariableDuplicateElimination(),
+                                                     repair=_RevertToQueryRepair()),
+                          eliminate_duplicates=NoDuplicateElimination(),
+                          # no duplicate elimination when initializing from dataset
+                          callback=_AllOffspringCallback(),
+                          output=MultiObjectiveOutput(),  # this is necessary because this object is mutable
+                          save_history=False)
+        algorithm.eliminate_duplicates = EfficientMixedVariableDuplicateElimination()  # set efficient duplicate elimination
         return algorithm
 
     def _initialize_population(self, query_pop):
@@ -271,6 +271,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _check_for_original_query(self, result):
         # Check if the initial query is in the final returned set
+        # noinspection PyUnresolvedReferences
         if (result == self._problem._data_package.query_x.values).all(1).any():
             self._log("Initial Query is valid and included in the top counterfactuals identified")
         return result
@@ -303,7 +304,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         all_cf_x = all_cfs.get("X")
         all_cf_x = pd.DataFrame.from_records(all_cf_x).values
 
-        valid = np.all(1-np.sign(all_cf_v), axis=1)
+        valid = np.all(1 - np.sign(all_cf_v), axis=1)
         return all_cf_x[valid], all_cf_y[valid]
 
     def _min2max(self, x, eps=1e-7):  # Converts minimization objective to maximization, assumes rough scale~ 1
@@ -338,7 +339,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return samples_index
 
     def _get_near_psd(self, A):
-        C = (A + A.T)/2
+        C = (A + A.T) / 2
         eigval, eigvec = np.linalg.eig(C)
         eigval[eigval < 0] = 0
 

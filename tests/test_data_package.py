@@ -83,8 +83,11 @@ class DataPackageTest(unittest.TestCase):
         )
 
     def test_invalid_bonus_objectives(self):
+        self.fail("Error must make sense given the new API")
         self.assert_raises_with_message(
-            lambda: self.initialize(design_targets=DesignTargets(minimization_targets=MinimizationTarget("NON_EXISTENT"))),
+            lambda: self.initialize(design_targets=DesignTargets(
+                [ContinuousTarget("A", 4, 10)],
+                minimization_targets=[MinimizationTarget("NON_EXISTENT")])),
             "Bonus objectives should be a subset of labels!"
         )
 
@@ -162,7 +165,6 @@ class DataPackageTest(unittest.TestCase):
         predictions = np.array([[1, 2], [3, 4]])
         data_package = self.initialize(features_dataset=features, features_to_vary=[0, 1],
                                        query_x=np.array([[1, 2, 3]]),
-                                       bonus_objectives=[0],
                                        predictions_dataset=predictions,
                                        design_targets=DesignTargets([
                                            ContinuousTarget(0, 5, 10),
@@ -185,7 +187,6 @@ class DataPackageTest(unittest.TestCase):
                    query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "z"]),
                    design_targets=None,
                    features_to_vary=None,
-                   bonus_objectives=None,
                    datatypes=None):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(1, 4)), Real(bounds=(2, 5)), Real(bounds=(3, 6))])
         features_to_vary = self.get_or_default(features_to_vary, ["x", "y"])

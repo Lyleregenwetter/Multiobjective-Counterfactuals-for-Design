@@ -9,13 +9,10 @@ from decode_mcd.mcd_exceptions import UserInputException
 class DesignTargetsTest(unittest.TestCase):
     def test_count_constrained_labels(self):
         targets = DesignTargets([ContinuousTarget("A", 12, 15), ContinuousTarget("B", 12, 15)],
-                                [CategoricalTarget("C", (1, 2)), CategoricalTarget("D", (1, 2))],
-                                [ProbabilityTarget(("E", "F"), ("E",)),
-                                 ProbabilityTarget(("G", "H", "L"), ("H", "L"))])
-        self.assertEqual(9, targets.count_constrained_labels())
+                                [CategoricalTarget("C", (1, 2)), CategoricalTarget("D", (1, 2))])
+        self.assertEqual(4, targets.count_constrained_labels())
         self.assertEqual(("A", "B"), targets.get_continuous_labels())
         self.assertEqual(("C", "D"), targets.get_categorical_labels())
-        self.assertEqual((("E", "F"), ("G", "H", "L")), targets.get_probability_labels())
         np_test.assert_equal(np.array([[12, 12], [15, 15]]), targets.get_continuous_boundaries())
 
     # noinspection PyTypeChecker
@@ -60,25 +57,6 @@ class DesignTargetsTest(unittest.TestCase):
             lambda: ContinuousTarget("LABEL", 50, 50): "Lower bound cannot be greater or equal to upper bound",
             lambda: ContinuousTarget("", 50, 500): "Label cannot be an empty string",
         })
-
-    # noinspection PyTypeChecker
-    def test_invalid_probability_target(self):
-        self._test_invalid({
-            lambda: ProbabilityTarget((1, 2), ()): "Preferred labels cannot be empty",
-            lambda: ProbabilityTarget((1, 2), (3,)): "Preferred labels must be a subset of labels",
-            lambda: ProbabilityTarget((1,), (1,)): "Labels must have a length greater than 1",
-            lambda: ProbabilityTarget((1, 2), ("1",)): "Preferred labels must be a subset of labels",
-            lambda: ProbabilityTarget((1, None),
-                                      ("1",)): "Expected labels to be an all-integer or all-string sequence",
-            lambda: ProbabilityTarget(("A", ""), ("1",)): "Labels cannot contain empty strings",
-            lambda: ProbabilityTarget(("A", "B"), ("A", "")): "Preferred labels cannot contain empty strings",
-            lambda: ProbabilityTarget((1, 2), (
-                "1", None)): "Expected preferred labels to be an all-integer or all-string sequence",
-        })
-
-    def test_valid_probability_target(self):
-        ProbabilityTarget(labels=("A", "B", "C"), preferred_labels=["A", "B"])
-        ProbabilityTarget(labels=(5, 6, 7), preferred_labels=(5,))
 
     def test_valid_categorical_target(self):
         CategoricalTarget("LABEL", (5,))

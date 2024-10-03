@@ -6,7 +6,7 @@ import pandas as pd
 from pymoo.core.variable import Real, Choice
 
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import ContinuousTarget, DesignTargets, CategoricalTarget, ProbabilityTarget, \
+from decode_mcd.design_targets import ContinuousTarget, DesignTargets, CategoricalTarget, \
     MinimizationTarget
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem as MOP
 
@@ -39,6 +39,7 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         )
         self.problem = MOP(
             data_package=self.data_package,
+            x_query=self.data_package.query_x,
             prediction_function=lambda x: pd.DataFrame(),
             constraint_functions=[],
         )
@@ -81,7 +82,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         targets = DesignTargets(
             [ContinuousTarget(0, 2, 6), ContinuousTarget(2, 10, 16)],
             [CategoricalTarget(1, (200, 300)), CategoricalTarget(3, (550,))],
-            [ProbabilityTarget((4, 5), (5,))]
         )
         satisfaction = problem._calculate_mixed_constraint_satisfaction(x_full=x_full,
                                                                         y=y,
@@ -90,13 +90,15 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                                                                         design_targets=targets
                                                                         )
         np_test.assert_array_equal(satisfaction, np.array([
-            [1, 0, 7, 1, 0, 0, 1],
-            [-1, 1, 0, 0, 1, 1, 1],
-            [-1, 0, -1, 1, 0, 0, 1],
+            [1, 0, 7, 1, 1],
+            [-1, 1, 0, 0, 1],
+            [-1, 0, -1, 1, 1],
         ]))
 
     def build_problem(self, package):
-        return MOP(data_package=package, prediction_function=DummyPredictor().predict, constraint_functions=[])
+        return MOP(data_package=package,
+                   x_query=package.query_x,
+                   prediction_function=DummyPredictor().predict, constraint_functions=[])
 
     def test_values_equal_to_constraints_lead_to_zero_in_satisfaction(self):
         """
@@ -142,7 +144,9 @@ class MultiObjectiveProblemTest(unittest.TestCase):
             features_to_vary=features,
             x_datatypes=datatypes
         )
-        generator = MOP(data_package, lambda x: x, [])
+        generator = MOP(data_package,
+                        data_package.query_x,
+                        lambda x: x, [])
 
         scores = generator._calculate_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
                                                             columns=features),
@@ -180,7 +184,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                       predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2], [2, 1]]), columns=["A", "B"]),
                       query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
                       design_targets=None,
-                      bonus_objectives=None,
                       features_to_vary=None,
                       datatypes=None):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(-100, 100)), Real(bounds=(-100, 100)),
