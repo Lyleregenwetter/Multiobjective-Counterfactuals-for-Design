@@ -47,9 +47,8 @@ class MultiObjectiveProblem(Problem):
         self._ranges = self._build_ranges(self._data_package.features_dataset)
         self._avg_gower_sample_size = 1000
         self._avg_gower_sample_seed = MEANING_OF_LIFE
-        self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
+        self._valid_features_dataset, self._predictions_dataset = self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
         self._revertible_indexes = self._get_revertible_indexes()
-
 
     def set_average_gower_sampling_parameters(self, sample_size: int, sample_seed: int):
         self._validate(sample_size > 0, "Invalid sample size; must be greater than zero")
@@ -114,7 +113,7 @@ class MultiObjectiveProblem(Problem):
         all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._data_package.bonus_objectives]
         all_scores[:, _GOWER_INDEX] = mixed_gower(x, self._x_query, self._ranges.values, gower_types).T
         all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self._x_query,
-                                                                       len(self._data_package.valid_features_dataset.columns))
+                                                                       len(self._valid_features_dataset.columns))
         subset = self._get_features_sample()
         all_scores[:, _AVG_GOWER_INDEX] = avg_gower_distance(x, subset, self._ranges.values, gower_types)
         return all_scores
@@ -127,8 +126,8 @@ class MultiObjectiveProblem(Problem):
 
     def _get_predictions(self, x_full: pd.DataFrame, dataset_flag: bool):
         if dataset_flag:
-            return self._data_package.predictions_dataset.copy()
-        return pd.DataFrame(self._predictor(x_full), columns=self._data_package.predictions_dataset.columns)
+            return self._predictions_dataset.copy()
+        return pd.DataFrame(self._predictor(x_full), columns=self._predictions_dataset.columns)
 
     def _build_gower_types(self):
         return {
@@ -151,8 +150,7 @@ class MultiObjectiveProblem(Problem):
             # TODO: test this!
             p_d = p_d[np.equal(f_d_view.values, query_view.values).all(axis=1)]
             f_d = f_d[np.equal(f_d_view.values, query_view.values).all(axis=1)]
-        self._data_package.valid_features_dataset = f_d
-        self._data_package.predictions_dataset = p_d
+        return f_d, p_d
 
     def _get_valid_categorical_entries(self, f_d, p_d):
         categorical_idx = self._get_features_by_type([Choice])  # pass in the pymoo built in variable types
@@ -270,7 +268,7 @@ class MultiObjectiveProblem(Problem):
         df = pd.concat([self._x_query] * n, axis=0, )
         df.index = list(range(n))
         df = pd.concat([df.loc[:, self._data_package.features_to_freeze], x], axis=1)
-        df = df[self._data_package.valid_features_dataset.columns]
+        df = df[self._valid_features_dataset.columns]
         return df
 
     def _validate(self, mandatory_condition, error_message):
