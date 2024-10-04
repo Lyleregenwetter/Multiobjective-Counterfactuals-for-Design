@@ -1,4 +1,4 @@
-from typing import List, Callable, Union
+from typing import List, Callable, Union, Sequence
 
 import numpy as np
 import pandas as pd
@@ -28,16 +28,20 @@ class MultiObjectiveProblem(Problem):
     def __init__(self,
                  data_package: DataPackage,
                  x_query: Union[pd.DataFrame, np.ndarray],
+                 y_targets: DesignTargets,
                  prediction_function: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
+                 features_to_vary: Union[Sequence[str], Sequence[int]] = None,
+                 datasets_scores = None,
+                 datasets_validity = None,
                  constraint_functions: list = None):
         """A class representing a multiobjective minimization problem"""
         self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
         self._data_package = data_package
         self._x_query = x_query
-        self._y_targets = self._data_package.design_targets
-        self._features_to_vary = self._data_package.features_to_vary
-        self._datasets_scores = self._data_package.datasets_scores
-        self._datasets_validity = self._data_package.datasets_validity
+        self._y_targets = y_targets
+        self._features_to_vary = features_to_vary
+        self._datasets_scores = datasets_scores
+        self._datasets_validity = datasets_validity
         self._predictor = prediction_function
         self._constraint_functions = self._get_or_default(constraint_functions, [])
         self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)

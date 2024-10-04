@@ -40,6 +40,8 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         self.problem = MOP(
             data_package=self.data_package,
             x_query=self.data_package.query_x,
+            y_targets=self.data_package.design_targets,
+            features_to_vary=self.data_package.features_to_vary,
             prediction_function=lambda x: pd.DataFrame(),
             constraint_functions=[],
         )
@@ -98,6 +100,8 @@ class MultiObjectiveProblemTest(unittest.TestCase):
     def build_problem(self, package):
         return MOP(data_package=package,
                    x_query=package.query_x,
+                   y_targets=package.design_targets,
+                   features_to_vary=package.features_to_vary,
                    prediction_function=DummyPredictor().predict, constraint_functions=[])
 
     def test_values_equal_to_constraints_lead_to_zero_in_satisfaction(self):
@@ -144,9 +148,12 @@ class MultiObjectiveProblemTest(unittest.TestCase):
             features_to_vary=features,
             x_datatypes=datatypes
         )
-        generator = MOP(data_package,
-                        data_package.query_x,
-                        lambda x: x, [])
+        generator = MOP(data_package=data_package,
+                        x_query=data_package.query_x,
+                        y_targets=data_package.design_targets,
+                        features_to_vary=data_package.features_to_vary,
+                        prediction_function=lambda x: x,
+                        constraint_functions=[])
 
         scores = generator._calculate_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
                                                             columns=features),

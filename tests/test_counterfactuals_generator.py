@@ -28,6 +28,7 @@ class RevertToQueryRepairTest(unittest.TestCase):
                                      [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         problem = MultiObjectiveProblem(data_package=package,
                                         x_query=package.query_x,
+                                        y_targets=package.design_targets,
                                         prediction_function=lambda x: x, constraint_functions=[])
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
         repaired = repair._do(problem, z)
@@ -44,6 +45,8 @@ class RevertToQueryRepairTest(unittest.TestCase):
                                      [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         problem = MultiObjectiveProblem(data_package=package,
                                         x_query=package.query_x,
+                                        y_targets=package.design_targets,
+                                        features_to_vary=package.features_to_vary,
                                         prediction_function=lambda x: x, constraint_functions=[])
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
         repaired = repair._do(problem, z)
@@ -106,6 +109,8 @@ class CounterfactualsGeneratorTest(unittest.TestCase):
         return MultiObjectiveProblem(
             data_package=_data_package,
             x_query=_data_package.query_x,
+            y_targets=_data_package.design_targets,
+            features_to_vary=_data_package.features_to_vary,
             prediction_function=lambda x: x,
             constraint_functions=[]
         )

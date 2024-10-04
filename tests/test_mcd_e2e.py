@@ -53,6 +53,8 @@ class McdEndToEndTest(unittest.TestCase):
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             x_query=dp.query_x,
+                                            y_targets=dp.design_targets,
+                                            features_to_vary=dp.features_to_vary,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[self.x_constraint])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
@@ -80,6 +82,8 @@ class McdEndToEndTest(unittest.TestCase):
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             x_query=dp.query_x,
+                                            y_targets=dp.design_targets,
+                                            features_to_vary=dp.features_to_vary,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
@@ -106,6 +110,8 @@ class McdEndToEndTest(unittest.TestCase):
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             x_query=dp.query_x,
+                                            y_targets=dp.design_targets,
+                                            features_to_vary=dp.features_to_vary,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
@@ -131,6 +137,8 @@ class McdEndToEndTest(unittest.TestCase):
                          y_targets=targets, x_datatypes=datatypes)
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             x_query=dp.query_x,
+                                            y_targets=dp.design_targets,
+                                            features_to_vary=dp.features_to_vary,
                                             prediction_function=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                   any_x),
                                             constraint_functions=[])
@@ -157,6 +165,8 @@ class McdEndToEndTest(unittest.TestCase):
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             x_query=dp.query_x,
+                                            y_targets=dp.design_targets,
+                                            features_to_vary=dp.features_to_vary,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
