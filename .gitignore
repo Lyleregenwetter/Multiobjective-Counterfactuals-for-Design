@@ -6,3 +6,5 @@
 **/build/
 **/dist/
 **/__pycache__/
+**/.idea/
+**/decode_mcd.egg-info/
