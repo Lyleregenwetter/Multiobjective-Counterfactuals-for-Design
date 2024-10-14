@@ -26,8 +26,6 @@ class DataPackage:
                  y_targets: DesignTargets,
                  x_datatypes: Sequence[Variable],
                  features_to_vary: Union[Sequence[str], Sequence[int]] = None,
-                 datasets_scores=None,  # TODO: x_counterfactual_scores
-                 datasets_validity=None  # TODO: y_validity
                  ):
         """
         A data class that encapsulates all design and performance space data.
@@ -61,12 +59,22 @@ class DataPackage:
         self.design_targets = y_targets
         self.datatypes = x_datatypes
         self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
-        self._validate_design_targets() # called here to avoid weird errors in assigning bonus objectives
+        self._validate_design_targets(self.design_targets)  # called here to avoid weird errors in assigning bonus objectives
         self.bonus_objectives = self._get_or_default(self._grab_minimization_targets(), [])
-        self.datasets_scores = datasets_scores
-        self.datasets_validity = datasets_validity
         self._validate_fields()
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
+
+    def cross_validate(self,
+                       x_query: Union[pd.DataFrame, np.ndarray],
+                       y_targets: DesignTargets,
+                       features_to_vary: Union[Sequence[str], Sequence[int]]):
+        self._cross_validate_datasets()
+        self._cross_validate_features_to_vary(features_to_vary)
+        self._cross_validate_query_x(x_query)
+        self._validate_design_targets(y_targets)
+        self._validate_bonus_objs()
+        self._validate_datatypes()
+        self._validate_query_x_against_datatypes(x_query)
 
     def _get_or_default(self, value, default_value):
         if value is None:
@@ -93,9 +101,9 @@ class DataPackage:
 
     def _validate_fields(self):
         self._cross_validate_datasets()
-        self._cross_validate_features_to_vary()
+        self._cross_validate_features_to_vary(self.features_to_vary)
         self._cross_validate_query_x(self.query_x)
-        self._validate_design_targets()
+        self._validate_design_targets(self.design_targets)
         self._validate_bonus_objs()
         self._validate_datatypes()
         self._validate_query_x_against_datatypes(self.query_x)
@@ -119,8 +127,8 @@ class DataPackage:
     #     assert upper_bounds.shape == (valid_length,)
     #     assert lower_bounds.shape == (valid_length,)
 
-    def _cross_validate_features_to_vary(self):
-        self._validate_columns(self.features_dataset, self.features_to_vary,
+    def _cross_validate_features_to_vary(self, features_to_vary: Union[Sequence[str], Sequence[int]]):
+        self._validate_columns(self.features_dataset, features_to_vary,
                                "features_dataset", "features_to_vary")
 
     def _validate_columns(self,
@@ -175,10 +183,10 @@ class DataPackage:
         validate(mandatory_condition, "datatypes must strictly be a sequence of objects belonging to "
                                       "the types [Real, Integer, Choice, Binary]")
 
-    def _validate_design_targets(self):
-        condition = isinstance(self.design_targets, DesignTargets)
+    def _validate_design_targets(self, design_targets: DesignTargets):
+        condition = isinstance(design_targets, DesignTargets)
         validate(condition, "design_targets must be an instance of DesignTargets")
-        invalid_columns = self._get_invalid_columns(self.design_targets.get_all_constrained_labels(),
+        invalid_columns = self._get_invalid_columns(design_targets.get_all_constrained_labels(),
                                                     self.predictions_dataset.columns)
         self._raise_if_invalid_columns("predictions_dataset", "design_targets",
                                        invalid_columns, self.predictions_dataset.columns.values)
