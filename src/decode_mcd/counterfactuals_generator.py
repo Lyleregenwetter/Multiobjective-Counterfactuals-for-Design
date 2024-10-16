@@ -35,7 +35,7 @@ class _RevertToQueryRepair(Repair):
     def _do(self, problem: MultiObjectiveProblem, Z, **kwargs):
         # noinspection PyProtectedMember
         revertible_indexes = problem._revertible_indexes
-        original_x = problem._data_package.query_x
+        original_x = problem._x_query
         qxs = original_x.values[:, revertible_indexes]
         # TODO: confirm existence of column ordering bug and check if this fix is valid
         full_Z_dataframe = pd.DataFrame.from_records(Z, columns=[c for c in original_x.columns
@@ -137,7 +137,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
                                                         np.ones(
                                                             shape=(1, len(
-                                                                self._problem._data_package.bonus_objectives))))
+                                                                self._problem._bonus_objectives))))
         self._validate_y_weights(bonus_objectives_weights)
 
         all_cf_x, all_cf_y = self._initialize_and_filter_all_cfs(include_dataset)
@@ -160,7 +160,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _setup_algorithm(self):  # First time algorithm setup
         if self._algorithm is None:  # Runs if algorithm is not yet initialized
-            x = self._problem._data_package.query_x.loc[:, self._problem._data_package.features_to_vary].to_dict(
+            x = self._problem._x_query.loc[:, self._problem._data_package.features_to_vary].to_dict(
                 "records")
             query_pop = Population.new("X", x)
             Evaluator().eval(self._problem,
@@ -272,7 +272,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
     def _check_for_original_query(self, result):
         # Check if the initial query is in the final returned set
         # noinspection PyUnresolvedReferences
-        if (result == self._problem._data_package.query_x.values).all(1).any():
+        if (result == self._problem._x_query.values).all(1).any():
             self._log("Initial Query is valid and included in the top counterfactuals identified")
         return result
 
@@ -367,7 +367,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _validate_bonus_objective_scoring_parameter(self, parameter: np.ndarray, parameter_name):
         validate(isinstance(parameter, np.ndarray), f"{parameter_name} must be a numpy array")
-        n_bonus = len(self._problem._data_package.bonus_objectives)
+        n_bonus = len(self._problem._bonus_objectives)
         expected_shape = (1, n_bonus)
         exception_message = self._get_exception_message(expected_shape, n_bonus, parameter_name)
         validate(parameter.shape == expected_shape, exception_message)
@@ -386,7 +386,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _get_or_default_dtai(self, dtai_target, dtai_alpha, dtai_beta):
         dtai_target = self._get_or_default(dtai_target,
-                                           np.ones(shape=(1, len(self._problem._data_package.bonus_objectives))))
+                                           np.ones(shape=(1, len(self._problem._bonus_objectives))))
         dtai_alpha = self._get_or_default(dtai_alpha, np.ones_like(dtai_target))
         dtai_beta = self._get_or_default(dtai_beta, np.ones_like(dtai_target) * _DEFAULT_BETA)
         return dtai_target, dtai_alpha, dtai_beta

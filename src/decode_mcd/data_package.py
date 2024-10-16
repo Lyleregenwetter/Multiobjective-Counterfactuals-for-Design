@@ -22,8 +22,6 @@ class DataPackage:
     def __init__(self,
                  x: Union[pd.DataFrame, np.ndarray],
                  y: Union[pd.DataFrame, np.ndarray],
-                 x_query: Union[pd.DataFrame, np.ndarray],
-                 y_targets: DesignTargets,
                  x_datatypes: Sequence[Variable],
                  features_to_vary: Union[Sequence[str], Sequence[int]] = None,
                  ):
@@ -55,12 +53,8 @@ class DataPackage:
         """
         self.features_dataset = self._to_valid_dataframe(x, "features_dataset")
         self.predictions_dataset = self._to_valid_dataframe(y, "predictions_dataset")
-        self.query_x = self._to_valid_dataframe(x_query, "query_x")
-        self.design_targets = y_targets
         self.datatypes = x_datatypes
         self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
-        self._validate_design_targets(self.design_targets)  # called here to avoid weird errors in assigning bonus objectives
-        self.bonus_objectives = self._get_or_default(self._grab_minimization_targets(), [])
         self._validate_fields()
         self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 
@@ -68,11 +62,11 @@ class DataPackage:
                        x_query: Union[pd.DataFrame, np.ndarray],
                        y_targets: DesignTargets,
                        features_to_vary: Union[Sequence[str], Sequence[int]]):
+        x_query = self._to_valid_dataframe(x_query, "query_x")
         self._cross_validate_datasets()
         self._cross_validate_features_to_vary(features_to_vary)
         self._cross_validate_query_x(x_query)
         self._validate_design_targets(y_targets)
-        self._validate_bonus_objs()
         self._validate_datatypes()
         self._validate_query_x_against_datatypes(x_query)
 
@@ -102,11 +96,7 @@ class DataPackage:
     def _validate_fields(self):
         self._cross_validate_datasets()
         self._cross_validate_features_to_vary(self.features_to_vary)
-        self._cross_validate_query_x(self.query_x)
-        self._validate_design_targets(self.design_targets)
-        self._validate_bonus_objs()
         self._validate_datatypes()
-        self._validate_query_x_against_datatypes(self.query_x)
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
     def _cross_validate_datasets(self):
@@ -152,10 +142,6 @@ class DataPackage:
         if len(invalid_columns) != 0:
             validate(False, f"Invalid value in {features_name}: expected columns "
                             f"{invalid_columns} to be in {dataset_name} columns {valid_columns}")
-
-    def _validate_bonus_objs(self):
-        condition = set(self.bonus_objectives).issubset(set(self.predictions_dataset.columns))
-        validate(condition, "Bonus objectives should be a subset of labels!")
 
     def _cross_validate_query_x(self, query_x: pd.DataFrame):
         condition = not query_x.empty
@@ -225,6 +211,3 @@ class DataPackage:
                  QUERY_X_OUTSIDE_TYPES_RANGE)
         validate(val <= upper_bound,
                  QUERY_X_OUTSIDE_TYPES_RANGE)
-
-    def _grab_minimization_targets(self) -> List[str]:
-        return [_target.label for _target in self.design_targets.minimization_targets]

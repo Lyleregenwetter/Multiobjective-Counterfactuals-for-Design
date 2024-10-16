@@ -48,12 +48,12 @@ class McdEndToEndTest(unittest.TestCase):
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
         )
         dp = DataPackage(x=x, y=y,
-                         x_query=x.iloc[0:1], features_to_vary=x.columns,
-                         y_targets=targets, x_datatypes=datatypes)
+                         features_to_vary=x.columns,
+                         x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=dp.query_x,
-                                            y_targets=dp.design_targets,
+                                            x_query=x.iloc[0:1],
+                                            y_targets=targets,
                                             features_to_vary=dp.features_to_vary,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[self.x_constraint])
@@ -77,12 +77,12 @@ class McdEndToEndTest(unittest.TestCase):
              ContinuousTarget("O_R2", 0, 6)],
         )
         dp = DataPackage(x=x, y=y,
-                         x_query=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                         y_targets=targets, x_datatypes=datatypes)
+                         features_to_vary=["R1", "R2", "R3", "R4", "R5"],
+                         x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=dp.query_x,
-                                            y_targets=dp.design_targets,
+                                            x_query=x.iloc[1:2],
+                                            y_targets=targets,
                                             features_to_vary=dp.features_to_vary,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
@@ -105,12 +105,12 @@ class McdEndToEndTest(unittest.TestCase):
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))]
         )
         dp = DataPackage(x=x, y=y,
-                         x_query=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                         y_targets=targets, x_datatypes=datatypes)
+                         features_to_vary=["R1", "R2", "R3", "R4", "R5"],
+                         x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=dp.query_x,
-                                            y_targets=dp.design_targets,
+                                            x_query=x.iloc[1:2],
+                                            y_targets=targets,
                                             features_to_vary=dp.features_to_vary,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
@@ -133,11 +133,11 @@ class McdEndToEndTest(unittest.TestCase):
             minimization_targets=[MinimizationTarget("O_R1")]
         )
         dp = DataPackage(x=x, y=y,
-                         x_query=x.iloc[0:1], features_to_vary=x.columns,
-                         y_targets=targets, x_datatypes=datatypes)
+                         features_to_vary=x.columns,
+                         x_datatypes=datatypes)
         problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=dp.query_x,
-                                            y_targets=dp.design_targets,
+                                            x_query=x.iloc[0:1],
+                                            y_targets=targets,
                                             features_to_vary=dp.features_to_vary,
                                             prediction_function=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                   any_x),
@@ -160,12 +160,12 @@ class McdEndToEndTest(unittest.TestCase):
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
         )
         dp = DataPackage(x=x, y=y,
-                         x_query=x.iloc[0:1], features_to_vary=x.columns,
-                         y_targets=targets, x_datatypes=datatypes)
+                         features_to_vary=x.columns,
+                         x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=dp.query_x,
-                                            y_targets=dp.design_targets,
+                                            x_query=x.iloc[0:1],
+                                            y_targets=targets,
                                             features_to_vary=dp.features_to_vary,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
@@ -202,7 +202,7 @@ class McdEndToEndTest(unittest.TestCase):
     def assert_greater_than(self, cfs, desired_proba: str, other_proba: str):
         proba_results = self.predict_subset([desired_proba, other_proba], cfs)
         satisfaction = np.greater(proba_results[desired_proba].values,
-                                        proba_results[other_proba].values)
+                                  proba_results[other_proba].values)
         np_test.assert_equal(satisfaction, 1)
 
     def assert_categorical_target_met(self, cfs: pd.DataFrame, label: str, desired_classes: list):

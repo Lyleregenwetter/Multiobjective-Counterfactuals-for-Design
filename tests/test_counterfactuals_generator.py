@@ -24,11 +24,12 @@ class RevertToQueryRepairTest(unittest.TestCase):
         to remove the redundant check in the code or otherwise replace it with
         a more meaningful check."""
         repair = _RevertToQueryRepair()
-        package = self.build_package(np.array([[11, 8, 13]]),
-                                     [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
+        query_x = np.array([[11, 8, 13]])
+        design_targets = DesignTargets([ContinuousTarget(0, 10, 15)])
+        package = self.build_package([Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         problem = MultiObjectiveProblem(data_package=package,
-                                        x_query=package.query_x,
-                                        y_targets=package.design_targets,
+                                        x_query=query_x,
+                                        y_targets=design_targets,
                                         prediction_function=lambda x: x, constraint_functions=[])
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
         repaired = repair._do(problem, z)
@@ -41,11 +42,10 @@ class RevertToQueryRepairTest(unittest.TestCase):
 
     def test_revert_all(self):
         repair = _RevertToQueryRepair()
-        package = self.build_package(np.array([[1, 2, 3]]),
-                                     [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
+        package = self.build_package([Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         problem = MultiObjectiveProblem(data_package=package,
-                                        x_query=package.query_x,
-                                        y_targets=package.design_targets,
+                                        x_query=np.array([[1, 2, 3]]),
+                                        y_targets=DesignTargets([ContinuousTarget(0, 10, 15)]),
                                         features_to_vary=package.features_to_vary,
                                         prediction_function=lambda x: x, constraint_functions=[])
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
@@ -56,12 +56,10 @@ class RevertToQueryRepairTest(unittest.TestCase):
         self.assertTrue(2 <= np.average(repaired_array[:, 1]) <= 4)
         self.assertTrue(3 <= np.average(repaired_array[:, 2]) <= 5)
 
-    def build_package(self, query_x, datatypes):
+    def build_package(self, datatypes):
         _array = np.array([[5, 10, 15], [12, 15, 123], [13, 145, 13]])
         package = DataPackage(x=_array,
                               y=_array,
-                              x_query=query_x,
-                              y_targets=DesignTargets([ContinuousTarget(0, 10, 15)]),
                               x_datatypes=datatypes)
         return package
 
@@ -102,14 +100,14 @@ class CounterfactualsGeneratorTest(unittest.TestCase):
             "num_samples must be a positive integer")
 
     def build_valid_problem(self):
+        _x_query = np.array([[5, 3, 1]])
+        targets = DesignTargets([ContinuousTarget(0, 0, 10)])
         _data_package = DataPackage(x=np.array([[1, 2, 3], [4, 5, 6]]), y=np.array([[1, 2, 3], [4, 5, 6]]),
-                                    x_query=np.array([[5, 3, 1]]),
-                                    y_targets=DesignTargets([ContinuousTarget(0, 0, 10)]),
                                     x_datatypes=[Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         return MultiObjectiveProblem(
             data_package=_data_package,
-            x_query=_data_package.query_x,
-            y_targets=_data_package.design_targets,
+            x_query=_x_query,
+            y_targets=targets,
             features_to_vary=_data_package.features_to_vary,
             prediction_function=lambda x: x,
             constraint_functions=[]

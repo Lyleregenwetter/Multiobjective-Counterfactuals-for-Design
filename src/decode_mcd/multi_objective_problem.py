@@ -9,6 +9,7 @@ from decode_mcd_private.classification_evaluator import ClassificationEvaluator
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets
 from decode_mcd_private.stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio
+from decode_mcd_private.validation_utils import validate
 
 _AVG_GOWER_INDEX = -1
 
@@ -35,15 +36,16 @@ class MultiObjectiveProblem(Problem):
         """A class representing a multiobjective minimization problem"""
         self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
         self._data_package = data_package
-        self._x_query = x_query
+        self._x_query = self._to_valid_dataframe(x_query, "x_query")
         self._y_targets = y_targets
         self._features_to_vary: Union[Sequence[str], Sequence[int]] = self._get_or_default(features_to_vary, [])
         self._data_package.cross_validate(self._x_query, self._y_targets, self._features_to_vary)
         self._datasets_scores = datasets_scores
         self._datasets_validity = datasets_validity
         self._predictor = prediction_function
+        self._bonus_objectives = self._get_or_default(self._grab_minimization_targets(), [])
         self._constraint_functions = self._get_or_default(constraint_functions, [])
-        self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(data_package.bonus_objectives)
+        self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(self._bonus_objectives)
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self._number_of_objectives,
                          n_constr=len(constraint_functions) + self._count_y_constraints())
@@ -79,6 +81,29 @@ class MultiObjectiveProblem(Problem):
             validity[candidate] = valid
         return validity
 
+    def _validate_bonus_objs(self):
+        condition = set(self._bonus_objectives).issubset(set(self._data_package.predictions_dataset.columns))
+        validate(condition, "Bonus objectives should be a subset of labels!")
+
+    def _to_valid_dataframe(self, dataset, dataset_name):
+        condition = isinstance(dataset, (np.ndarray, pd.DataFrame))
+        validate(condition, f"{dataset_name} must either be a pandas dataframe or a numpy ndarray")
+        if isinstance(dataset, np.ndarray):
+            return self._to_dataframe(dataset, dataset_name)
+        mandatory_condition = not dataset.empty
+        validate(mandatory_condition, f"{dataset_name} cannot be empty")
+        return dataset
+
+    def _to_dataframe(self, numpy_array: np.ndarray, dataset_name: str):
+        condition = len(numpy_array.shape) == 2
+        validate(condition, f"{dataset_name} must be a valid numpy array (non-empty, 2D...)")
+        if dataset_name == "query_x":
+            index_based_columns = self._data_package.features_dataset.columns
+        else:
+            index_based_columns = [_ for _ in range(numpy_array.shape[1])]
+        return pd.DataFrame(numpy_array, columns=index_based_columns)
+
+
     def _count_y_constraints(self):
         return self._y_targets.count_constrained_labels()
 
@@ -113,7 +138,7 @@ class MultiObjectiveProblem(Problem):
     def _calculate_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
         all_scores = np.zeros((len(x), self._number_of_objectives))
         gower_types = self._build_gower_types()
-        all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._data_package.bonus_objectives]
+        all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._bonus_objectives]
         all_scores[:, _GOWER_INDEX] = mixed_gower(x, self._x_query, self._ranges.values, gower_types).T
         all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self._x_query,
                                                                        len(self._valid_features_dataset.columns))
@@ -229,6 +254,10 @@ class MultiObjectiveProblem(Problem):
                                   design_targets.get_categorical_labels())
         result = self.drop_non_constrained_columns(design_targets, len(x_constraint_functions), result, y)
         return result
+
+    def _grab_minimization_targets(self) -> List[str]:
+        return [_target.label for _target in self._y_targets.minimization_targets]
+
 
     def drop_non_constrained_columns(self, design_targets, num_x_constraints: int, result, y):
         x_constraints = result[:, result.shape[1] - num_x_constraints:]
