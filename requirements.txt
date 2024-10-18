@@ -40,7 +40,7 @@ numpy==1.26.0
 packaging==23.1
 pandas==1.5.3
 Pillow==10.0.1
-pkginfo==1.9.6
+pkginfo==1.11.2
 psutil==5.9.5
 pycparser==2.21
 Pygments==2.16.1
