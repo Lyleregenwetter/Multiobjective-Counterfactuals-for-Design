@@ -41,7 +41,7 @@ packaging==23.1
 pandas==1.5.3
 Pillow==10.0.1
 pkginfo==1.11.2
-psutil==5.9.5
+psutil==6.1.0
 pycparser==2.21
 Pygments==2.16.1
 pymoo==0.6.0.1
