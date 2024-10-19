@@ -163,8 +163,7 @@ class MultilabelPredictor:
         predictor = self.predictors[label]
         if isinstance(predictor, str):
             path_elements = predictor.split("/")
-            path_relative_to_root = path_elements[-2] + "/" + path_elements[-1]
-            return TabularPredictor.load(path=os.path.join(self.model_root, path_relative_to_root))
+            return TabularPredictor.load(path=os.path.join(self.model_root, path_elements[-1]))
         return predictor
 
     def _get_data(self, data):

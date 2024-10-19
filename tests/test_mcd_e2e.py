@@ -200,7 +200,7 @@ class McdEndToEndTest(unittest.TestCase):
     def grab_trained_model_path(self):
         models_path_exists = "AutogluonModels" in os.listdir(os.path.dirname(__file__))
         if models_path_exists:
-            return self.find_valid_model()
+            return get_path("AutogluonModels")
 
     # noinspection PyTypeChecker
     def find_valid_model(self):
@@ -213,7 +213,7 @@ class McdEndToEndTest(unittest.TestCase):
 
     def train_model(self):
         training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"],
-                                                 path=get_path("AutogluonModels/ag-3000"))
+                                                 path=get_path("AutogluonModels/"))
         x, y = self.load_toy_x_y()
         training_predictor.fit(TabularDataset(pd.concat([x, y], axis=1)))
 
