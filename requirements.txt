@@ -35,7 +35,7 @@ pytz==2024.2
 requests==2.32.3
 s3transfer==0.10.3
 scikit-learn==1.4.0
-scipy==1.12.0
+scipy==1.14.1
 six==1.16.0
 threadpoolctl==3.5.0
 tqdm==4.66.5
