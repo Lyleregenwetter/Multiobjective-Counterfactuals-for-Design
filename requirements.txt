@@ -9,7 +9,7 @@ boto3==1.35.44
 botocore==1.35.44
 certifi==2024.8.30
 charset-normalizer==3.4.0
-cma==3.2.2
+cma==4.0.0
 contourpy==1.3.0
 cycler==0.12.1
 Deprecated==1.2.14
