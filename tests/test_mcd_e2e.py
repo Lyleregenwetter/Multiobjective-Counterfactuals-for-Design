@@ -1,4 +1,3 @@
-import __main__
 import os
 import sys
 import unittest
@@ -6,14 +5,14 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
-from autogluon.tabular import TabularDataset
 from pymoo.core.variable import Real, Choice
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LinearRegression
 
 import decode_mcd.multi_objective_problem as MOP
 from decode_mcd import counterfactuals_generator
 from decode_mcd.data_package import DataPackage
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, ProbabilityTarget
-from tests.alt_multi_label_predictor import MultilabelPredictor
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -22,13 +21,23 @@ def get_path(filename):
     return os.path.join(os.path.dirname(__file__), filename)
 
 
+class ToyModel:
+    def __init__(self, x, y):
+        self.regression_model = LinearRegression()
+        self.regression_model.fit(X=x, y=pd.DataFrame(y, columns=["O_R1", "O_P1", "O_P2"]))
+        self.classifier_model = RandomForestClassifier(n_estimators=100, random_state=42)
+        self.classifier_model.fit(X=x, y=pd.DataFrame(y, columns=["O_C1"]))
+
+    def predict(self, x: pd.DataFrame):
+        reg = self.regression_model.predict(x)
+        classification = self.classifier_model.predict(x).reshape(len(x), 1)
+        return pd.DataFrame(np.concatenate([reg, classification], axis=1), columns=["O_R1", "O_P1", "O_P2", "O_C1"])
+
+
 class McdEndToEndTest(unittest.TestCase):
     def setUp(self) -> None:
-        __main__.alt_multi_label_predictor = MultilabelPredictor
-        if not self.grab_trained_model_path():
-            self.train_model()
-        self.model = MultilabelPredictor.load(self.grab_trained_model_path())
         self.x, self.y = self.load_toy_x_y()
+        self.model = ToyModel(self.x, self.y)
 
     def predict_dummy_multiple_objectives(self, x):
         predictions = self.predict(x)
@@ -196,26 +205,6 @@ class McdEndToEndTest(unittest.TestCase):
         satisfaction = np.logical_and(np.greater(regression_results, lower_bound),
                                       np.less(regression_results, upper_bound))
         np_test.assert_equal(satisfaction, 1)
-
-    def grab_trained_model_path(self):
-        models_path_exists = "AutogluonModels" in os.listdir(os.path.dirname(__file__))
-        if models_path_exists:
-            return get_path("AutogluonModels")
-
-    # noinspection PyTypeChecker
-    def find_valid_model(self):
-        trained_models = os.listdir(get_path("AutogluonModels"))
-        for trained_model in trained_models:
-            model_path = os.path.join(get_path("AutogluonModels"), trained_model)
-            valid_model = "multilabel_predictor.pkl" in os.listdir(model_path)
-            if valid_model:
-                return model_path
-
-    def train_model(self):
-        training_predictor = MultilabelPredictor(labels=["O_C1", "O_R1", "O_P1", "O_P2"],
-                                                 path=get_path("AutogluonModels/"))
-        x, y = self.load_toy_x_y()
-        training_predictor.fit(TabularDataset(pd.concat([x, y], axis=1)))
 
     # noinspection PyTypeChecker
     def load_toy_x_y(self):
