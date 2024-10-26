@@ -12,9 +12,7 @@ from sklearn.linear_model import LinearRegression
 import decode_mcd.multi_objective_problem as MOP
 from decode_mcd import counterfactuals_generator
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, ProbabilityTarget
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, MinimizationTarget
-from tests.alt_multi_label_predictor import MultilabelPredictor
 
 INFINITY = 1_000_000_000
 
