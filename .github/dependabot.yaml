@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "11:30"
+      timezone: "Etc/Universal"
+    target-branch: main
+    labels:
+      - dependabot
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "11:30"
+      timezone: "Etc/Universal"
+    target-branch: main
+    labels:
+      - dependabot
