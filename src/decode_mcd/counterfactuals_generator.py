@@ -39,7 +39,7 @@ class _RevertToQueryRepair(Repair):
         qxs = original_x.values[:, revertible_indexes]
         # TODO: confirm existence of column ordering bug and check if this fix is valid
         full_Z_dataframe = pd.DataFrame.from_records(Z, columns=[c for c in original_x.columns
-                                                                 if c in problem._data_package.features_to_vary])
+                                                                 if c in problem._features_to_vary])
         full_Z_np = full_Z_dataframe.values
         reverted_subset = self._revert_subset(full_Z_np, qxs, revertible_indexes)
         full_Z_np[:, revertible_indexes] = reverted_subset
@@ -160,7 +160,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
     def _setup_algorithm(self):  # First time algorithm setup
         if self._algorithm is None:  # Runs if algorithm is not yet initialized
-            x = self._problem._x_query.loc[:, self._problem._data_package.features_to_vary].to_dict(
+            x = self._problem._x_query.loc[:, self._problem._features_to_vary].to_dict(
                 "records")
             query_pop = Population.new("X", x)
             Evaluator().eval(self._problem,
@@ -320,7 +320,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         # TODO remove any that are out of range or that change features that are supposed to be fixed
         if self._dataset_pop is None:  # Evaluate Pop if not done already
             x = self._problem._valid_features_dataset
-            x = x.loc[:, self._problem._data_package.features_to_vary].to_dict("records")
+            x = x.loc[:, self._problem._features_to_vary].to_dict("records")
             pop = Population.new("X", x)
             Evaluator().eval(self._problem, pop, datasetflag=True)
             self._dataset_pop = pop
