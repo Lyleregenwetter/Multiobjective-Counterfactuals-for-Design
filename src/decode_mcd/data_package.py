@@ -1,4 +1,4 @@
-from typing import Sequence, List
+from typing import Sequence
 from typing import Union
 
 import numpy as np
@@ -22,8 +22,7 @@ class DataPackage:
     def __init__(self,
                  x: Union[pd.DataFrame, np.ndarray],
                  y: Union[pd.DataFrame, np.ndarray],
-                 x_datatypes: Sequence[Variable],
-                 features_to_vary: Union[Sequence[str], Sequence[int]] = None,
+                 x_datatypes: Sequence[Variable]
                  ):
         """
         A data class that encapsulates all design and performance space data.
@@ -54,9 +53,7 @@ class DataPackage:
         self.features_dataset = self._to_valid_dataframe(x, "features_dataset")
         self.predictions_dataset = self._to_valid_dataframe(y, "predictions_dataset")
         self.datatypes = x_datatypes
-        self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
         self._validate_fields()
-        self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
 
     def cross_validate(self,
                        x_query: Union[pd.DataFrame, np.ndarray],
@@ -95,7 +92,6 @@ class DataPackage:
 
     def _validate_fields(self):
         self._cross_validate_datasets()
-        self._cross_validate_features_to_vary(self.features_to_vary)
         self._validate_datatypes()
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 

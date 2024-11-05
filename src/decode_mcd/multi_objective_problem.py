@@ -38,7 +38,9 @@ class MultiObjectiveProblem(Problem):
         self._data_package = data_package
         self._x_query = self._to_valid_dataframe(x_query, "x_query")
         self._y_targets = y_targets
-        self._features_to_vary: Union[Sequence[str], Sequence[int]] = self._get_or_default(features_to_vary, [])
+        self._features_to_vary: Union[Sequence[str], Sequence[int]] = self._get_or_default(features_to_vary,
+                                                                                           list(self._data_package.features_dataset.columns.values))
+        self._features_to_freeze = list(set(self._data_package.features_dataset.columns.values) - set(self._features_to_vary))
         self._data_package.cross_validate(self._x_query, self._y_targets, self._features_to_vary)
         self._datasets_scores = datasets_scores
         self._datasets_validity = datasets_validity
@@ -171,7 +173,7 @@ class MultiObjectiveProblem(Problem):
         f_d, p_d = self._get_valid_numeric_entries(f_d, p_d)
         f_d, p_d = self._get_valid_categorical_entries(f_d, p_d)
 
-        f2f = self._data_package.features_to_freeze
+        f2f = self._features_to_freeze
         if len(f2f) > 0:
             f_d_view = f_d[f2f]
             query_view = self._x_query[f2f]
@@ -299,7 +301,7 @@ class MultiObjectiveProblem(Problem):
         n = np.shape(x)[0]
         df = pd.concat([self._x_query] * n, axis=0, )
         df.index = list(range(n))
-        df = pd.concat([df.loc[:, self._data_package.features_to_freeze], x], axis=1)
+        df = pd.concat([df.loc[:, self._features_to_freeze], x], axis=1)
         df = df[self._valid_features_dataset.columns]
         return df
 
