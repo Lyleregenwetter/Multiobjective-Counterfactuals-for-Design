@@ -32,14 +32,12 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         self.data_package = DataPackage(
             x=features,
             y=pd.DataFrame(np.random.rand(features.shape[0], 1), columns=["performance"]),
-            features_to_vary=["x", "y", "z"],
             x_datatypes=[Real(bounds=(-100, 100)), Real(bounds=(-100, 100)), Real(bounds=(-100, 100))]
         )
         self.problem = MOP(
             data_package=self.data_package,
             x_query=features[0:1],
             y_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
-            features_to_vary=self.data_package.features_to_vary,
             prediction_function=lambda x: pd.DataFrame(),
             constraint_functions=[],
         )
@@ -50,7 +48,7 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         pass
 
     def test_evaluate_subset(self):
-        problem = self.build_problem(self.build_package(features_to_vary=["x", "y"]))
+        problem = self.build_problem(self.build_package(), features_to_vary=["x", "y"])
         out = {}
         problem._evaluate(
             np.array([[12, 13], [14, 15], [16, 17], [16, 19]]), out, datasetflag=False)
@@ -97,14 +95,16 @@ class MultiObjectiveProblemTest(unittest.TestCase):
 
     def build_problem(self, package,
                       query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
-                      design_targets=None
+                      design_targets=None,
+                      features_to_vary=None,
                       ):
         design_targets = self.get_or_default(design_targets, DesignTargets(
             [ContinuousTarget("A", 4, 10)]))
+        features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
         return MOP(data_package=package,
                    x_query=query_x,
                    y_targets=design_targets,
-                   features_to_vary=package.features_to_vary,
+                   features_to_vary=features_to_vary,
                    prediction_function=DummyPredictor().predict, constraint_functions=[])
 
     def test_values_equal_to_constraints_lead_to_zero_in_satisfaction(self):
@@ -146,13 +146,12 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         data_package = DataPackage(
             x=features_dataset,
             y=predictions_dataset,
-            features_to_vary=features,
             x_datatypes=datatypes
         )
         generator = MOP(data_package=data_package,
                         x_query=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
                         y_targets=targets,
-                        features_to_vary=data_package.features_to_vary,
+                        features_to_vary=features,
                         prediction_function=lambda x: x,
                         constraint_functions=[])
 
@@ -194,10 +193,8 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                       datatypes=None):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(-100, 100)), Real(bounds=(-100, 100)),
                                                     Real(bounds=(-100, 100))])
-        features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
         return DataPackage(x=features_dataset,
                            y=predictions_dataset,
-                           features_to_vary=features_to_vary,
                            x_datatypes=datatypes)
 
     def get_or_default(self, value, default_value):
