@@ -7,6 +7,7 @@ import pymoo.core.variable
 from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 
 from decode_mcd.design_targets import DesignTargets
+from decode_mcd.mcd_exceptions import UserInputException
 from decode_mcd_private.validation_utils import validate
 
 QUERY_X_INVALID_BINARY_TYPE = "[query_x] has a variable specified as binary by datatypes " \
@@ -18,30 +19,25 @@ QUERY_X_OUTSIDE_TYPES_RANGE = "[query_x] parameters fall outside of range specif
 
 
 class DataPackage:
+    # TODO: move fields from data package to problem
     def __init__(self,
-                 features_dataset: Union[pd.DataFrame, np.ndarray],
-                 predictions_dataset: Union[pd.DataFrame, np.ndarray],
-                 query_x: Union[pd.DataFrame, np.ndarray],
-                 design_targets: DesignTargets,
-                 datatypes: Sequence[Variable],
-                 features_to_vary: Union[Sequence[str], Sequence[int]] = None,
-                 bonus_objectives: Union[Sequence[str], Sequence[int]] = None,
-                 datasets_scores=None,
-                 datasets_validity=None
+                 x: Union[pd.DataFrame, np.ndarray],
+                 y: Union[pd.DataFrame, np.ndarray],
+                 x_datatypes: Sequence[Variable]
                  ):
         """
         A data class that encapsulates all design and performance space data.
 
-        @param features_dataset: should be 2D and should contain designs that are
+        @param x: should be 2D and should contain designs that are
         somewhat representative of the desired region of the design space.
 
-        @param predictions_dataset: dataset of the performance metrics of the designs in the features dataset.
+        @param y: dataset of the performance metrics of the designs in the features dataset.
 
-        @param query_x: the starting design. Generated designs will generally try to remain similar to this.
+        @param x_query: the starting design. Generated designs will generally try to remain similar to this.
 
-        @param design_targets:  describes the desired region of the performance space.
+        @param y_targets:  describes the desired region of the performance space.
 
-        @param datatypes: describes the datatypes of the design features in @features_dataset,
+        @param x_datatypes: describes the datatypes of the design features in @features_dataset,
         and must also be supplied with bounds that describe the desired region of the design space.
         Valid: [Real(bounds=(0, 10), Choice(options=(0, 1, 2), ...]
         Invalid: [Real(0, 10), Choice((0, 1, 2))] | [Real(), Choice()]
@@ -55,17 +51,22 @@ class DataPackage:
         @param datasets_validity:
 
         """
-        self.features_dataset = self._to_valid_dataframe(features_dataset, "features_dataset")
-        self.predictions_dataset = self._to_valid_dataframe(predictions_dataset, "predictions_dataset")
-        self.query_x = self._to_valid_dataframe(query_x, "query_x")
-        self.design_targets = design_targets
-        self.datatypes = datatypes
-        self.features_to_vary = self._get_or_default(features_to_vary, list(self.features_dataset.columns.values))
-        self.bonus_objectives = self._get_or_default(bonus_objectives, [])
-        self.datasets_scores = datasets_scores
-        self.datasets_validity = datasets_validity
+        self.features_dataset = self._to_valid_dataframe(x, "features_dataset")
+        self.predictions_dataset = self._to_valid_dataframe(y, "predictions_dataset")
+        self.datatypes = x_datatypes
         self._validate_fields()
-        self.features_to_freeze = list(set(self.features_dataset) - set(self.features_to_vary))
+
+    def cross_validate(self,
+                       x_query: Union[pd.DataFrame, np.ndarray],
+                       y_targets: DesignTargets,
+                       features_to_vary: Union[Sequence[str], Sequence[int]]):
+        x_query = self._to_valid_dataframe(x_query, "query_x")
+        self._cross_validate_datasets()
+        self._cross_validate_features_to_vary(features_to_vary)
+        self._cross_validate_query_x(x_query)
+        self._validate_design_targets(y_targets)
+        self._validate_datatypes()
+        self._validate_query_x_against_datatypes(x_query)
 
     def _get_or_default(self, value, default_value):
         if value is None:
@@ -92,12 +93,7 @@ class DataPackage:
 
     def _validate_fields(self):
         self._cross_validate_datasets()
-        self._cross_validate_features_to_vary()
-        self._cross_validate_query_x()
-        self._validate_design_targets()
-        self._validate_bonus_objs()
         self._validate_datatypes()
-        self._validate_query_x_against_datatypes()
         # self._validate_bounds(features_to_vary, upper_bounds, lower_bounds)
 
     def _cross_validate_datasets(self):
@@ -118,8 +114,8 @@ class DataPackage:
     #     assert upper_bounds.shape == (valid_length,)
     #     assert lower_bounds.shape == (valid_length,)
 
-    def _cross_validate_features_to_vary(self):
-        self._validate_columns(self.features_dataset, self.features_to_vary,
+    def _cross_validate_features_to_vary(self, features_to_vary: Union[Sequence[str], Sequence[int]]):
+        self._validate_columns(self.features_dataset, features_to_vary,
                                "features_dataset", "features_to_vary")
 
     def _validate_columns(self,
@@ -144,17 +140,13 @@ class DataPackage:
             validate(False, f"Invalid value in {features_name}: expected columns "
                             f"{invalid_columns} to be in {dataset_name} columns {valid_columns}")
 
-    def _validate_bonus_objs(self):
-        condition = set(self.bonus_objectives).issubset(set(self.predictions_dataset.columns))
-        validate(condition, "Bonus objectives should be a subset of labels!")
-
-    def _cross_validate_query_x(self):
-        condition = not self.query_x.empty
+    def _cross_validate_query_x(self, query_x: pd.DataFrame):
+        condition = not query_x.empty
         validate(condition, "query_x cannot be empty!")
         expected_n_columns = len(self.features_dataset.columns)
-        mandatory_condition = self.query_x.values.shape == (1, expected_n_columns)
+        mandatory_condition = query_x.values.shape == (1, expected_n_columns)
         validate(mandatory_condition, f"query_x must have 1 row and {expected_n_columns} columns")
-        condition1 = set(self.query_x.columns) == set(self.features_dataset.columns)
+        condition1 = set(query_x.columns) == set(self.features_dataset.columns)
         validate(condition1, "query_x columns do not match dataset columns!")
 
     def _validate_datatypes(self):
@@ -174,13 +166,19 @@ class DataPackage:
         validate(mandatory_condition, "datatypes must strictly be a sequence of objects belonging to "
                                       "the types [Real, Integer, Choice, Binary]")
 
-    def _validate_design_targets(self):
-        condition = isinstance(self.design_targets, DesignTargets)
+    def _validate_design_targets(self, design_targets: DesignTargets):
+        condition = isinstance(design_targets, DesignTargets)
         validate(condition, "design_targets must be an instance of DesignTargets")
-        invalid_columns = self._get_invalid_columns(self.design_targets.get_all_constrained_labels(),
+        invalid_columns = self._get_invalid_columns(design_targets.get_all_constrained_labels(),
                                                     self.predictions_dataset.columns)
         self._raise_if_invalid_columns("predictions_dataset", "design_targets",
                                        invalid_columns, self.predictions_dataset.columns.values)
+
+        invalid_minimization_targets = self._get_invalid_columns([t.label for t in design_targets.minimization_targets],
+                                                                 self.predictions_dataset.columns)
+        if len(invalid_minimization_targets) > 0:
+            raise UserInputException(
+                f"Minimization targets {invalid_minimization_targets} do not exist in dataset columns {self.predictions_dataset.columns.values}")
 
     def _validate_internals(self):
         for dt in self.datatypes:
@@ -196,10 +194,10 @@ class DataPackage:
                  f"Parameter [datatypes] is invalid: {field_name} cannot be None for object of type "
                  f"pymoo.core.variable.{class_name}")
 
-    def _validate_query_x_against_datatypes(self):
+    def _validate_query_x_against_datatypes(self, query_x: pd.DataFrame):
         for i in range(len(self.datatypes)):
             dt = self.datatypes[i]
-            val = self.query_x.values[0][i]
+            val = query_x.values[0][i]
             if type(dt) in [Real, Integer]:
                 self._validate_range(dt, val)
             if type(dt) is Choice:

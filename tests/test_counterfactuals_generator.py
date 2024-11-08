@@ -24,9 +24,13 @@ class RevertToQueryRepairTest(unittest.TestCase):
         to remove the redundant check in the code or otherwise replace it with
         a more meaningful check."""
         repair = _RevertToQueryRepair()
-        package = self.build_package(np.array([[11, 8, 13]]),
-                                     [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
-        problem = MultiObjectiveProblem(data_package=package, prediction_function=lambda x: x, constraint_functions=[])
+        query_x = np.array([[11, 8, 13]])
+        design_targets = DesignTargets([ContinuousTarget(0, 10, 15)])
+        package = self.build_package([Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
+        problem = MultiObjectiveProblem(data_package=package,
+                                        x_query=query_x,
+                                        y_targets=design_targets,
+                                        prediction_function=lambda x: x, constraint_functions=[])
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
         repaired = repair._do(problem, z)
         repaired_array = pd.DataFrame.from_records(repaired).values
@@ -38,9 +42,11 @@ class RevertToQueryRepairTest(unittest.TestCase):
 
     def test_revert_all(self):
         repair = _RevertToQueryRepair()
-        package = self.build_package(np.array([[1, 2, 3]]),
-                                     [Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
-        problem = MultiObjectiveProblem(data_package=package, prediction_function=lambda x: x, constraint_functions=[])
+        package = self.build_package([Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
+        problem = MultiObjectiveProblem(data_package=package,
+                                        x_query=np.array([[1, 2, 3]]),
+                                        y_targets=DesignTargets([ContinuousTarget(0, 10, 15)]),
+                                        prediction_function=lambda x: x, constraint_functions=[])
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
         repaired = repair._do(problem, z)
         repaired_array = pd.DataFrame.from_records(repaired).values
@@ -49,13 +55,11 @@ class RevertToQueryRepairTest(unittest.TestCase):
         self.assertTrue(2 <= np.average(repaired_array[:, 1]) <= 4)
         self.assertTrue(3 <= np.average(repaired_array[:, 2]) <= 5)
 
-    def build_package(self, query_x, datatypes):
+    def build_package(self, datatypes):
         _array = np.array([[5, 10, 15], [12, 15, 123], [13, 145, 13]])
-        package = DataPackage(features_dataset=_array,
-                              predictions_dataset=_array,
-                              query_x=query_x,
-                              design_targets=DesignTargets([ContinuousTarget(0, 10, 15)]),
-                              datatypes=datatypes)
+        package = DataPackage(x=_array,
+                              y=_array,
+                              x_datatypes=datatypes)
         return package
 
 
@@ -86,23 +90,23 @@ class CounterfactualsGeneratorTest(unittest.TestCase):
         generator = CounterfactualsGenerator(self.build_valid_problem(), 500)
         generator.generate(1)
         self.assert_raises_with_message(
-            lambda: generator.sample_with_weights(num_samples=5.5, avg_gower_weight=1, cfc_weight=1, gower_weight=1,
-                                                  diversity_weight=1),
+            lambda: generator.sample(num_samples=5.5, avg_gower_weight=1, cfc_weight=1, gower_weight=1,
+                                     diversity_weight=1),
             "num_samples must be an integer")
         self.assert_raises_with_message(
-            lambda: generator.sample_with_weights(num_samples=-5, avg_gower_weight=1, cfc_weight=1, gower_weight=1,
-                                                  diversity_weight=1),
+            lambda: generator.sample(num_samples=-5, avg_gower_weight=1, cfc_weight=1, gower_weight=1,
+                                     diversity_weight=1),
             "num_samples must be a positive integer")
 
     def build_valid_problem(self):
+        _x_query = np.array([[5, 3, 1]])
+        targets = DesignTargets([ContinuousTarget(0, 0, 10)])
+        _data_package = DataPackage(x=np.array([[1, 2, 3], [4, 5, 6]]), y=np.array([[1, 2, 3], [4, 5, 6]]),
+                                    x_datatypes=[Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))])
         return MultiObjectiveProblem(
-            data_package=DataPackage(
-                features_dataset=np.array([[1, 2, 3], [4, 5, 6]]),
-                predictions_dataset=np.array([[1, 2, 3], [4, 5, 6]]),
-                query_x=np.array([[5, 3, 1]]),
-                design_targets=DesignTargets([ContinuousTarget(0, 0, 10)]),
-                datatypes=[Real(bounds=(0, 10)), Real(bounds=(0, 10)), Real(bounds=(0, 10))]
-            ),
+            data_package=_data_package,
+            x_query=_x_query,
+            y_targets=targets,
             prediction_function=lambda x: x,
             constraint_functions=[]
         )

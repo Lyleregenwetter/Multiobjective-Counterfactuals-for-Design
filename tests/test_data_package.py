@@ -6,9 +6,10 @@ import pandas as pd
 from pymoo.core.variable import Real, Choice, Integer, Binary
 
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, MinimizationTarget
 from decode_mcd.mcd_exceptions import UserInputException
 
+DEFAULT_FEATURES = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]), columns=["x", "y", "z"])
 
 # noinspection PyTypeChecker
 class DataPackageTest(unittest.TestCase):
@@ -17,9 +18,6 @@ class DataPackageTest(unittest.TestCase):
 
     def test_initialize_valid_package(self):
         self.assertIsNotNone(self.valid_package)
-
-    def test_get_features_to_freeze(self):
-        self.assertEqual(["z"], self.valid_package.features_to_freeze)
 
     def test_invalid_features_dataset(self):
         self._test_invalid(
@@ -44,14 +42,14 @@ class DataPackageTest(unittest.TestCase):
 
     def test_invalid_design_targets(self):
         self._test_invalid({
-            lambda: self.initialize(design_targets=DesignTargets()):
+            lambda: self._test_cross_validate(design_targets=DesignTargets()):
                 "Design targets must be provided",
-            lambda: self.initialize(design_targets={}): "design_targets must be an instance of DesignTargets",
-            lambda: self.initialize(design_targets=DesignTargets([ContinuousTarget("Z", 3, 10)])):
+            lambda: self._test_cross_validate(design_targets={}): "design_targets must be an instance of DesignTargets",
+            lambda: self._test_cross_validate(design_targets=DesignTargets([ContinuousTarget("Z", 3, 10)])):
                 "Invalid value in design_targets: expected columns ['Z'] "
                 "to be in predictions_dataset columns ['A' 'B']",
-            lambda: self.initialize(design_targets=DesignTargets([ContinuousTarget("A", 3, 10)],
-                                                                 [CategoricalTarget("Z", (1, 2))])):
+            lambda: self._test_cross_validate(design_targets=DesignTargets([ContinuousTarget("A", 3, 10)],
+                                                                           [CategoricalTarget("Z", (1, 2))])):
                 "Invalid value in design_targets: expected columns ['Z'] "
                 "to be in predictions_dataset columns ['A' 'B']"
         })
@@ -84,51 +82,72 @@ class DataPackageTest(unittest.TestCase):
 
     def test_invalid_bonus_objectives(self):
         self.assert_raises_with_message(
-            lambda: self.initialize(bonus_objectives=["NON_EXISTENT"]),
-            "Bonus objectives should be a subset of labels!"
+            lambda: self._test_cross_validate(design_targets=DesignTargets(
+                continuous_targets=[ContinuousTarget("A", 0, 10)],
+                minimization_targets=[MinimizationTarget("NON_EXISTENT")]
+            )
+            ),
+            "Minimization targets ['NON_EXISTENT'] do not exist in dataset columns ['A' 'B']"
         )
 
     def test_invalid_features_to_vary(self):
         self._test_invalid({
-            lambda: self.initialize(features_dataset=np.array([[1, 2, 3], [4, 5, 6]])):
+            lambda: self._test_cross_validate(features_dataset=np.array([[1, 2, 3], [4, 5, 6]])):
                 "Invalid value in features_to_vary: expected columns ['x', 'y'] "
                 "to be in features_dataset columns [0 1 2]",
             lambda:
-            self.initialize(features_to_vary=["N"]):
+            self._test_cross_validate(features_to_vary=["N"]):
                 "Invalid value in features_to_vary: expected columns ['N'] "
                 "to be in features_dataset columns ['x' 'y' 'z']",
-            lambda: self.initialize(features_to_vary=[]):
+            lambda: self._test_cross_validate(features_to_vary=[]):
                 "features_to_vary cannot be an empty sequence"
 
         })
+
+    def _test_cross_validate(self, query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "z"]),
+                             design_targets=None,
+                             features_to_vary=None,
+                             features_dataset=None):
+        features_dataset = self.get_or_default(features_dataset, DEFAULT_FEATURES)
+        features_to_vary = self.get_or_default(features_to_vary, ["x", "y"])
+        design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)],
+                                                                           minimization_targets=[
+                                                                               MinimizationTarget("A")]))
+        self.initialize(features_dataset=features_dataset).cross_validate(x_query=query_x, y_targets=design_targets, features_to_vary=features_to_vary)
 
     def test_invalid_query_x(self):
         # noinspection PyTypeChecker
         self._test_invalid(
             {
-                lambda: self.initialize(query_x=None):
+                lambda: self._test_cross_validate(query_x=None):
                     "query_x must either be a pandas dataframe or a numpy ndarray",
-                lambda: self.initialize(query_x={}):
+                lambda: self._test_cross_validate(query_x={}):
                     "query_x must either be a pandas dataframe or a numpy ndarray",
-                lambda: self.initialize(query_x=pd.DataFrame()):
+                lambda: self._test_cross_validate(query_x=pd.DataFrame()):
                     "query_x cannot be empty",
-                lambda: self.initialize(query_x=pd.DataFrame(np.array([[1]]), columns=["x"])):
+                lambda: self._test_cross_validate(query_x=pd.DataFrame(np.array([[1]]), columns=["x"])):
                     "query_x must have 1 row and 3 columns",
-                lambda: self.initialize(query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "zz"])):
+                lambda: self._test_cross_validate(
+                    query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "zz"])):
                     "query_x columns do not match dataset columns!"
             }
         )
 
     def test_query_x_outside_of_datatypes_range(self):
         def build_problem_with_query_x_out_of_range():
-            self.initialize(query_x=pd.DataFrame(np.array([[-110, -110, -110]]),
-                                                 columns=["x", "y", "z"]
-                                                 ))
+            self._test_cross_validate(query_x=pd.DataFrame(np.array([[-110, -110, -110]]),
+                                                           columns=["x", "y", "z"]
+                                                           ))
 
         def build_problem_with_query_x_integer_out_of_range():
-            self.initialize(query_x=pd.DataFrame(np.array([[-110, -110, -110]]),
-                                                 columns=["x", "y", "z"]
-                                                 ), datatypes=[Integer(bounds=(0, 5)) for _ in range(3)])
+            x = pd.DataFrame(np.array([[-110, -110, -110]]),
+                             columns=["x", "y", "z"]
+                             )
+            design_t = DesignTargets([ContinuousTarget("A", 4, 10)], minimization_targets=[MinimizationTarget("A")])
+            self.initialize(datatypes=[Integer(bounds=(0, 5)) for _ in range(3)]).cross_validate(x_query=x,
+                                                                                                 y_targets=design_t,
+                                                                                                 features_to_vary=["x",
+                                                                                                                   "y"])
 
         self.assert_raises_with_message(build_problem_with_query_x_out_of_range,
                                         "[query_x] parameters fall outside of range specified by datatypes")
@@ -137,19 +156,24 @@ class DataPackageTest(unittest.TestCase):
 
     def test_query_x_with_invalid_choices(self):
         def build_problem_with_invalid_choice_in_query_x():
-            self.initialize(query_x=pd.DataFrame(np.array([[-110, -120, -110]]),
-                                                 columns=["x", "y", "z"]
-                                                 ),
-                            datatypes=[Real(bounds=(-200, 0)), Choice(options=(-100, -110)), Real(bounds=(-200, 0))])
+            dp = self.initialize(
+                datatypes=[Real(bounds=(-200, 200)), Choice(options=(-100, -110)), Real(bounds=(-200, 200))])
+            dp.cross_validate(x_query=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "z"]),
+                              y_targets=DesignTargets([ContinuousTarget("A", 4, 10)],
+                                                      minimization_targets=[
+                                                          MinimizationTarget("A")]),
+                              features_to_vary=["x", "y"])
 
         self.assert_raises_with_message(build_problem_with_invalid_choice_in_query_x,
                                         "[query_x] has a choice variable that is not permitted by datatypes")
 
         def build_problem_with_invalid_binary_in_query_x():
-            self.initialize(query_x=pd.DataFrame(np.array([[-110, 3, -110]]),
-                                                 columns=["x", "y", "z"]
-                                                 ),
-                            datatypes=[Real(bounds=(-200, 0)), Binary(), Real(bounds=(-200, 0))])
+            dp = self.initialize(datatypes=[Real(bounds=(-200, 200)), Binary(), Real(bounds=(-200, 200))])
+            dp.cross_validate(x_query=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "z"]),
+                              y_targets=DesignTargets([ContinuousTarget("A", 4, 10)],
+                                                      minimization_targets=[
+                                                          MinimizationTarget("A")]),
+                              features_to_vary=["x", "y"])
 
         self.assert_raises_with_message(build_problem_with_invalid_choice_in_query_x,
                                         "[query_x] has a choice variable that is not permitted by datatypes")
@@ -160,13 +184,7 @@ class DataPackageTest(unittest.TestCase):
     def test_initialize_with_numpy_arrays(self):
         features = np.array([[1, 2, 3], [4, 5, 6]])
         predictions = np.array([[1, 2], [3, 4]])
-        data_package = self.initialize(features_dataset=features, features_to_vary=[0, 1],
-                                       query_x=np.array([[1, 2, 3]]),
-                                       bonus_objectives=[0],
-                                       predictions_dataset=predictions,
-                                       design_targets=DesignTargets([
-                                           ContinuousTarget(0, 5, 10),
-                                           ContinuousTarget(1, 10, 15)]))
+        data_package = self.initialize(features_dataset=features, predictions_dataset=predictions)
         np_test.assert_equal(data_package.features_dataset.to_numpy(), features)
         np_test.assert_equal(data_package.predictions_dataset.to_numpy(), predictions)
         self.assertIs(pd.DataFrame, type(data_package.features_dataset))
@@ -180,24 +198,13 @@ class DataPackageTest(unittest.TestCase):
         self.assertEqual(expected_message, context.exception.args[0])
 
     def initialize(self,
-                   features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]), columns=["x", "y", "z"]),
+                   features_dataset=DEFAULT_FEATURES,
                    predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2]]), columns=["A", "B"]),
-                   query_x=pd.DataFrame(np.array([[1, 2, 3]]), columns=["x", "y", "z"]),
-                   design_targets=None,
-                   features_to_vary=None,
-                   bonus_objectives=None,
                    datatypes=None):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(1, 4)), Real(bounds=(2, 5)), Real(bounds=(3, 6))])
-        features_to_vary = self.get_or_default(features_to_vary, ["x", "y"])
-        design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
-        bonus_objectives = self.get_or_default(bonus_objectives, ["A"])
-        return DataPackage(features_dataset=features_dataset,
-                           predictions_dataset=predictions_dataset,
-                           query_x=query_x,
-                           features_to_vary=features_to_vary,
-                           design_targets=design_targets,
-                           bonus_objectives=bonus_objectives,
-                           datatypes=datatypes)
+        return DataPackage(x=features_dataset,
+                           y=predictions_dataset,
+                           x_datatypes=datatypes)
 
     def _test_invalid(self, invalid_scenarios: dict):
         for factory, exception_message in invalid_scenarios.items():

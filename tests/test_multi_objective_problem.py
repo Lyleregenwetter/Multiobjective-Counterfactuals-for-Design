@@ -6,7 +6,8 @@ import pandas as pd
 from pymoo.core.variable import Real, Choice
 
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import ContinuousTarget, DesignTargets, CategoricalTarget, ProbabilityTarget
+from decode_mcd.design_targets import ContinuousTarget, DesignTargets, CategoricalTarget, \
+    MinimizationTarget
 from decode_mcd.multi_objective_problem import MultiObjectiveProblem as MOP
 
 
@@ -29,16 +30,14 @@ class MultiObjectiveProblemTest(unittest.TestCase):
             "z": 0
         })
         self.data_package = DataPackage(
-            features_dataset=features,
-            predictions_dataset=pd.DataFrame(np.random.rand(features.shape[0], 1), columns=["performance"]),
-            query_x=features[0:1],
-            features_to_vary=["x", "y", "z"],
-            design_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
-            bonus_objectives=[],
-            datatypes=[Real(bounds=(-100, 100)), Real(bounds=(-100, 100)), Real(bounds=(-100, 100))]
+            x=features,
+            y=pd.DataFrame(np.random.rand(features.shape[0], 1), columns=["performance"]),
+            x_datatypes=[Real(bounds=(-100, 100)), Real(bounds=(-100, 100)), Real(bounds=(-100, 100))]
         )
         self.problem = MOP(
             data_package=self.data_package,
+            x_query=features[0:1],
+            y_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
             prediction_function=lambda x: pd.DataFrame(),
             constraint_functions=[],
         )
@@ -49,7 +48,7 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         pass
 
     def test_evaluate_subset(self):
-        problem = self.build_problem(self.build_package(features_to_vary=["x", "y"]))
+        problem = self.build_problem(self.build_package(), features_to_vary=["x", "y"])
         out = {}
         problem._evaluate(
             np.array([[12, 13], [14, 15], [16, 17], [16, 19]]), out, datasetflag=False)
@@ -81,7 +80,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         targets = DesignTargets(
             [ContinuousTarget(0, 2, 6), ContinuousTarget(2, 10, 16)],
             [CategoricalTarget(1, (200, 300)), CategoricalTarget(3, (550,))],
-            [ProbabilityTarget((4, 5), (5,))]
         )
         satisfaction = problem._calculate_mixed_constraint_satisfaction(x_full=x_full,
                                                                         y=y,
@@ -90,13 +88,24 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                                                                         design_targets=targets
                                                                         )
         np_test.assert_array_equal(satisfaction, np.array([
-            [1, 0, 7, 1, 0, 0, 1],
-            [-1, 1, 0, 0, 1, 1, 1],
-            [-1, 0, -1, 1, 0, 0, 1],
+            [1, 0, 7, 1, 1],
+            [-1, 1, 0, 0, 1],
+            [-1, 0, -1, 1, 1],
         ]))
 
-    def build_problem(self, package):
-        return MOP(data_package=package, prediction_function=DummyPredictor().predict, constraint_functions=[])
+    def build_problem(self, package,
+                      query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
+                      design_targets=None,
+                      features_to_vary=None,
+                      ):
+        design_targets = self.get_or_default(design_targets, DesignTargets(
+            [ContinuousTarget("A", 4, 10)]))
+        features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
+        return MOP(data_package=package,
+                   x_query=query_x,
+                   y_targets=design_targets,
+                   features_to_vary=features_to_vary,
+                   prediction_function=DummyPredictor().predict, constraint_functions=[])
 
     def test_values_equal_to_constraints_lead_to_zero_in_satisfaction(self):
         """
@@ -130,19 +139,21 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                      Real(bounds=(-5, 50)),
                      Choice(options=(1000, 2000, 3000))]
         targets = DesignTargets(
-            [ContinuousTarget("O1", 100, 500)]
+            [ContinuousTarget("O1", 100, 500)],
+            minimization_targets=[MinimizationTarget("O2"), MinimizationTarget("O3")]
         )
 
         data_package = DataPackage(
-            features_dataset=features_dataset,
-            predictions_dataset=predictions_dataset,
-            query_x=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
-            design_targets=targets,
-            features_to_vary=features,
-            bonus_objectives=["O2", "O3"],
-            datatypes=datatypes
+            x=features_dataset,
+            y=predictions_dataset,
+            x_datatypes=datatypes
         )
-        generator = MOP(data_package, lambda x: x, [])
+        generator = MOP(data_package=data_package,
+                        x_query=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
+                        y_targets=targets,
+                        features_to_vary=features,
+                        prediction_function=lambda x: x,
+                        constraint_functions=[])
 
         scores = generator._calculate_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
                                                             columns=features),
@@ -178,23 +189,13 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                       features_dataset=pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [12, 13, 15]]),
                                                     columns=["x", "y", "z"]),
                       predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2], [2, 1]]), columns=["A", "B"]),
-                      query_x=pd.DataFrame(np.array([[5, 12, 15]]), columns=["x", "y", "z"]),
-                      design_targets=None,
-                      bonus_objectives=None,
                       features_to_vary=None,
                       datatypes=None):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(-100, 100)), Real(bounds=(-100, 100)),
                                                     Real(bounds=(-100, 100))])
-        features_to_vary = self.get_or_default(features_to_vary, ["x", "y", "z"])
-        design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)]))
-        bonus_objectives = self.get_or_default(bonus_objectives, [])
-        return DataPackage(features_dataset=features_dataset,
-                           predictions_dataset=predictions_dataset,
-                           query_x=query_x,
-                           features_to_vary=features_to_vary,
-                           design_targets=design_targets,
-                           bonus_objectives=bonus_objectives,
-                           datatypes=datatypes)
+        return DataPackage(x=features_dataset,
+                           y=predictions_dataset,
+                           x_datatypes=datatypes)
 
     def get_or_default(self, value, default_value):
         if value is None:

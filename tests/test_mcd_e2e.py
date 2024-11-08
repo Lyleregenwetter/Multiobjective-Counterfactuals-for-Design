@@ -12,7 +12,9 @@ from sklearn.linear_model import LinearRegression
 import decode_mcd.multi_objective_problem as MOP
 from decode_mcd import counterfactuals_generator
 from decode_mcd.data_package import DataPackage
-from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, ProbabilityTarget
+from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, MinimizationTarget
+
+INFINITY = 1_000_000_000
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -48,16 +50,19 @@ class McdEndToEndTest(unittest.TestCase):
     def test_run_with_x_constraints(self):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
+        y["PROB"] = y["O_P1"] - y["O_P2"]
         targets = DesignTargets(
-            [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6)],
+            [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6),
+             ContinuousTarget("PROB", 0, INFINITY)],
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
-            [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         design_targets=targets, datatypes=datatypes)
+        dp = DataPackage(x=x, y=y,
+                         x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            x_query=x.iloc[0:1],
+                                            y_targets=targets,
+                                            features_to_vary=x.columns,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[self.x_constraint])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
@@ -69,7 +74,7 @@ class McdEndToEndTest(unittest.TestCase):
         self.assert_x_constraint_met(cfs)
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
         self.assert_categorical_target_met(cfs, "O_C1", [1])
-        self.assert_proba_target_met(cfs, "O_P1")
+        self.assert_greater_than(cfs, "O_P1", "O_P2")
         self.assert_cfs_within_valid_range(cfs)
 
     def test_non_contiguous_objectives(self):
@@ -79,11 +84,13 @@ class McdEndToEndTest(unittest.TestCase):
             [ContinuousTarget("O_R1", 0, 12),
              ContinuousTarget("O_R2", 0, 6)],
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                         design_targets=targets, datatypes=datatypes)
+        dp = DataPackage(x=x, y=y,
+                         x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            x_query=x.iloc[1:2],
+                                            y_targets=targets,
+                                            features_to_vary=["R1", "R2", "R3", "R4", "R5"],
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
@@ -98,16 +105,19 @@ class McdEndToEndTest(unittest.TestCase):
     def test_multi_objectives_with_subset_of_features_to_vary(self):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
+        y["PROB"] = y["O_P1"] - y["O_P2"]
         targets = DesignTargets(
-            [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6)],
-            [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
-            [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
+            [ContinuousTarget("O_R1", 0, 12),
+             ContinuousTarget("O_R2", 0, 6), ContinuousTarget("PROB", 0, INFINITY)],
+            [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))]
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[1:2], features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                         design_targets=targets, datatypes=datatypes)
+        dp = DataPackage(x=x, y=y,
+                         x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            x_query=x.iloc[1:2],
+                                            y_targets=targets,
+                                            features_to_vary=["R1", "R2", "R3", "R4", "R5"],
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
@@ -118,43 +128,49 @@ class McdEndToEndTest(unittest.TestCase):
 
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
         self.assert_categorical_target_met(cfs, "O_C1", [1])
-        self.assert_proba_target_met(cfs, "O_P1")
+        self.assert_greater_than(cfs, "O_P1", "O_P2")
         self.assert_cfs_within_valid_range(cfs)
 
     def test_regression_only_query_y(self):
         x, y = self.x, self.y.drop(columns=self.y.columns.difference(["O_R1"]))
         datatypes = self.build_toy_x_datatypes()
         targets = DesignTargets(
-            [ContinuousTarget("O_R1", -5, 5)]
+            [ContinuousTarget("O_R1", -5, 5)],
+            minimization_targets=[MinimizationTarget("O_R1")]
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         design_targets=targets, datatypes=datatypes, bonus_objectives=["O_R1"])
+        dp = DataPackage(x=x, y=y,
+                         x_datatypes=datatypes)
         problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            x_query=x.iloc[0:1],
+                                            y_targets=targets,
+                                            features_to_vary=x.columns,
                                             prediction_function=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                   any_x),
                                             constraint_functions=[])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
-        cfs = generator.sample_with_weights(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([[1]]),
-                                            include_dataset=False)
+        cfs = generator.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([[1]]),
+                               include_dataset=False)
         self.assert_regression_target_met(cfs, "O_R1", -5, 5)
         self.assert_cfs_within_valid_range(cfs)
 
     def test_mixed_type_targets(self):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
+        y["PROB"] = y["O_P1"] - y["O_P2"]
         targets = DesignTargets(
-            [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6)],
+            [ContinuousTarget("O_R1", 0, 12),
+             ContinuousTarget("O_R2", 0, 6), ContinuousTarget("PROB", 0, INFINITY)],
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
-            [ProbabilityTarget(("O_P1", "O_P2"), ("O_P1",))]
         )
-        dp = DataPackage(features_dataset=x, predictions_dataset=y,
-                         query_x=x.iloc[0:1], features_to_vary=x.columns,
-                         design_targets=targets, datatypes=datatypes)
+        dp = DataPackage(x=x, y=y,
+                         x_datatypes=datatypes)
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
+                                            x_query=x.iloc[0:1],
+                                            y_targets=targets,
+                                            features_to_vary=x.columns,
                                             prediction_function=self.predict_dummy_multiple_objectives,
                                             constraint_functions=[])
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
@@ -165,7 +181,7 @@ class McdEndToEndTest(unittest.TestCase):
 
         self.assert_regression_target_met(cfs, "O_R1", 0, 6)
         self.assert_categorical_target_met(cfs, "O_C1", [1])
-        self.assert_proba_target_met(cfs, "O_P1")
+        self.assert_greater_than(cfs, "O_P1", "O_P2")
         self.assert_cfs_within_valid_range(cfs)
 
     def _build_dummy_multiple_objectives(self):
@@ -187,12 +203,11 @@ class McdEndToEndTest(unittest.TestCase):
                                           np.less_equal(regression_cfs, self.x.max(numeric_only=True).values))
         np_test.assert_equal(all_within_range, 1)
 
-    def assert_proba_target_met(self, cfs, desired_proba):
-        proba_results = self.predict_subset(["O_P1", "O_P2"], cfs)
-        other_proba = list({"O_P1", "O_P2"}.symmetric_difference({desired_proba}))[0]
-        proba_satisfaction = np.greater(proba_results[desired_proba].values,
-                                        proba_results[other_proba].values)
-        np_test.assert_equal(proba_satisfaction, 1)
+    def assert_greater_than(self, cfs, desired_proba: str, other_proba: str):
+        proba_results = self.predict_subset([desired_proba, other_proba], cfs)
+        satisfaction = np.greater(proba_results[desired_proba].values,
+                                  proba_results[other_proba].values)
+        np_test.assert_equal(satisfaction, 1)
 
     def assert_categorical_target_met(self, cfs: pd.DataFrame, label: str, desired_classes: list):
         classification_results = self.predict_subset([label], cfs).values

@@ -1,5 +1,5 @@
 from .data_package import DataPackage
-from .design_targets import DesignTargets, CategoricalTarget, ContinuousTarget, ProbabilityTarget
+from .design_targets import DesignTargets, CategoricalTarget, ContinuousTarget
 from .multi_objective_problem import MultiObjectiveProblem
 from .counterfactuals_generator import CounterfactualsGenerator
 
