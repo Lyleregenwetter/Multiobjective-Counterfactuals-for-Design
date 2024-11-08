@@ -69,7 +69,7 @@ class DesignTargets:
                  minimization_targets: Sequence[MinimizationTarget] = None):
         self.continuous_targets = self._get_or_default(continuous_targets, ())
         self.categorical_targets = self._get_or_default(categorical_targets, ())
-        self.minimization_targets = self._get_or_default(minimization_targets, ())
+        self.minimization_targets: Sequence[MinimizationTarget] = self._get_or_default(minimization_targets, ())
         self._validate_fields()
 
     def get_all_constrained_labels(self):

@@ -7,6 +7,7 @@ import pymoo.core.variable
 from pymoo.core.variable import Variable, Integer, Binary, Choice, Real
 
 from decode_mcd.design_targets import DesignTargets
+from decode_mcd.mcd_exceptions import UserInputException
 from decode_mcd_private.validation_utils import validate
 
 QUERY_X_INVALID_BINARY_TYPE = "[query_x] has a variable specified as binary by datatypes " \
@@ -172,6 +173,12 @@ class DataPackage:
                                                     self.predictions_dataset.columns)
         self._raise_if_invalid_columns("predictions_dataset", "design_targets",
                                        invalid_columns, self.predictions_dataset.columns.values)
+
+        invalid_minimization_targets = self._get_invalid_columns([t.label for t in design_targets.minimization_targets],
+                                                                 self.predictions_dataset.columns)
+        if len(invalid_minimization_targets) > 0:
+            raise UserInputException(
+                f"Minimization targets {invalid_minimization_targets} do not exist in dataset columns {self.predictions_dataset.columns.values}")
 
     def _validate_internals(self):
         for dt in self.datatypes:
