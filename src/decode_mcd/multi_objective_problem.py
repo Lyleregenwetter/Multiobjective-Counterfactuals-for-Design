@@ -50,7 +50,7 @@ class MultiObjectiveProblem(Problem):
         self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(self._bonus_objectives)
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self._number_of_objectives,
-                         n_constr=len(constraint_functions) + self._count_y_constraints())
+                         n_constr=len(self._constraint_functions) + self._count_y_constraints())
         self._ranges = self._build_ranges(self._data_package.features_dataset)
         self._avg_gower_sample_size = 1000
         self._avg_gower_sample_seed = MEANING_OF_LIFE
