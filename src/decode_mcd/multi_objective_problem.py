@@ -29,10 +29,7 @@ class MultiObjectiveProblem(Problem):
                  x_query: Union[pd.DataFrame, np.ndarray],
                  y_targets: DesignTargets,
                  prediction_function: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
-                 features_to_vary: Union[Sequence[str], Sequence[int]] = None,
-                 datasets_scores=None,  # TODO: x_counterfactual_scores
-                 datasets_validity=None,  # TODO: y_validity
-                 constraint_functions: list = None):
+                 features_to_vary: Union[Sequence[str], Sequence[int]] = None):
         """A class representing a multiobjective minimization problem"""
         self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
         self._data_package = data_package
@@ -42,15 +39,12 @@ class MultiObjectiveProblem(Problem):
                                                                                            list(self._data_package.features_dataset.columns.values))
         self._features_to_freeze = list(set(self._data_package.features_dataset.columns.values) - set(self._features_to_vary))
         self._data_package.cross_validate(self._x_query, self._y_targets, self._features_to_vary)
-        self._datasets_scores = datasets_scores
-        self._datasets_validity = datasets_validity
         self._predictor = prediction_function
         self._bonus_objectives = self._get_or_default(self._grab_minimization_targets(), [])
-        self._constraint_functions = self._get_or_default(constraint_functions, [])
         self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(self._bonus_objectives)
         super().__init__(vars=self._build_problem_var_dict(),
                          n_obj=self._number_of_objectives,
-                         n_constr=len(self._constraint_functions) + self._count_y_constraints())
+                         n_constr=self._count_y_constraints())
         self._ranges = self._build_ranges(self._data_package.features_dataset)
         self._avg_gower_sample_size = 1000
         self._avg_gower_sample_seed = MEANING_OF_LIFE
@@ -70,7 +64,8 @@ class MultiObjectiveProblem(Problem):
         validity = self._get_revert_validity(all_candidates, q_x, var_dict)
         return tuple(list(self._features_to_vary).index(c) for c in all_candidates if validity[c])
 
-    def _get_revert_validity(self, all_candidates, q_x, var_dict):
+    @staticmethod
+    def _get_revert_validity(all_candidates, q_x, var_dict):
         validity = {}
         for candidate in all_candidates:
             value = q_x.iloc[0][candidate]
@@ -127,14 +122,12 @@ class MultiObjectiveProblem(Problem):
         x_full = self._build_full_df(x)
         predictions = self._get_predictions(x_full, dataset_flag)
 
-        scores = self._get_scores(x_full, predictions, dataset_flag)
-        validity = self._get_mixed_constraint_satisfaction(x_full, predictions, self._constraint_functions,
-                                                           self._y_targets, dataset_flag)
+        scores = self._get_scores(x_full, predictions)
+        validity = self._get_mixed_constraint_satisfaction(x_full, predictions,
+                                                           self._y_targets)
         return scores, validity
 
-    def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame, dataset_flag):
-        if dataset_flag and (self._datasets_scores is not None):
-            return self._datasets_scores
+    def _get_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
         return self._calculate_scores(x, predictions)
 
     def _calculate_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
@@ -232,49 +225,44 @@ class MultiObjectiveProblem(Problem):
     def _get_mixed_constraint_satisfaction(self,
                                            x_full: pd.DataFrame,
                                            y: pd.DataFrame,
-                                           x_constraint_functions: list,
-                                           design_targets: DesignTargets,
-                                           dataset_flag):
-        if dataset_flag and (self._datasets_validity is not None):
-            return self._datasets_validity
-        return self._calculate_mixed_constraint_satisfaction(x_full, y, x_constraint_functions, design_targets)
+                                           design_targets: DesignTargets):
+        return self._calculate_mixed_constraint_satisfaction(x_full, y, design_targets)
 
     def _calculate_mixed_constraint_satisfaction(self,
                                                  x_full: pd.DataFrame,
                                                  y: pd.DataFrame,
-                                                 x_constraint_functions: list,
                                                  design_targets: DesignTargets):
         all_labels = y.columns.tolist()
-        initial_num_columns = len(all_labels) + len(x_constraint_functions)
+        initial_num_columns = len(all_labels)
         n_rows = x_full.shape[0]
         result = np.zeros(shape=(n_rows, initial_num_columns))
 
-        self._append_x_constraint_satisfaction(result, x_full, x_constraint_functions, initial_num_columns)
         self._append_satisfaction(result, self._evaluate_regression_satisfaction, y, design_targets,
                                   design_targets.get_continuous_labels())
         self._append_satisfaction(result, self._evaluate_categorical_satisfaction, y, design_targets,
                                   design_targets.get_categorical_labels())
-        result = self.drop_non_constrained_columns(design_targets, len(x_constraint_functions), result, y)
+        result = self.drop_non_constrained_columns(design_targets, result, y)
         return result
 
     def _grab_minimization_targets(self) -> List[str]:
         return [_target.label for _target in self._y_targets.minimization_targets]
 
 
-    def drop_non_constrained_columns(self, design_targets, num_x_constraints: int, result, y):
-        x_constraints = result[:, result.shape[1] - num_x_constraints:]
+    @staticmethod
+    def drop_non_constrained_columns(design_targets, result, y):
         constrained_indices = [list(y.columns).index(key) for key in design_targets.get_all_constrained_labels()]
         constrained_indices.sort()
-        y_constraints = result[:, constrained_indices]
-        return np.concatenate([y_constraints, x_constraints], axis=1)
+        return result[:, constrained_indices]
 
-    def _append_satisfaction(self, result: np.ndarray, evaluation_function: callable,
+    @staticmethod
+    def _append_satisfaction(result: np.ndarray, evaluation_function: callable,
                              y: pd.DataFrame, y_constraints: DesignTargets, labels) -> None:
         satisfaction = evaluation_function(y, y_constraints)
         indices = [list(y.columns).index(key) for key in labels]
         result[:, indices] = satisfaction
 
-    def _append_x_constraint_satisfaction(self, result: np.ndarray,
+    @staticmethod
+    def _append_x_constraint_satisfaction(result: np.ndarray,
                                           x_full: pd.DataFrame,
                                           x_constraint_functions: List[callable],
                                           initial_num_columns: int):
@@ -282,13 +270,15 @@ class MultiObjectiveProblem(Problem):
             # TODO: discuss this change with Lyle
             result[:, initial_num_columns - 1 - i] = x_constraint_functions[i](x_full).values.flatten()
 
-    def _evaluate_categorical_satisfaction(self, y: pd.DataFrame, y_category_constraints: DesignTargets):
+    @staticmethod
+    def _evaluate_categorical_satisfaction(y: pd.DataFrame, y_category_constraints: DesignTargets):
         actual = y.loc[:, y_category_constraints.get_categorical_labels()]
         # dtype=object is needed, otherwise the operation is deprecated
         targets = np.array([[i for i in j] for j in y_category_constraints.get_desired_classes()], dtype=object)
         return 1 - ClassificationEvaluator().evaluate_categorical(actual, targets=targets)
 
-    def _evaluate_regression_satisfaction(self, y: pd.DataFrame, design_targets: DesignTargets):
+    @staticmethod
+    def _evaluate_regression_satisfaction(y: pd.DataFrame, design_targets: DesignTargets):
         query_lb, query_ub = design_targets.get_continuous_boundaries()
         actual = y.loc[:, design_targets.get_continuous_labels()].values
         satisfaction = np.maximum(actual - query_ub, query_lb - actual)
@@ -305,11 +295,13 @@ class MultiObjectiveProblem(Problem):
         df = df[self._valid_features_dataset.columns]
         return df
 
-    def _validate(self, mandatory_condition, error_message):
+    @staticmethod
+    def _validate(mandatory_condition, error_message):
         if not mandatory_condition:
             raise ValueError(error_message)
 
-    def _get_or_default(self, _supplied_value, _default_value):
+    @staticmethod
+    def _get_or_default(_supplied_value, _default_value):
         if _supplied_value is None:
             return _default_value
         return _supplied_value

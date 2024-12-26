@@ -26,8 +26,7 @@ class QuickStartTest(unittest.TestCase):
                                         x_query=x[0].reshape(1, 1),
                                         y_targets=DesignTargets([ContinuousTarget(label=0,
                                                                                   lower_bound=25,
-                                                                                  upper_bound=75)]),
-                                        constraint_functions=[])
+                                                                                  upper_bound=75)]))
 
         generator = CounterfactualsGenerator(problem=problem,
                                              pop_size=10,
