@@ -51,20 +51,26 @@ class McdEndToEndTest(unittest.TestCase):
         x, y = self._build_dummy_multiple_objectives()
         datatypes = self.build_toy_x_datatypes()
         y["PROB"] = y["O_P1"] - y["O_P2"]
+        y["X_CONSTRAINT"] = self.x_constraint(x)
         targets = DesignTargets(
             [ContinuousTarget("O_R1", 0, 12), ContinuousTarget("O_R2", 0, 6),
              ContinuousTarget("PROB", 0, INFINITY)],
-            [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
+            [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,)),
+             CategoricalTarget("X_CONSTRAINT", (0,))],
         )
         dp = DataPackage(x=x, y=y,
                          x_datatypes=datatypes)
+
+        def prediction_function(_x: pd.DataFrame):
+            result = self.predict_dummy_multiple_objectives(_x)
+            result["X_CONSTRAINT"] = self.x_constraint(_x)
+            return result
 
         problem = MOP.MultiObjectiveProblem(data_package=dp,
                                             x_query=x.iloc[0:1],
                                             y_targets=targets,
                                             features_to_vary=x.columns,
-                                            prediction_function=self.predict_dummy_multiple_objectives,
-                                            constraint_functions=[self.x_constraint])
+                                            prediction_function=prediction_function)
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
@@ -91,8 +97,7 @@ class McdEndToEndTest(unittest.TestCase):
                                             x_query=x.iloc[1:2],
                                             y_targets=targets,
                                             features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                                            prediction_function=self.predict_dummy_multiple_objectives,
-                                            constraint_functions=[])
+                                            prediction_function=self.predict_dummy_multiple_objectives)
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
@@ -118,8 +123,7 @@ class McdEndToEndTest(unittest.TestCase):
                                             x_query=x.iloc[1:2],
                                             y_targets=targets,
                                             features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                                            prediction_function=self.predict_dummy_multiple_objectives,
-                                            constraint_functions=[])
+                                            prediction_function=self.predict_dummy_multiple_objectives)
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
@@ -145,8 +149,7 @@ class McdEndToEndTest(unittest.TestCase):
                                             y_targets=targets,
                                             features_to_vary=x.columns,
                                             prediction_function=lambda any_x: self.predict_subset(["O_R1"],
-                                                                                                  any_x),
-                                            constraint_functions=[])
+                                                                                                  any_x))
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
@@ -171,8 +174,7 @@ class McdEndToEndTest(unittest.TestCase):
                                             x_query=x.iloc[0:1],
                                             y_targets=targets,
                                             features_to_vary=x.columns,
-                                            prediction_function=self.predict_dummy_multiple_objectives,
-                                            constraint_functions=[])
+                                            prediction_function=self.predict_dummy_multiple_objectives)
         generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
@@ -241,6 +243,7 @@ class McdEndToEndTest(unittest.TestCase):
             1
         )
 
-    def x_constraint(self, x: pd.DataFrame):
+    @staticmethod
+    def x_constraint(x: pd.DataFrame):
         # noinspection PyUnresolvedReferences
         return (x['R1'] > x['R2']).astype('int32')
