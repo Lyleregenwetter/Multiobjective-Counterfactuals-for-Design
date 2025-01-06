@@ -39,7 +39,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
             x_query=features[0:1],
             y_targets=DesignTargets([ContinuousTarget("performance", 0.75, 1)]),
             prediction_function=lambda x: pd.DataFrame(),
-            constraint_functions=[],
         )
         self.static_problem = MOP
 
@@ -83,14 +82,12 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         )
         satisfaction = problem._calculate_mixed_constraint_satisfaction(x_full=x_full,
                                                                         y=y,
-                                                                        x_constraint_functions=[
-                                                                            self._constraint_function],
                                                                         design_targets=targets
                                                                         )
         np_test.assert_array_equal(satisfaction, np.array([
-            [1, 0, 7, 1, 1],
-            [-1, 1, 0, 0, 1],
-            [-1, 0, -1, 1, 1],
+            [1, 0, 7, 1],
+            [-1, 1, 0, 0],
+            [-1, 0, -1, 1],
         ]))
 
     def build_problem(self, package,
@@ -105,7 +102,7 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                    x_query=query_x,
                    y_targets=design_targets,
                    features_to_vary=features_to_vary,
-                   prediction_function=DummyPredictor().predict, constraint_functions=[])
+                   prediction_function=DummyPredictor().predict)
 
     def test_values_equal_to_constraints_lead_to_zero_in_satisfaction(self):
         """
@@ -152,8 +149,7 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                         x_query=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
                         y_targets=targets,
                         features_to_vary=features,
-                        prediction_function=lambda x: x,
-                        constraint_functions=[])
+                        prediction_function=lambda x: x)
 
         scores = generator._calculate_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
                                                             columns=features),
@@ -176,7 +172,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
                                  ContinuousTarget(1, 10, 20)])
         satisfaction = generator._calculate_mixed_constraint_satisfaction(x_full=x_full,
                                                                           y=y,
-                                                                          x_constraint_functions=[],
                                                                           design_targets=targets)
         np_test.assert_equal(satisfaction, np.array([[1, 1],
                                                      [0, 0],
@@ -201,6 +196,3 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         if value is None:
             return default_value
         return value
-
-    def _constraint_function(self, designs: pd.DataFrame):
-        return pd.DataFrame(np.ones(shape=(len(designs), 1)))

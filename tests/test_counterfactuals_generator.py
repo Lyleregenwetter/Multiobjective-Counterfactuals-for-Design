@@ -30,7 +30,7 @@ class RevertToQueryRepairTest(unittest.TestCase):
         problem = MultiObjectiveProblem(data_package=package,
                                         x_query=query_x,
                                         y_targets=design_targets,
-                                        prediction_function=lambda x: x, constraint_functions=[])
+                                        prediction_function=lambda x: x)
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
         repaired = repair._do(problem, z)
         repaired_array = pd.DataFrame.from_records(repaired).values
@@ -46,7 +46,7 @@ class RevertToQueryRepairTest(unittest.TestCase):
         problem = MultiObjectiveProblem(data_package=package,
                                         x_query=np.array([[1, 2, 3]]),
                                         y_targets=DesignTargets([ContinuousTarget(0, 10, 15)]),
-                                        prediction_function=lambda x: x, constraint_functions=[])
+                                        prediction_function=lambda x: x)
         z = [{0: 3, 1: 4, 2: 5} for _ in range(100_000)]
         repaired = repair._do(problem, z)
         repaired_array = pd.DataFrame.from_records(repaired).values
@@ -107,8 +107,7 @@ class CounterfactualsGeneratorTest(unittest.TestCase):
             data_package=_data_package,
             x_query=_x_query,
             y_targets=targets,
-            prediction_function=lambda x: x,
-            constraint_functions=[]
+            prediction_function=lambda x: x
         )
 
     def assert_raises_with_message(self, faulty_call: callable, expected_message: str):
