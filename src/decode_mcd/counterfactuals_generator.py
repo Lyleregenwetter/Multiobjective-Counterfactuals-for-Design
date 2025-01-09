@@ -108,8 +108,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self._algorithm = dill.load(f)
             self._problem = self._algorithm.problem
 
-    def sample_with_dtai(self, num_samples: int, avg_gower_weight: float, cfc_weight: float, gower_weight: float,
-                         diversity_weight: float, dtai_target: np.ndarray = None,
+    def sample_with_dtai(self, num_samples: int, avg_gower_weight: float = 0.5, cfc_weight: float = 0.5, gower_weight: float = 1,
+                         diversity_weight: float = 0.2, dtai_target: np.ndarray = None,
                          dtai_alpha: np.ndarray = None, dtai_beta: np.ndarray = None,
                          include_dataset=True, num_dpp=1000):  # Query from pareto front
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
