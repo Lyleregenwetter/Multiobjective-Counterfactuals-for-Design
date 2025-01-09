@@ -226,6 +226,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return all_cf_x, all_cf_y
 
     def _sample_based_on_scores(self, all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores):
+        agg_scores = (agg_scores-np.min(agg_scores))/(np.max(agg_scores)-np.min(agg_scores)) #scale the scores from 0 to 1
         if num_samples == 1:
             best_idx = np.argmin(agg_scores)
             result = self._build_res_df(all_cf_x[best_idx:best_idx + 1, :])
@@ -307,8 +308,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         valid = np.all(1 - np.sign(all_cf_v), axis=1)
         return all_cf_x[valid], all_cf_y[valid]
 
-    def _min2max(self, x, eps=1e-7):  # Converts minimization objective to maximization, assumes rough scale~ 1
-        return np.divide(np.mean(x), x + eps)
+    def _min2max(self, x):  # Converts minimization objective to maximization, assumes rough scale~ 1
+        return 1-x
 
     def _build_res_df(self, x):
         self._verbose_log("Done! Returning CFs")
