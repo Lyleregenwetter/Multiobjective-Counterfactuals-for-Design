@@ -111,7 +111,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
     def sample_with_dtai(self, num_samples: int, avg_gower_weight: float = 0.5, cfc_weight: float = 0.5, gower_weight: float = 1,
                          diversity_weight: float = 0.2, dtai_target: np.ndarray = None,
                          dtai_alpha: np.ndarray = None, dtai_beta: np.ndarray = None,
-                         include_dataset=True, num_dpp=1000):  # Query from pareto front
+                         include_dataset=True, max_dpp=None):  # Query from pareto front
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
         dtai_target, dtai_alpha, dtai_beta = self._get_or_default_dtai(dtai_target, dtai_alpha, dtai_beta)
         self._validate_dtai_parameters(dtai_target, dtai_alpha, dtai_beta)
@@ -128,11 +128,11 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                                                       dtai_alpha, dtai_beta, dtai_target,
                                                       gower_weight)
 
-        return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
+        return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, max_dpp, agg_scores)
 
     def sample(self, num_samples: int, avg_gower_weight: float = 0.5, cfc_weight: float = 0.5, gower_weight: float = 1,
                diversity_weight: float = 0.2, bonus_objectives_weights: np.ndarray = None, include_dataset=True,
-               num_dpp=1000):
+               max_dpp=None):
         self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
         bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
                                                         np.ones(shape=(len(self._problem._bonus_objectives))))
@@ -149,7 +149,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         agg_scores = self._calculate_scores_with_weights(all_cf_y, avg_gower_weight, cfc_weight, gower_weight,
                                                          bonus_objectives_weights)
 
-        return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores)
+        return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, max_dpp, agg_scores)
 
     def _validate_sampling_parameters(self, num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight):
         assert self._res, "You must call generate before calling sample!"
@@ -223,7 +223,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._all_cf_y = all_cf_y
         return all_cf_x, all_cf_y
 
-    def _sample_based_on_scores(self, all_cf_x, num_samples, diversity_weight, num_dpp, agg_scores):
+    def _sample_based_on_scores(self, all_cf_x, num_samples, diversity_weight, max_dpp, agg_scores):
         agg_scores = (agg_scores-np.min(agg_scores))/(np.max(agg_scores)-np.min(agg_scores)) #scale the scores from 0 to 1
         if num_samples == 1:
             best_idx = np.argmin(agg_scores)
@@ -240,9 +240,15 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                     self._log(
                         """Warning: Very small diversity can cause numerical instability. 
                         We recommend keeping diversity above 0.1 or setting diversity to 0""")
-                if len(agg_scores) > num_dpp:
-                    index = np.argpartition(agg_scores, num_dpp)[:num_dpp]
+                if max_dpp:
+                    if len(agg_scores) > max_dpp:
+                        index = np.argpartition(agg_scores, max_dpp)[:max_dpp]
                 else:
+                    if len(agg_scores) > 25000:
+                        self._log(
+                        """Warning: Sampling a diverse set from over 25k possible counterfactuals. 
+                        If this operation hangs or takes too much memory, 
+                        consider setting max_dpp to limit the subset of solutions to sample from.""")
                     index = range(len(agg_scores))
                 samples_index = self._diverse_sample(all_cf_x[index], agg_scores[index], num_samples, diversity_weight)
                 result = self._build_res_df(all_cf_x[samples_index, :])
