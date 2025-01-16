@@ -19,8 +19,6 @@ _PROXIMITY_INDEX = -3
 
 _MCD_BASE_OBJECTIVES = 3
 
-MEANING_OF_LIFE = 42
-
 def def_proximity_wrapper(ranges, feature_types):
     def fn(x, y, ranges=ranges, feature_types=feature_types):
         return mixed_gower(x, y, ranges, feature_types)
@@ -31,11 +29,16 @@ def def_sparsity_wrapper(dimensionality):
         return changed_features_ratio(x, y, dimensionality)
     return fn
 
-def def_manprox_wrapper(ranges, feature_types):
-    def fn(x, y, ranges=ranges, feature_types=feature_types):
-        return avg_gower_distance(x, y, ranges, feature_types)
+def def_manprox_wrapper(ranges, feature_types, features_dataset):
+    reference_data = get_features_sample(features_dataset, num_sample=1000, seed=42)
+    def fn(x, y=reference_data, ranges=ranges, feature_types=feature_types):
+        return avg_gower_distance(x, reference_data, ranges, feature_types)
     return fn
 
+def get_features_sample(features_dataset, num_sample, seed):
+    subset_size = min(num_sample, len(features_dataset))
+    subset = features_dataset.sample(n=subset_size, axis=0, random_state=seed)
+    return subset
 
 class MultiObjectiveProblem(Problem):
     def __init__(self,
@@ -60,12 +63,10 @@ class MultiObjectiveProblem(Problem):
                          n_obj=self._number_of_objectives,
                          n_constr=self._count_y_constraints())
         self._ranges = self._build_ranges(self._data_package.features_dataset)
-        self._manprox_sample_size = 1000
-        self._manprox_sample_seed = MEANING_OF_LIFE
         self._valid_features_dataset, self._predictions_dataset = self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
         self._revertible_indexes = self._get_revertible_indexes()
         self._feature_types = self._build_feature_types()
-        self._manprox_fn = def_manprox_wrapper(self._ranges.values, self._feature_types)
+        self._manprox_fn = def_manprox_wrapper(self._ranges.values, self._feature_types, self._data_package.features_dataset)
         self._sparsity_fn = def_sparsity_wrapper(len(self._valid_features_dataset.columns))
         self._proximity_fn = def_proximity_wrapper(self._ranges.values, self._feature_types)
         
@@ -81,12 +82,6 @@ class MultiObjectiveProblem(Problem):
     def set_sparsity_function(self, sparsity_function: Callable):
         self._validate(callable(sparsity_function), "Sparsity function must be callable")
         self._sparsity_fn = sparsity_function
-
-    def set_manprox_sampling_parameters(self, sample_size: int, sample_seed: int):
-        self._validate(sample_size > 0, "Invalid sample size; must be greater than zero")
-        self._validate(sample_seed > 0, "Invalid seed; must be greater than zero")
-        self._manprox_sample_size = sample_size
-        self._manprox_sample_seed = sample_seed
 
     def _get_revertible_indexes(self):
         all_candidates = self._features_to_vary
@@ -166,15 +161,8 @@ class MultiObjectiveProblem(Problem):
         all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._bonus_objectives]
         all_scores[:, _PROXIMITY_INDEX] = self._proximity_fn(x, self._x_query).T
         all_scores[:, _SPARSITY_INDEX] = self._sparsity_fn(x, self._x_query)
-        subset = self._get_features_sample()
-        all_scores[:, _MANPROX_INDEX] = self._manprox_fn(x, subset)
+        all_scores[:, _MANPROX_INDEX] = self._manprox_fn(x)
         return all_scores
-
-    def _get_features_sample(self):
-        subset_size = min(self._manprox_sample_size, len(self._data_package.features_dataset))
-        subset = self._data_package.features_dataset.sample(n=subset_size, axis=0,
-                                                            random_state=self._manprox_sample_seed)
-        return subset
 
     def _get_predictions(self, x_full: pd.DataFrame, dataset_flag: bool):
         if dataset_flag:
