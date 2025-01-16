@@ -340,7 +340,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         self._verbose_log("Calculating diversity matrix!")
         y = np.power(self._min2max(y), 1 / diversity_weight)
         x_df = self._problem._build_full_df(x)
-        matrix = mixed_gower(x_df, x_df, self._problem._ranges.values, self._problem._build_gower_types())
+        matrix = mixed_gower(x_df, x_df, self._problem._ranges.values, self._problem._build_feature_types())
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self._verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.pure_greedy(weighted_matrix, num_samples)

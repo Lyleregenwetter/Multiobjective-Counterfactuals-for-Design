@@ -21,9 +21,23 @@ _MCD_BASE_OBJECTIVES = 3
 
 MEANING_OF_LIFE = 42
 
+def def_proximity_wrapper(ranges, feature_types):
+    def fn(x, y, ranges=ranges, feature_types=feature_types):
+        return mixed_gower(x, y, ranges, feature_types)
+    return fn
+
+def def_sparsity_wrapper(dimensionality):
+    def fn(x, y, dimensionality=dimensionality):
+        return changed_features_ratio(x, y, dimensionality)
+    return fn
+
+def def_manprox_wrapper(ranges, feature_types):
+    def fn(x, y, ranges=ranges, feature_types=feature_types):
+        return avg_gower_distance(x, y, ranges, feature_types)
+    return fn
+
 
 class MultiObjectiveProblem(Problem):
-    # TODO: allow user to specify score functions
     def __init__(self,
                  data_package: DataPackage,
                  x_query: Union[pd.DataFrame, np.ndarray],
@@ -46,16 +60,33 @@ class MultiObjectiveProblem(Problem):
                          n_obj=self._number_of_objectives,
                          n_constr=self._count_y_constraints())
         self._ranges = self._build_ranges(self._data_package.features_dataset)
-        self._avg_gower_sample_size = 1000
-        self._avg_gower_sample_seed = MEANING_OF_LIFE
+        self._manprox_sample_size = 1000
+        self._manprox_sample_seed = MEANING_OF_LIFE
         self._valid_features_dataset, self._predictions_dataset = self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
         self._revertible_indexes = self._get_revertible_indexes()
+        self._feature_types = self._build_feature_types()
+        self._manprox_fn = def_manprox_wrapper(self._ranges.values, self._feature_types)
+        self._sparsity_fn = def_sparsity_wrapper(len(self._valid_features_dataset.columns))
+        self._proximity_fn = def_proximity_wrapper(self._ranges.values, self._feature_types)
+        
 
-    def set_average_gower_sampling_parameters(self, sample_size: int, sample_seed: int):
+    def set_manprox_function(self, manprox_function: Callable):
+        self._validate(callable(manprox_function), "Manifold proximity function must be callable")
+        self._manprox_fn = manprox_function
+
+    def set_proximity_function(self, proximity_function: Callable):
+        self._validate(callable(proximity_function), "Proximity function must be callable")
+        self._proximity_fn = proximity_function
+
+    def set_sparsity_function(self, sparsity_function: Callable):
+        self._validate(callable(sparsity_function), "Sparsity function must be callable")
+        self._sparsity_fn = sparsity_function
+
+    def set_manprox_sampling_parameters(self, sample_size: int, sample_seed: int):
         self._validate(sample_size > 0, "Invalid sample size; must be greater than zero")
         self._validate(sample_seed > 0, "Invalid seed; must be greater than zero")
-        self._avg_gower_sample_size = sample_size
-        self._avg_gower_sample_seed = sample_seed
+        self._manprox_sample_size = sample_size
+        self._manprox_sample_seed = sample_seed
 
     def _get_revertible_indexes(self):
         all_candidates = self._features_to_vary
@@ -132,19 +163,17 @@ class MultiObjectiveProblem(Problem):
 
     def _calculate_scores(self, x: pd.DataFrame, predictions: pd.DataFrame):
         all_scores = np.zeros((len(x), self._number_of_objectives))
-        gower_types = self._build_gower_types()
         all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._bonus_objectives]
-        all_scores[:, _PROXIMITY_INDEX] = mixed_gower(x, self._x_query, self._ranges.values, gower_types).T
-        all_scores[:, _SPARSITY_INDEX] = changed_features_ratio(x, self._x_query,
-                                                                       len(self._valid_features_dataset.columns))
+        all_scores[:, _PROXIMITY_INDEX] = self._proximity_fn(x, self._x_query).T
+        all_scores[:, _SPARSITY_INDEX] = self._sparsity_fn(x, self._x_query)
         subset = self._get_features_sample()
-        all_scores[:, _MANPROX_INDEX] = avg_gower_distance(x, subset, self._ranges.values, gower_types)
+        all_scores[:, _MANPROX_INDEX] = self._manprox_fn(x, subset)
         return all_scores
 
     def _get_features_sample(self):
-        subset_size = min(self._avg_gower_sample_size, len(self._data_package.features_dataset))
+        subset_size = min(self._manprox_sample_size, len(self._data_package.features_dataset))
         subset = self._data_package.features_dataset.sample(n=subset_size, axis=0,
-                                                            random_state=self._avg_gower_sample_seed)
+                                                            random_state=self._manprox_sample_seed)
         return subset
 
     def _get_predictions(self, x_full: pd.DataFrame, dataset_flag: bool):
@@ -152,7 +181,7 @@ class MultiObjectiveProblem(Problem):
             return self._predictions_dataset.copy()
         return pd.DataFrame(self._predictor(x_full), columns=self._predictions_dataset.columns)
 
-    def _build_gower_types(self):
+    def _build_feature_types(self):
         return {
             "r": tuple(self._get_features_by_type([Real, Integer])),
             "c": tuple(self._get_features_by_type([Choice, Binary]))
