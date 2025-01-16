@@ -11,11 +11,11 @@ from decode_mcd.design_targets import DesignTargets
 from decode_mcd_private.stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio
 from decode_mcd_private.validation_utils import validate
 
-_AVG_GOWER_INDEX = -1
+_MANPROX_INDEX = -1
 
-_CHANGED_FEATURE_INDEX = -2
+_SPARSITY_INDEX = -2
 
-_GOWER_INDEX = -3
+_PROXIMITY_INDEX = -3
 
 _MCD_BASE_OBJECTIVES = 3
 
@@ -134,11 +134,11 @@ class MultiObjectiveProblem(Problem):
         all_scores = np.zeros((len(x), self._number_of_objectives))
         gower_types = self._build_gower_types()
         all_scores[:, :-_MCD_BASE_OBJECTIVES] = predictions.loc[:, self._bonus_objectives]
-        all_scores[:, _GOWER_INDEX] = mixed_gower(x, self._x_query, self._ranges.values, gower_types).T
-        all_scores[:, _CHANGED_FEATURE_INDEX] = changed_features_ratio(x, self._x_query,
+        all_scores[:, _PROXIMITY_INDEX] = mixed_gower(x, self._x_query, self._ranges.values, gower_types).T
+        all_scores[:, _SPARSITY_INDEX] = changed_features_ratio(x, self._x_query,
                                                                        len(self._valid_features_dataset.columns))
         subset = self._get_features_sample()
-        all_scores[:, _AVG_GOWER_INDEX] = avg_gower_distance(x, subset, self._ranges.values, gower_types)
+        all_scores[:, _MANPROX_INDEX] = avg_gower_distance(x, subset, self._ranges.values, gower_types)
         return all_scores
 
     def _get_features_sample(self):

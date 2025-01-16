@@ -15,8 +15,8 @@ from pymoo.optimize import minimize
 from pymoo.termination.max_gen import MaximumGenerationTermination
 from pymoo.util.display.multi import MultiObjectiveOutput
 
-from decode_mcd.multi_objective_problem import MultiObjectiveProblem, _MCD_BASE_OBJECTIVES, _GOWER_INDEX, \
-    _CHANGED_FEATURE_INDEX, _AVG_GOWER_INDEX
+from decode_mcd.multi_objective_problem import MultiObjectiveProblem, _MCD_BASE_OBJECTIVES, _PROXIMITY_INDEX, \
+    _SPARSITY_INDEX, _MANPROX_INDEX
 from decode_mcd_private import calculate_dtai as calculate_dtai, DPPsampling as DPPsampling
 from decode_mcd_private.efficient_mixed_duplicate_elimination import EfficientMixedVariableDuplicateElimination
 from decode_mcd_private.stats_methods import mixed_gower
@@ -108,11 +108,11 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self._algorithm = dill.load(f)
             self._problem = self._algorithm.problem
 
-    def sample_with_dtai(self, num_samples: int, avg_gower_weight: float = 0.5, cfc_weight: float = 0.5, gower_weight: float = 1,
+    def sample_with_dtai(self, num_samples: int, manifold_proximity_weight: float = 0.5, sparsity_weight: float = 0.5, proximity_weight: float = 1,
                          diversity_weight: float = 0.2, dtai_target: np.ndarray = None,
                          dtai_alpha: np.ndarray = None, dtai_beta: np.ndarray = None,
                          include_dataset=True, max_dpp=None):  # Query from pareto front
-        self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
+        self._validate_sampling_parameters(num_samples, manifold_proximity_weight, sparsity_weight, proximity_weight, diversity_weight)
         dtai_target, dtai_alpha, dtai_beta = self._get_or_default_dtai(dtai_target, dtai_alpha, dtai_beta)
         self._validate_dtai_parameters(dtai_target, dtai_alpha, dtai_beta)
 
@@ -124,16 +124,16 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
         self._verbose_log("Scoring all counterfactual candidates!")
 
-        agg_scores = self._calculate_scores_with_dtai(all_cf_y, avg_gower_weight, cfc_weight,
+        agg_scores = self._calculate_scores_with_dtai(all_cf_y, manifold_proximity_weight, sparsity_weight,
                                                       dtai_alpha, dtai_beta, dtai_target,
-                                                      gower_weight)
+                                                      proximity_weight)
 
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, max_dpp, agg_scores)
 
-    def sample(self, num_samples: int, avg_gower_weight: float = 0.5, cfc_weight: float = 0.5, gower_weight: float = 1,
+    def sample(self, num_samples: int, manifold_proximity_weight: float = 0.5, sparsity_weight: float = 0.5, proximity_weight: float = 1,
                diversity_weight: float = 0.2, bonus_objectives_weights: np.ndarray = None, include_dataset=True,
                max_dpp=None):
-        self._validate_sampling_parameters(num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
+        self._validate_sampling_parameters(num_samples, manifold_proximity_weight, sparsity_weight, proximity_weight, diversity_weight)
         bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
                                                         np.ones(shape=(len(self._problem._bonus_objectives))))
         self._validate_y_weights(bonus_objectives_weights)
@@ -146,15 +146,15 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
 
         self._verbose_log("Scoring all counterfactual candidates!")
 
-        agg_scores = self._calculate_scores_with_weights(all_cf_y, avg_gower_weight, cfc_weight, gower_weight,
+        agg_scores = self._calculate_scores_with_weights(all_cf_y, manifold_proximity_weight, sparsity_weight, proximity_weight,
                                                          bonus_objectives_weights)
 
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, max_dpp, agg_scores)
 
-    def _validate_sampling_parameters(self, num_samples, avg_gower_weight, cfc_weight, gower_weight, diversity_weight):
+    def _validate_sampling_parameters(self, num_samples, manifold_proximity_weight, sparsity_weight, proximity_weight, diversity_weight):
         assert self._res, "You must call generate before calling sample!"
         self._validate_positive_int(num_samples, "num_samples")
-        self._validate_statistical_weights(avg_gower_weight, cfc_weight, gower_weight, diversity_weight)
+        self._validate_statistical_weights(manifold_proximity_weight, sparsity_weight, proximity_weight, diversity_weight)
 
     def _setup_algorithm(self):  # First time algorithm setup
         if self._algorithm is None:  # Runs if algorithm is not yet initialized
@@ -254,24 +254,24 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                 result = self._build_res_df(all_cf_x[samples_index, :])
                 return self._check_for_original_query(result)
 
-    def _calculate_scores_with_dtai(self, all_cf_y, avg_gower_weight, cfc_weight, dtai_alpha, dtai_beta, dtai_target,
-                                    gower_weight):
+    def _calculate_scores_with_dtai(self, all_cf_y, manifold_proximity_weight, sparsity_weight, dtai_alpha, dtai_beta, dtai_target,
+                                    proximity_weight):
         dtai_alpha = np.array([dtai_alpha])
         dtai_beta = np.array([dtai_beta])
         dtai_target = np.array([dtai_target])
         dtai_scores = self._calculate_dtai(all_cf_y, dtai_alpha, dtai_beta, dtai_target)
-        return self._calculate_statistical_scores(all_cf_y, avg_gower_weight, cfc_weight, gower_weight, dtai_scores)
+        return self._calculate_statistical_scores(all_cf_y, manifold_proximity_weight, sparsity_weight, proximity_weight, dtai_scores)
 
-    def _calculate_scores_with_weights(self, all_cf_y, avg_gower_weight, cfc_weight, gower_weight,
+    def _calculate_scores_with_weights(self, all_cf_y, manifold_proximity_weight, sparsity_weight, proximity_weight,
                                        bonus_objectives_weights):
         bonus_objectives_weights = np.array([bonus_objectives_weights])
         weighted_scores = np.sum(all_cf_y[:, :-_MCD_BASE_OBJECTIVES] * bonus_objectives_weights, axis=1)
-        return self._calculate_statistical_scores(all_cf_y, avg_gower_weight, cfc_weight, gower_weight, weighted_scores)
+        return self._calculate_statistical_scores(all_cf_y, manifold_proximity_weight, sparsity_weight, proximity_weight, weighted_scores)
 
-    def _calculate_statistical_scores(self, all_cf_y, avg_gower_weight, cfc_weight, gower_weight, label_scores):
-        cf_quality = all_cf_y[:, _GOWER_INDEX] * gower_weight + \
-                     all_cf_y[:, _CHANGED_FEATURE_INDEX] * cfc_weight + \
-                     all_cf_y[:, _AVG_GOWER_INDEX] * avg_gower_weight
+    def _calculate_statistical_scores(self, all_cf_y, manifold_proximity_weight, sparsity_weight, proximity_weight, label_scores):
+        cf_quality = all_cf_y[:, _PROXIMITY_INDEX] * proximity_weight + \
+                     all_cf_y[:, _SPARSITY_INDEX] * sparsity_weight + \
+                     all_cf_y[:, _MANPROX_INDEX] * manifold_proximity_weight
         agg_scores = label_scores + cf_quality
         # For quick debugging
         self._label_scores = label_scores
