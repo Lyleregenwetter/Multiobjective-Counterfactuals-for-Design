@@ -6,7 +6,7 @@ from pymoo.core.problem import Problem
 from pymoo.core.variable import Real, Integer, Binary, Choice
 
 from decode_mcd_private.classification_evaluator import ClassificationEvaluator
-from decode_mcd.data_package import McdDataset
+from decode_mcd.mcd_dataset import McdDataset
 from decode_mcd.design_targets import DesignTargets
 from decode_mcd_private.stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio
 from decode_mcd_private.validation_utils import validate

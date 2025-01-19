@@ -5,10 +5,10 @@ import numpy.testing as np_test
 import pandas as pd
 from pymoo.core.variable import Real, Choice
 
-from decode_mcd.data_package import McdDataset
+from decode_mcd.mcd_dataset import McdDataset
 from decode_mcd.design_targets import ContinuousTarget, DesignTargets, CategoricalTarget, \
     MinimizationTarget
-from decode_mcd.multi_objective_problem import McdProblem as MOP
+from decode_mcd.mcd_problem import McdProblem as MOP
 
 
 class DummyPredictor:

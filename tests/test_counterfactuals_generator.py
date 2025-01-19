@@ -5,11 +5,11 @@ import numpy.testing as np_test
 import pandas as pd
 from pymoo.core.variable import Real
 
-from decode_mcd.counterfactuals_generator import _RevertToQueryRepair, McdGenerator
-from decode_mcd.data_package import McdDataset
+from decode_mcd.mcd_generator import _RevertToQueryRepair, McdGenerator
+from decode_mcd.mcd_dataset import McdDataset
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget
 from decode_mcd.mcd_exceptions import UserInputException
-from decode_mcd.multi_objective_problem import McdProblem
+from decode_mcd.mcd_problem import McdProblem
 
 
 class RevertToQueryRepairTest(unittest.TestCase):

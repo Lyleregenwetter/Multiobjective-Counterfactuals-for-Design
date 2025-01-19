@@ -1,9 +1,9 @@
-from .data_package import McdDataset
+from .mcd_dataset import McdDataset
 from .design_targets import DesignTargets, CategoricalTarget, ContinuousTarget
-from .multi_objective_problem import McdProblem
-from .counterfactuals_generator import McdGenerator
+from .mcd_problem import McdProblem
+from .mcd_generator import McdGenerator
 
-del data_package
+del mcd_dataset
 del design_targets
-del multi_objective_problem
-del counterfactuals_generator
+del mcd_problem
+del mcd_generator

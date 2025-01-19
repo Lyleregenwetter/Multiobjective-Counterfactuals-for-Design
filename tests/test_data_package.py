@@ -5,7 +5,7 @@ import numpy.testing as np_test
 import pandas as pd
 from pymoo.core.variable import Real, Choice, Integer, Binary
 
-from decode_mcd.data_package import McdDataset
+from decode_mcd.mcd_dataset import McdDataset
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, MinimizationTarget
 from decode_mcd.mcd_exceptions import UserInputException
 
