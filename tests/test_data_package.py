@@ -5,7 +5,7 @@ import numpy.testing as np_test
 import pandas as pd
 from pymoo.core.variable import Real, Choice, Integer, Binary
 
-from decode_mcd.data_package import DataPackage
+from decode_mcd.data_package import McdDataset
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, MinimizationTarget
 from decode_mcd.mcd_exceptions import UserInputException
 
@@ -202,9 +202,9 @@ class DataPackageTest(unittest.TestCase):
                    predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2]]), columns=["A", "B"]),
                    datatypes=None):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(1, 4)), Real(bounds=(2, 5)), Real(bounds=(3, 6))])
-        return DataPackage(x=features_dataset,
-                           y=predictions_dataset,
-                           x_datatypes=datatypes)
+        return McdDataset(x=features_dataset,
+                          y=predictions_dataset,
+                          x_datatypes=datatypes)
 
     def _test_invalid(self, invalid_scenarios: dict):
         for factory, exception_message in invalid_scenarios.items():

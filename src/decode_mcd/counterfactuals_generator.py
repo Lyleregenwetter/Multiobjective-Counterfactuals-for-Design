@@ -15,7 +15,7 @@ from pymoo.optimize import minimize
 from pymoo.termination.max_gen import MaximumGenerationTermination
 from pymoo.util.display.multi import MultiObjectiveOutput
 
-from decode_mcd.multi_objective_problem import MultiObjectiveProblem, _MCD_BASE_OBJECTIVES, _PROXIMITY_INDEX, \
+from decode_mcd.multi_objective_problem import McdProblem, _MCD_BASE_OBJECTIVES, _PROXIMITY_INDEX, \
     _SPARSITY_INDEX, _MANPROX_INDEX
 from decode_mcd_private import calculate_dtai as calculate_dtai, DPPsampling as DPPsampling
 from decode_mcd_private.efficient_mixed_duplicate_elimination import EfficientMixedVariableDuplicateElimination
@@ -32,7 +32,7 @@ class _RevertToQueryRepair(Repair):
         self.beta = beta
         super().__init__(*args, **kwargs)
 
-    def _do(self, problem: MultiObjectiveProblem, Z, **kwargs):
+    def _do(self, problem: McdProblem, Z, **kwargs):
         # noinspection PyProtectedMember
         revertible_indexes = problem._revertible_indexes
         original_x = problem._x_query
@@ -66,10 +66,10 @@ class _AllOffspringCallback(Callback):
         self.data["offspring"].append(algorithm.off)
 
 
-# noinspection PyProtectedMember
-class CounterfactualsGenerator:  # For calling the optimization and sampling counterfactuals
+# noinspection PyProtectedMember,PyMethodMayBeStatic
+class McdGenerator:  # For calling the optimization and sampling counterfactuals
     def __init__(self,
-                 problem: MultiObjectiveProblem,
+                 problem: McdProblem,
                  pop_size: int,
                  initialize_from_dataset: bool = True,
                  verbose: bool = True):
@@ -335,7 +335,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
             self._verbose_log(f"{len(pop)} dataset entries found matching problem parameters")
 
     # noinspection PyProtectedMember
-    def _diverse_sample(self, x, y, num_samples, diversity_weight, eps=1e-7):
+    def _diverse_sample(self, x, y, num_samples, diversity_weight):
         self._verbose_log("Calculating diversity matrix!")
         y = np.power(self._min2max(y), 1 / diversity_weight)
         x_df = self._problem._build_full_df(x)
@@ -354,7 +354,7 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
         return eigvec.dot(np.diag(eigval)).dot(eigvec.T)
 
     def _validate_fields(self):
-        validate(isinstance(self._problem, MultiObjectiveProblem), "problem must be an instance "
+        validate(isinstance(self._problem, McdProblem), "problem must be an instance "
                                                                    "of decode_mcd.MultiObjectiveProblem")
         self._validate_positive_int(self._pop_size, "pop_size")
 

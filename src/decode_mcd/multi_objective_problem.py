@@ -6,7 +6,7 @@ from pymoo.core.problem import Problem
 from pymoo.core.variable import Real, Integer, Binary, Choice
 
 from decode_mcd_private.classification_evaluator import ClassificationEvaluator
-from decode_mcd.data_package import DataPackage
+from decode_mcd.data_package import McdDataset
 from decode_mcd.design_targets import DesignTargets
 from decode_mcd_private.stats_methods import mixed_gower, avg_gower_distance, changed_features_ratio
 from decode_mcd_private.validation_utils import validate
@@ -20,19 +20,19 @@ _PROXIMITY_INDEX = -3
 _MCD_BASE_OBJECTIVES = 3
 
 def def_proximity_wrapper(ranges, feature_types):
-    def fn(x, y, ranges=ranges, feature_types=feature_types):
-        return mixed_gower(x, y, ranges, feature_types)
+    def fn(x, y, _ranges=ranges, _feature_types=feature_types):
+        return mixed_gower(x, y, _ranges, _feature_types)
     return fn
 
 def def_sparsity_wrapper(dimensionality):
-    def fn(x, y, dimensionality=dimensionality):
-        return changed_features_ratio(x, y, dimensionality)
+    def fn(x, y, _dimensionality=dimensionality):
+        return changed_features_ratio(x, y, _dimensionality)
     return fn
 
 def def_manprox_wrapper(ranges, feature_types, features_dataset):
     reference_data = get_features_sample(features_dataset, num_sample=1000, seed=42)
-    def fn(x, y=reference_data, ranges=ranges, feature_types=feature_types):
-        return avg_gower_distance(x, reference_data, ranges, feature_types)
+    def fn(x, y=reference_data, _ranges=ranges, _feature_types=feature_types):
+        return avg_gower_distance(x, y, _ranges, _feature_types)
     return fn
 
 def get_features_sample(features_dataset, num_sample, seed):
@@ -40,16 +40,16 @@ def get_features_sample(features_dataset, num_sample, seed):
     subset = features_dataset.sample(n=subset_size, axis=0, random_state=seed)
     return subset
 
-class MultiObjectiveProblem(Problem):
+class McdProblem(Problem):
     def __init__(self,
-                 data_package: DataPackage,
+                 mcd_dataset: McdDataset,
                  x_query: Union[pd.DataFrame, np.ndarray],
                  y_targets: DesignTargets,
                  prediction_function: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
                  features_to_vary: Union[Sequence[str], Sequence[int]] = None):
         """A class representing a multiobjective minimization problem"""
-        self._validate(isinstance(data_package, DataPackage), "data_package must be an instance of DataPackage")
-        self._data_package = data_package
+        self._validate(isinstance(mcd_dataset, McdDataset), "data_package must be an instance of DataPackage")
+        self._data_package = mcd_dataset
         self._x_query = self._to_valid_dataframe(x_query, "x_query")
         self._y_targets = y_targets
         self._features_to_vary: Union[Sequence[str], Sequence[int]] = self._get_or_default(features_to_vary,

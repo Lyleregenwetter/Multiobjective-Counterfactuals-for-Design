@@ -18,7 +18,7 @@ QUERY_X_INVALID_DATATYPES_CHOICE = "[query_x] has a choice variable that is not 
 QUERY_X_OUTSIDE_TYPES_RANGE = "[query_x] parameters fall outside of range specified by datatypes"
 
 
-class DataPackage:
+class McdDataset:
     # TODO: move fields from data package to problem
     def __init__(self,
                  x: Union[pd.DataFrame, np.ndarray],
@@ -171,10 +171,13 @@ class DataPackage:
     def _validate_internals(self):
         for dt in self.datatypes:
             if type(dt) == pymoo.core.variable.Real:
+                # noinspection PyUnresolvedReferences
                 self._validate_has_field(dt.bounds != (None, None), "bounds", "Real")
             elif type(dt) == pymoo.core.variable.Integer:
+                # noinspection PyUnresolvedReferences
                 self._validate_has_field(dt.bounds != (None, None), "bounds", "Integer")
             elif type(dt) == pymoo.core.variable.Choice:
+                # noinspection PyUnresolvedReferences
                 self._validate_has_field(dt.options is not None, "options", "Choice")
 
     def _validate_has_field(self, condition: bool, field_name: str, class_name: str):
@@ -187,8 +190,10 @@ class DataPackage:
             dt = self.datatypes[i]
             val = query_x.values[0][i]
             if type(dt) in [Real, Integer]:
+                # noinspection PyTypeChecker
                 self._validate_range(dt, val)
             if type(dt) is Choice:
+                # noinspection PyTypeChecker,PyUnresolvedReferences
                 validate(val in dt.options,
                          QUERY_X_INVALID_DATATYPES_CHOICE)
             if type(dt) is Binary:
@@ -198,7 +203,9 @@ class DataPackage:
     def _validate_range(self, dt: Union[Integer, Real], val: Union[float, int]):
         lower_bound = dt.bounds[0]
         upper_bound = dt.bounds[1]
+        # noinspection PyTypeChecker
         validate(val >= lower_bound,
                  QUERY_X_OUTSIDE_TYPES_RANGE)
+        # noinspection PyTypeChecker
         validate(val <= upper_bound,
                  QUERY_X_OUTSIDE_TYPES_RANGE)
