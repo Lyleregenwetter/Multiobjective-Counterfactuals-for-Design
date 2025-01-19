@@ -240,9 +240,8 @@ class CounterfactualsGenerator:  # For calling the optimization and sampling cou
                     self._log(
                         """Warning: Very small diversity can cause numerical instability. 
                         We recommend keeping diversity above 0.1 or setting diversity to 0""")
-                if max_dpp:
-                    if len(agg_scores) > max_dpp:
-                        index = np.argpartition(agg_scores, max_dpp)[:max_dpp]
+                if max_dpp and len(agg_scores) > max_dpp:
+                    index = np.argpartition(agg_scores, max_dpp)[:max_dpp]
                 else:
                     if len(agg_scores) > 25000:
                         self._log(

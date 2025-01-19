@@ -33,7 +33,7 @@ class QuickStartTest(unittest.TestCase):
                                              initialize_from_dataset=False)
 
         generator.generate(n_generations=10)
-        counterfactuals = generator.sample_with_dtai(num_samples=10, gower_weight=1,
-                                                     avg_gower_weight=1, cfc_weight=1,
+        counterfactuals = generator.sample_with_dtai(num_samples=10, proximity_weight=1,
+                                                     manifold_proximity_weight=1, sparsity_weight=1,
                                                      diversity_weight=50)
         print(counterfactuals)

@@ -33,22 +33,10 @@ class DataPackage:
 
         @param y: dataset of the performance metrics of the designs in the features dataset.
 
-        @param x_query: the starting design. Generated designs will generally try to remain similar to this.
-
-        @param y_targets:  describes the desired region of the performance space.
-
         @param x_datatypes: describes the datatypes of the design features in @features_dataset,
         and must also be supplied with bounds that describe the desired region of the design space.
         Valid: [Real(bounds=(0, 10), Choice(options=(0, 1, 2), ...]
         Invalid: [Real(0, 10), Choice((0, 1, 2))] | [Real(), Choice()]
-
-        @param features_to_vary: the subset of features that are 'actionable' or allowed to vary.
-
-        @param bonus_objectives: the subset of performance metrics that will be minimized in optimization steps.
-
-        @param datasets_scores:
-
-        @param datasets_validity:
 
         """
         self.features_dataset = self._to_valid_dataframe(x, "features_dataset")
