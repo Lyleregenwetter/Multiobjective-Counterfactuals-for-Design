@@ -14,7 +14,7 @@ importlib_resources==6.4.5
 joblib==1.4.2
 kiwisolver==1.4.7
 matplotlib==3.9.2
-numpy==2.0.2
+numpy==2.2.2
 packaging==24.2
 pandas==2.2.3
 pillow==11.0.0
