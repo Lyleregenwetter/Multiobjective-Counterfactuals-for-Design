@@ -102,8 +102,8 @@ class McdGenerator:  # For calling the optimization and sampling counterfactuals
             self._algorithm = dill.load(f)
             self._problem = self._algorithm.problem
 
-    def sample_with_dtai(self, num_samples: int, manifold_proximity_weight: float = 0.5, sparsity_weight: float = 0.5, proximity_weight: float = 1,
-                         diversity_weight: float = 0.2, dtai_target: np.ndarray = None,
+    def sample_with_dtai(self, num_samples: int, manifold_proximity_weight: float = 0.5, sparsity_weight: float = 0.3, proximity_weight: float = 1,
+                         diversity_weight: float = 0.3, dtai_target: np.ndarray = None,
                          dtai_alpha: np.ndarray = None, dtai_beta: np.ndarray = None,
                          include_dataset=True, max_dpp=None):  # Query from pareto front
         self._validate_sampling_parameters(num_samples, manifold_proximity_weight, sparsity_weight, proximity_weight, diversity_weight)
@@ -124,8 +124,8 @@ class McdGenerator:  # For calling the optimization and sampling counterfactuals
 
         return self._sample_based_on_scores(all_cf_x, num_samples, diversity_weight, max_dpp, agg_scores)
 
-    def sample(self, num_samples: int, manifold_proximity_weight: float = 0.5, sparsity_weight: float = 0.5, proximity_weight: float = 1,
-               diversity_weight: float = 0.2, bonus_objectives_weights: np.ndarray = None, include_dataset=True,
+    def sample(self, num_samples: int, manifold_proximity_weight: float = 0.5, sparsity_weight: float = 0.3, proximity_weight: float = 1,
+               diversity_weight: float = 0.3, bonus_objectives_weights: np.ndarray = None, include_dataset=True,
                max_dpp=None):
         self._validate_sampling_parameters(num_samples, manifold_proximity_weight, sparsity_weight, proximity_weight, diversity_weight)
         bonus_objectives_weights = self._get_or_default(bonus_objectives_weights,
