@@ -205,7 +205,7 @@ class McdDataset:
         upper_bound = dt.bounds[1]
         # noinspection PyTypeChecker
         validate(val >= lower_bound,
-                 QUERY_X_OUTSIDE_TYPES_RANGE)
+                 QUERY_X_OUTSIDE_TYPES_RANGE, warning=True) #only warn for these, don't except
         # noinspection PyTypeChecker
         validate(val <= upper_bound,
-                 QUERY_X_OUTSIDE_TYPES_RANGE)
+                 QUERY_X_OUTSIDE_TYPES_RANGE, warning=True) #only warn for these, don't except
