@@ -225,7 +225,6 @@ class McdGenerator:  # For calling the optimization and sampling counterfactuals
             return self._check_for_original_query(result)
         else:
             if diversity_weight == 0:
-                self._verbose_log(f"{num_samples=}")
                 idx = np.argpartition(agg_scores, num_samples)[:num_samples]
                 result = self._build_res_df(all_cf_x[idx, :])
                 return self._check_for_original_query(result)
@@ -337,7 +336,6 @@ class McdGenerator:  # For calling the optimization and sampling counterfactuals
         weighted_matrix = np.einsum('ij,i,j->ij', matrix, y, y)
         self._verbose_log("Sampling diverse set of counterfactual candidates!")
         samples_index = DPPsampling.pure_greedy(weighted_matrix, num_samples)
-        self._verbose_log(f"{samples_index=}")
         return samples_index
 
     def _get_near_psd(self, A):
