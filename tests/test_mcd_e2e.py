@@ -69,7 +69,7 @@ class McdEndToEndTest(unittest.TestCase):
         problem = MOP.McdProblem(mcd_dataset=dp,
                                  x_query=x.iloc[0:1],
                                  y_targets=targets,
-                                 features_to_vary=x.columns,
+                                 features_to_freeze=[],
                                  prediction_function=prediction_function)
         generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
@@ -96,7 +96,7 @@ class McdEndToEndTest(unittest.TestCase):
         problem = MOP.McdProblem(mcd_dataset=dp,
                                  x_query=x.iloc[1:2],
                                  y_targets=targets,
-                                 features_to_vary=["R1", "R2", "R3", "R4", "R5"],
+                                 features_to_freeze=["C1"],
                                  prediction_function=self.predict_dummy_multiple_objectives)
         generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
@@ -122,7 +122,7 @@ class McdEndToEndTest(unittest.TestCase):
         problem = MOP.McdProblem(mcd_dataset=dp,
                                  x_query=x.iloc[1:2],
                                  y_targets=targets,
-                                 features_to_vary=["R1", "R2", "R3", "R4", "R5"],
+                                 features_to_freeze=["C1"],
                                  prediction_function=self.predict_dummy_multiple_objectives)
         generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
@@ -147,7 +147,7 @@ class McdEndToEndTest(unittest.TestCase):
         problem = MOP.McdProblem(mcd_dataset=dp,
                                  x_query=x.iloc[0:1],
                                  y_targets=targets,
-                                 features_to_vary=x.columns,
+                                 features_to_freeze=[],
                                  prediction_function=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                   any_x))
         generator = McdGenerator(problem, 500, initialize_from_dataset=False)
@@ -173,7 +173,7 @@ class McdEndToEndTest(unittest.TestCase):
         problem = MOP.McdProblem(mcd_dataset=dp,
                                  x_query=x.iloc[0:1],
                                  y_targets=targets,
-                                 features_to_vary=x.columns,
+                                 features_to_freeze=[],
                                  prediction_function=self.predict_dummy_multiple_objectives)
         generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)

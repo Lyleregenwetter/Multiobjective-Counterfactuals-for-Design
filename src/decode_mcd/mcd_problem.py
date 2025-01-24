@@ -46,15 +46,14 @@ class McdProblem(Problem):
                  x_query: Union[pd.DataFrame, np.ndarray],
                  y_targets: DesignTargets,
                  prediction_function: Callable[[pd.DataFrame], Union[np.ndarray, pd.DataFrame]],
-                 features_to_vary: Union[Sequence[str], Sequence[int]] = None):
+                 features_to_freeze: Union[Sequence[str], Sequence[int]] = None):
         """A class representing a multiobjective minimization problem"""
         self._validate(isinstance(mcd_dataset, McdDataset), "data_package must be an instance of DataPackage")
         self._data_package = mcd_dataset
         self._x_query = self._to_valid_dataframe(x_query, "x_query")
         self._y_targets = y_targets
-        self._features_to_vary: Union[Sequence[str], Sequence[int]] = self._get_or_default(features_to_vary,
-                                                                                           list(self._data_package.features_dataset.columns.values))
-        self._features_to_freeze = list(set(self._data_package.features_dataset.columns.values) - set(self._features_to_vary))
+        self._features_to_freeze = self._get_or_default(features_to_freeze, [])
+        self._features_to_vary: Union[Sequence[str], Sequence[int]] = list(set(self._data_package.features_dataset.columns.values) - set(self._features_to_freeze))
         self._data_package.cross_validate(self._x_query, self._y_targets, self._features_to_vary)
         self._predictor = prediction_function
         self._bonus_objectives = self._get_or_default(self._grab_minimization_targets(), [])

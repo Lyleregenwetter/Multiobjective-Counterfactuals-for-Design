@@ -101,7 +101,7 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         return MOP(mcd_dataset=package,
                    x_query=query_x,
                    y_targets=design_targets,
-                   features_to_vary=features_to_vary,
+                   features_to_freeze=[feature for feature in ["x", "y", "z"] if feature not in features_to_vary],
                    prediction_function=DummyPredictor().predict)
 
     def test_values_equal_to_constraints_lead_to_zero_in_satisfaction(self):
@@ -148,7 +148,6 @@ class MultiObjectiveProblemTest(unittest.TestCase):
         generator = MOP(mcd_dataset=data_package,
                         x_query=pd.DataFrame(np.array([[0, 600, 40, 2000]]), columns=features),
                         y_targets=targets,
-                        features_to_vary=features,
                         prediction_function=lambda x: x)
 
         scores = generator._calculate_scores(x=pd.DataFrame(np.array([[25, 500, 45, 2000], [35, 700, 35, 3000]]),
