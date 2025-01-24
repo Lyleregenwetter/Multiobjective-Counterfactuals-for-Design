@@ -28,7 +28,7 @@ class QuickStartTest(unittest.TestCase):
                                                                                   lower_bound=25,
                                                                                   upper_bound=75)]))
 
-        generator = McdGenerator(problem=problem,
+        generator = McdGenerator(mcd_problem=problem,
                                  pop_size=10,
                                  initialize_from_dataset=False)
 

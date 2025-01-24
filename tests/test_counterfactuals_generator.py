@@ -67,7 +67,7 @@ class RevertToQueryRepairTest(unittest.TestCase):
 class CounterfactualsGeneratorTest(unittest.TestCase):
     def test_validates_constructor_parameters(self):
         self.assert_raises_with_message(lambda:
-                                        McdGenerator(problem=None, pop_size=500),
+                                        McdGenerator(mcd_problem=None, pop_size=500),
                                         "problem must be an instance of decode_mcd.MultiObjectiveProblem")
         problem = self.build_valid_problem()
         self.assert_raises_with_message(lambda: McdGenerator(problem, 1000.15),

@@ -69,7 +69,7 @@ class _AllOffspringCallback(Callback):
 # noinspection PyProtectedMember,PyMethodMayBeStatic
 class McdGenerator:  # For calling the optimization and sampling counterfactuals
     def __init__(self,
-                 problem: McdProblem,
+                 mcd_problem: McdProblem,
                  pop_size: int,
                  initialize_from_dataset: bool = True,
                  verbose: bool = True):
@@ -79,7 +79,7 @@ class McdGenerator:  # For calling the optimization and sampling counterfactuals
         The generation and sampling steps are decoupled to allow users to vary sampling parameters without having to regenerate counterfactuals."""
         self._all_cf_y, self._all_cf_x, self._agg_scores, self._label_scores, \
             self._seed, self._res, self._algorithm, self._dataset_pop = (None for _ in range(8))
-        self._problem = problem
+        self._problem = mcd_problem
         self._pop_size = pop_size
         self._initialize_from_dataset = initialize_from_dataset
         self._verbose = verbose
