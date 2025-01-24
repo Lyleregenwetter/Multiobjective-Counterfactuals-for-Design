@@ -55,6 +55,7 @@ class McdProblem(Problem):
         self._features_to_freeze = self._get_or_default(features_to_freeze, [])
         self._features_to_vary: Union[Sequence[str], Sequence[int]] = list(set(self._data_package.features_dataset.columns.values) - set(self._features_to_freeze))
         self._data_package.cross_validate(self._x_query, self._y_targets, self._features_to_vary)
+        self._reorder_x_query_columns()
         self._predictor = prediction_function
         self._bonus_objectives = self._get_or_default(self._grab_minimization_targets(), [])
         self._number_of_objectives = _MCD_BASE_OBJECTIVES + len(self._bonus_objectives)
@@ -68,7 +69,6 @@ class McdProblem(Problem):
         self._manprox_fn = def_manprox_wrapper(self._ranges.values, self._feature_types, self._data_package.features_dataset)
         self._sparsity_fn = def_sparsity_wrapper(len(self._valid_features_dataset.columns))
         self._proximity_fn = def_proximity_wrapper(self._ranges.values, self._feature_types)
-        
 
     def set_manprox_function(self, manprox_function: Callable):
         self._validate(callable(manprox_function), "Manifold proximity function must be callable")
@@ -262,7 +262,10 @@ class McdProblem(Problem):
 
     def _grab_minimization_targets(self) -> List[str]:
         return [_target.label for _target in self._y_targets.minimization_targets]
-
+    
+    def _reorder_x_query_columns(self):
+        target_order = self._data_package.features_dataset.columns
+        self._x_query = self._x_query[target_order]
 
     @staticmethod
     def drop_non_constrained_columns(design_targets, result, y):
