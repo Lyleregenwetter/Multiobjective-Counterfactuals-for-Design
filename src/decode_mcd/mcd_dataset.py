@@ -186,6 +186,8 @@ class McdDataset:
                  f"pymoo.core.variable.{class_name}")
 
     def _validate_query_x_against_datatypes(self, query_x: pd.DataFrame):
+        target_order = self.features_dataset.columns
+        query_x = query_x[target_order]
         for i in range(len(self.datatypes)):
             dt = self.datatypes[i]
             val = query_x.values[0][i]
