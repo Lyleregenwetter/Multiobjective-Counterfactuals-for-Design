@@ -64,7 +64,7 @@ class McdProblem(Problem):
                          n_constr=self._count_y_constraints())
         self._ranges = self._build_ranges(self._data_package.features_dataset)
         self._valid_features_dataset, self._predictions_dataset = self._set_valid_datasets_subset()  # Remove any invalid designs from the features dataset and predictions
-        self._revertible_indexes = self._get_revertible_indexes()
+        self._revertible_variables = self._get_revertible_variables()
         self._feature_types = self._build_feature_types()
         self._manprox_fn = def_manprox_wrapper(self._ranges.values, self._feature_types, self._data_package.features_dataset)
         self._sparsity_fn = def_sparsity_wrapper(len(self._valid_features_dataset.columns))
@@ -82,12 +82,12 @@ class McdProblem(Problem):
         self._validate(callable(sparsity_function), "Sparsity function must be callable")
         self._sparsity_fn = sparsity_function
 
-    def _get_revertible_indexes(self):
+    def _get_revertible_variables(self):
         all_candidates = self._features_to_vary
         var_dict = self._build_problem_var_dict()
         q_x = self._x_query
         validity = self._get_revert_validity(all_candidates, q_x, var_dict)
-        return tuple(list(self._features_to_vary).index(c) for c in all_candidates if validity[c])
+        return [k for k, v in validity.items() if v]
 
     @staticmethod
     def _get_revert_validity(all_candidates, q_x, var_dict):

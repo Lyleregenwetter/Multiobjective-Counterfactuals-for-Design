@@ -34,26 +34,20 @@ class _RevertToQueryRepair(Repair):
 
     def _do(self, problem: McdProblem, Z, **kwargs):
         # noinspection PyProtectedMember
-        revertible_indexes = problem._revertible_indexes
-        original_x = problem._x_query
-        qxs = original_x.values[:, revertible_indexes]
-        # TODO: confirm existence of column ordering bug and check if this fix is valid
-        full_Z_dataframe = pd.DataFrame.from_records(Z, columns=[c for c in original_x.columns
-                                                                 if c in problem._features_to_vary])
-        full_Z_np = full_Z_dataframe.values
-        reverted_subset = self._revert_subset(full_Z_np, qxs, revertible_indexes)
-        full_Z_np[:, revertible_indexes] = reverted_subset
-        Z = pd.DataFrame(full_Z_np, columns=full_Z_dataframe.columns)
-        return Z.to_dict("records")
+        revertible_variables = problem._revertible_variables
+        original_query = problem._x_query[problem._features_to_vary]
+        query_revertible = original_query[revertible_variables]
+        Z_df = pd.DataFrame.from_records(Z)
+        Z_revertible = Z_df[revertible_variables]
+        Z_revertible = self._revert_subset(Z_revertible.values, query_revertible.values)
+        Z_df[revertible_variables] = Z_revertible
+        return Z_df.to_dict("records")
 
-    def _revert_subset(self, full_Z_np, qxs, revertible_indexes):
-        revertible_subset = full_Z_np[:, revertible_indexes]
+    def _revert_subset(self, Z_revertible, query_revertible):
         elementwise_prob = np.random.beta(self.alpha, self.beta)
-        mask = np.random.binomial(size=np.shape(revertible_subset), n=1, p=elementwise_prob).astype(bool)
-        # mask = mask * np.random.binomial(size=(np.shape(revertible_subset)[0], 1), n=1, p=self.rep_prob)
-        reverted_subset = revertible_subset
-        reverted_subset[mask] = np.repeat(qxs, reverted_subset.shape[0], axis=0)[mask]
-        return reverted_subset
+        mask = np.random.binomial(size=np.shape(Z_revertible), n=1, p=elementwise_prob).astype(bool)
+        Z_revertible[mask] = np.repeat(query_revertible, Z_revertible.shape[0], axis=0)[mask]
+        return Z_revertible
 
 
 class _AllOffspringCallback(Callback):
