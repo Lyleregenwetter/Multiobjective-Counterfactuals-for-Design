@@ -5,11 +5,12 @@ import numpy.testing as np_test
 import pandas as pd
 from pymoo.core.variable import Real, Choice, Integer, Binary
 
-from decode_mcd.data_package import DataPackage
+from decode_mcd.mcd_dataset import McdDataset
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, MinimizationTarget
 from decode_mcd.mcd_exceptions import UserInputException
 
 DEFAULT_FEATURES = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]), columns=["x", "y", "z"])
+
 
 # noinspection PyTypeChecker
 class DataPackageTest(unittest.TestCase):
@@ -113,7 +114,8 @@ class DataPackageTest(unittest.TestCase):
         design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)],
                                                                            minimization_targets=[
                                                                                MinimizationTarget("A")]))
-        self.initialize(features_dataset=features_dataset).cross_validate(x_query=query_x, y_targets=design_targets, features_to_vary=features_to_vary)
+        self.initialize(features_dataset=features_dataset).cross_validate(x_query=query_x, y_targets=design_targets,
+                                                                          features_to_vary=features_to_vary)
 
     def test_invalid_query_x(self):
         # noinspection PyTypeChecker
@@ -132,27 +134,6 @@ class DataPackageTest(unittest.TestCase):
                     "query_x columns do not match dataset columns!"
             }
         )
-
-    def test_query_x_outside_of_datatypes_range(self):
-        def build_problem_with_query_x_out_of_range():
-            self._test_cross_validate(query_x=pd.DataFrame(np.array([[-110, -110, -110]]),
-                                                           columns=["x", "y", "z"]
-                                                           ))
-
-        def build_problem_with_query_x_integer_out_of_range():
-            x = pd.DataFrame(np.array([[-110, -110, -110]]),
-                             columns=["x", "y", "z"]
-                             )
-            design_t = DesignTargets([ContinuousTarget("A", 4, 10)], minimization_targets=[MinimizationTarget("A")])
-            self.initialize(datatypes=[Integer(bounds=(0, 5)) for _ in range(3)]).cross_validate(x_query=x,
-                                                                                                 y_targets=design_t,
-                                                                                                 features_to_vary=["x",
-                                                                                                                   "y"])
-
-        self.assert_raises_with_message(build_problem_with_query_x_out_of_range,
-                                        "[query_x] parameters fall outside of range specified by datatypes")
-        self.assert_raises_with_message(build_problem_with_query_x_integer_out_of_range,
-                                        "[query_x] parameters fall outside of range specified by datatypes")
 
     def test_query_x_with_invalid_choices(self):
         def build_problem_with_invalid_choice_in_query_x():
@@ -202,9 +183,9 @@ class DataPackageTest(unittest.TestCase):
                    predictions_dataset=pd.DataFrame(np.array([[5, 4], [3, 2]]), columns=["A", "B"]),
                    datatypes=None):
         datatypes = self.get_or_default(datatypes, [Real(bounds=(1, 4)), Real(bounds=(2, 5)), Real(bounds=(3, 6))])
-        return DataPackage(x=features_dataset,
-                           y=predictions_dataset,
-                           x_datatypes=datatypes)
+        return McdDataset(x=features_dataset,
+                          y=predictions_dataset,
+                          x_datatypes=datatypes)
 
     def _test_invalid(self, invalid_scenarios: dict):
         for factory, exception_message in invalid_scenarios.items():

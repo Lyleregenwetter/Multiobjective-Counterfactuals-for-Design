@@ -9,9 +9,9 @@ from pymoo.core.variable import Real, Choice
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LinearRegression
 
-import decode_mcd.multi_objective_problem as MOP
-from decode_mcd import counterfactuals_generator
-from decode_mcd.data_package import DataPackage
+import decode_mcd.mcd_problem as MOP
+from decode_mcd import McdGenerator
+from decode_mcd.mcd_dataset import McdDataset
 from decode_mcd.design_targets import DesignTargets, ContinuousTarget, CategoricalTarget, MinimizationTarget
 
 INFINITY = 1_000_000_000
@@ -58,20 +58,20 @@ class McdEndToEndTest(unittest.TestCase):
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,)),
              CategoricalTarget("X_CONSTRAINT", (0,))],
         )
-        dp = DataPackage(x=x, y=y,
-                         x_datatypes=datatypes)
+        dp = McdDataset(x=x, y=y,
+                        x_datatypes=datatypes)
 
         def prediction_function(_x: pd.DataFrame):
             result = self.predict_dummy_multiple_objectives(_x)
             result["X_CONSTRAINT"] = self.x_constraint(_x)
             return result
 
-        problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=x.iloc[0:1],
-                                            y_targets=targets,
-                                            features_to_vary=x.columns,
-                                            prediction_function=prediction_function)
-        generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        problem = MOP.McdProblem(mcd_dataset=dp,
+                                 x_query=x.iloc[0:1],
+                                 y_targets=targets,
+                                 features_to_freeze=[],
+                                 prediction_function=prediction_function)
+        generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
         cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, include_dataset=False,
@@ -90,15 +90,15 @@ class McdEndToEndTest(unittest.TestCase):
             [ContinuousTarget("O_R1", 0, 12),
              ContinuousTarget("O_R2", 0, 6)],
         )
-        dp = DataPackage(x=x, y=y,
-                         x_datatypes=datatypes)
+        dp = McdDataset(x=x, y=y,
+                        x_datatypes=datatypes)
 
-        problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=x.iloc[1:2],
-                                            y_targets=targets,
-                                            features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                                            prediction_function=self.predict_dummy_multiple_objectives)
-        generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        problem = MOP.McdProblem(mcd_dataset=dp,
+                                 x_query=x.iloc[1:2],
+                                 y_targets=targets,
+                                 features_to_freeze=["C1"],
+                                 prediction_function=self.predict_dummy_multiple_objectives)
+        generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
         cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, include_dataset=False,
@@ -116,15 +116,15 @@ class McdEndToEndTest(unittest.TestCase):
              ContinuousTarget("O_R2", 0, 6), ContinuousTarget("PROB", 0, INFINITY)],
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))]
         )
-        dp = DataPackage(x=x, y=y,
-                         x_datatypes=datatypes)
+        dp = McdDataset(x=x, y=y,
+                        x_datatypes=datatypes)
 
-        problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=x.iloc[1:2],
-                                            y_targets=targets,
-                                            features_to_vary=["R1", "R2", "R3", "R4", "R5"],
-                                            prediction_function=self.predict_dummy_multiple_objectives)
-        generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        problem = MOP.McdProblem(mcd_dataset=dp,
+                                 x_query=x.iloc[1:2],
+                                 y_targets=targets,
+                                 features_to_freeze=["C1"],
+                                 prediction_function=self.predict_dummy_multiple_objectives)
+        generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
         cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, include_dataset=False,
@@ -142,15 +142,15 @@ class McdEndToEndTest(unittest.TestCase):
             [ContinuousTarget("O_R1", -5, 5)],
             minimization_targets=[MinimizationTarget("O_R1")]
         )
-        dp = DataPackage(x=x, y=y,
-                         x_datatypes=datatypes)
-        problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=x.iloc[0:1],
-                                            y_targets=targets,
-                                            features_to_vary=x.columns,
-                                            prediction_function=lambda any_x: self.predict_subset(["O_R1"],
+        dp = McdDataset(x=x, y=y,
+                        x_datatypes=datatypes)
+        problem = MOP.McdProblem(mcd_dataset=dp,
+                                 x_query=x.iloc[0:1],
+                                 y_targets=targets,
+                                 features_to_freeze=[],
+                                 prediction_function=lambda any_x: self.predict_subset(["O_R1"],
                                                                                                   any_x))
-        generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
         cfs = generator.sample(num_samples, 0.5, 0.2, 0.5, 0.2, np.array([1]),
@@ -167,15 +167,15 @@ class McdEndToEndTest(unittest.TestCase):
              ContinuousTarget("O_R2", 0, 6), ContinuousTarget("PROB", 0, INFINITY)],
             [CategoricalTarget("O_C1", (1, 2)), CategoricalTarget("O_C2", (1,))],
         )
-        dp = DataPackage(x=x, y=y,
-                         x_datatypes=datatypes)
+        dp = McdDataset(x=x, y=y,
+                        x_datatypes=datatypes)
 
-        problem = MOP.MultiObjectiveProblem(data_package=dp,
-                                            x_query=x.iloc[0:1],
-                                            y_targets=targets,
-                                            features_to_vary=x.columns,
-                                            prediction_function=self.predict_dummy_multiple_objectives)
-        generator = counterfactuals_generator.CounterfactualsGenerator(problem, 500, initialize_from_dataset=False)
+        problem = MOP.McdProblem(mcd_dataset=dp,
+                                 x_query=x.iloc[0:1],
+                                 y_targets=targets,
+                                 features_to_freeze=[],
+                                 prediction_function=self.predict_dummy_multiple_objectives)
+        generator = McdGenerator(problem, 500, initialize_from_dataset=False)
         generator.generate(5)
         num_samples = 10
         cfs = generator.sample_with_dtai(num_samples, 0.5, 0.2, 0.5, 0.2, include_dataset=False,
