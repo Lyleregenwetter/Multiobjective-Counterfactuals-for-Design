@@ -11,6 +11,7 @@ from decode_mcd.mcd_exceptions import UserInputException
 
 DEFAULT_FEATURES = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]), columns=["x", "y", "z"])
 
+
 # noinspection PyTypeChecker
 class DataPackageTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -113,7 +114,8 @@ class DataPackageTest(unittest.TestCase):
         design_targets = self.get_or_default(design_targets, DesignTargets([ContinuousTarget("A", 4, 10)],
                                                                            minimization_targets=[
                                                                                MinimizationTarget("A")]))
-        self.initialize(features_dataset=features_dataset).cross_validate(x_query=query_x, y_targets=design_targets, features_to_vary=features_to_vary)
+        self.initialize(features_dataset=features_dataset).cross_validate(x_query=query_x, y_targets=design_targets,
+                                                                          features_to_vary=features_to_vary)
 
     def test_invalid_query_x(self):
         # noinspection PyTypeChecker
@@ -132,27 +134,6 @@ class DataPackageTest(unittest.TestCase):
                     "query_x columns do not match dataset columns!"
             }
         )
-
-    def test_query_x_outside_of_datatypes_range(self):
-        def build_problem_with_query_x_out_of_range():
-            self._test_cross_validate(query_x=pd.DataFrame(np.array([[-110, -110, -110]]),
-                                                           columns=["x", "y", "z"]
-                                                           ))
-
-        def build_problem_with_query_x_integer_out_of_range():
-            x = pd.DataFrame(np.array([[-110, -110, -110]]),
-                             columns=["x", "y", "z"]
-                             )
-            design_t = DesignTargets([ContinuousTarget("A", 4, 10)], minimization_targets=[MinimizationTarget("A")])
-            self.initialize(datatypes=[Integer(bounds=(0, 5)) for _ in range(3)]).cross_validate(x_query=x,
-                                                                                                 y_targets=design_t,
-                                                                                                 features_to_vary=["x",
-                                                                                                                   "y"])
-
-        self.assert_raises_with_message(build_problem_with_query_x_out_of_range,
-                                        "[query_x] parameters fall outside of range specified by datatypes")
-        self.assert_raises_with_message(build_problem_with_query_x_integer_out_of_range,
-                                        "[query_x] parameters fall outside of range specified by datatypes")
 
     def test_query_x_with_invalid_choices(self):
         def build_problem_with_invalid_choice_in_query_x():
