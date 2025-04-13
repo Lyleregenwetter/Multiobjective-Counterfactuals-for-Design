@@ -153,6 +153,10 @@ Performance targets can be any combination of:
 
 ## Quick-Start Guide
 
+### Local setup
+1. Install poetry on your system or run `pip install poetry`
+2. If poetry is available on your system, run `poetry install`. Otherwise, run `python -m poetry install`.
+
 ### Installation
 
 1. Install MCD with:
