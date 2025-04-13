@@ -14,16 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.9
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.12
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
       - name: Install dependencies
-        run: python -m pip install --upgrade pip && pip install -r requirements.txt;
-      - name: Install MCD
-        run: pip install .;
+        run: poetry install;
       - name: run tests
-        run: python3 -m unittest discover -v;
+        run: PYTHONPATH=test poetry run pytest -v;
 
   publish_build:
     if: github.event_name == 'release'
@@ -33,13 +33,13 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.9
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.12
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
       - name: Install dependencies
-        run: python -m pip install --upgrade pip && pip install -r requirements.txt;
-      - name: Build MCD wheel
-        run: python3 -m build
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        run: poetry install;
+      - name: Build and publish to pypi
+        uses: JRubics/poetry-publish@v2.1
