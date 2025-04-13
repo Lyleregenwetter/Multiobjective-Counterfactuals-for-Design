@@ -156,7 +156,7 @@ Performance targets can be any combination of:
 ### Local development setup
 1. Clone the repository
 2. Install poetry on your system or run `pip install poetry`
-3. If poetry is available on your system, run `poetry install`. Otherwise, run `python -m poetry install`.
+3. If you decided to install poetry on your system, run `poetry install`. If you've used `pip`, run `python -m poetry install`.
 
 ### Installation
 
